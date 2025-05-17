@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   Dialog, 
   DialogTitle, 
@@ -27,81 +27,18 @@ export function SchoolForm({
   onSave,
   initialData,
 }: SchoolFormProps) {
-  const [name, setName] = useState('');
-  const [cnpj, setCnpj] = useState('');
-  const [address, setAddress] = useState('');
-  const [cityState, setCityState] = useState('');
-  const [responsibleName, setResponsibleName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState(initialData?.name || "");
+  const [tradingName, setTradingName] = useState(initialData?.tradingName || "");
+  const [cnpj, setCnpj] = useState(initialData?.cnpj || "");
+  const [director, setDirector] = useState(initialData?.director || "");
+  const [responsibleName, setResponsibleName] = useState(initialData?.responsibleName || "");
+  const [email, setEmail] = useState(initialData?.email || "");
+  const [phone, setPhone] = useState(initialData?.phone || "");
+  const [address, setAddress] = useState(initialData?.address || "");
+  const [cityState, setCityState] = useState(initialData?.cityState || "");
+  const [logo, setLogo] = useState(initialData?.logo || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (initialData) {
-      setName(initialData.name || '');
-      setCnpj(initialData.cnpj || '');
-      setAddress(initialData.address || '');
-      setCityState(initialData.cityState || '');
-      setResponsibleName(initialData.responsibleName || '');
-      setPhone(initialData.phone || '');
-      setEmail(initialData.email || '');
-    } else {
-      setName('');
-      setCnpj('');
-      setAddress('');
-      setCityState('');
-      setResponsibleName('');
-      setPhone('');
-      setEmail('');
-    }
-  }, [initialData]);
-
-  // Format CNPJ as user types
-  const handleCnpjChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, "");
-    
-    if (value.length <= 14) {
-      // Format as XX.XXX.XXX/XXXX-XX
-      value = value.replace(/^(\d{2})(\d)/, "$1.$2");
-      value = value.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
-      value = value.replace(/\.(\d{3})(\d)/, ".$1/$2");
-      value = value.replace(/(\d{4})(\d)/, "$1-$2");
-      
-      setCnpj(value);
-    }
-  };
-
-  // Format phone as user types
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, "");
-    
-    if (value.length <= 11) {
-      // Format as (XX) XXXXX-XXXX
-      value = value.replace(/^(\d{2})(\d)/, "($1) $2");
-      value = value.replace(/(\d)(\d{4})$/, "$1-$2");
-      
-      setPhone(value);
-    }
-  };
-
-  // Validate CNPJ
-  const validateCnpj = (cnpj: string) => {
-    const cleanCnpj = cnpj.replace(/\D/g, "");
-    
-    if (cleanCnpj.length !== 14) {
-      return false;
-    }
-    
-    // Check for all same digits
-    if (/^(\d)\1+$/.test(cleanCnpj)) {
-      return false;
-    }
-    
-    // This is a simple validation for demo purposes
-    // In a real app, we would implement the complete CNPJ validation algorithm
-    return true;
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,27 +52,30 @@ export function SchoolForm({
       return;
     }
     
-    if (!validateCnpj(cnpj)) {
-      toast({
-        title: "CNPJ inválido",
-        description: "Por favor, insira um CNPJ válido.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     setIsSubmitting(true);
     
     try {
       onSave({
         name,
+        tradingName,
         cnpj,
+        director,
+        responsibleName,
+        email,
+        phone,
         address,
         cityState,
-        responsibleName,
-        phone,
-        email,
+        logo,
       });
+      
+      toast({
+        title: initialData ? "Escola atualizada" : "Escola cadastrada",
+        description: initialData 
+          ? "A escola foi atualizada com sucesso." 
+          : "A escola foi cadastrada com sucesso.",
+      });
+      
+      onClose();
     } catch (error) {
       toast({
         title: "Erro ao salvar",
@@ -149,22 +89,22 @@ export function SchoolForm({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {initialData ? "Editar Escola" : "Nova Escola"}
+            {initialData ? "Editar Instituição" : "Nova Instituição"}
           </DialogTitle>
           <DialogDescription>
             {initialData 
-              ? "Atualize os dados da escola no sistema." 
-              : "Cadastre uma nova escola no sistema."}
+              ? "Atualize os dados da instituição no sistema." 
+              : "Cadastre uma nova instituição no sistema."}
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div>
-              <Label htmlFor="name">Nome da Escola *</Label>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome da Instituição *</Label>
               <Input
                 id="name"
                 value={name}
@@ -173,32 +113,72 @@ export function SchoolForm({
                 required
               />
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="cnpj">CNPJ *</Label>
-                <Input
-                  id="cnpj"
-                  value={cnpj}
-                  onChange={handleCnpjChange}
-                  placeholder="XX.XXX.XXX/XXXX-XX"
-                  required
-                  maxLength={18}
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Telefone</Label>
-                <Input
-                  id="phone"
-                  value={phone}
-                  onChange={handlePhoneChange}
-                  placeholder="(XX) XXXXX-XXXX"
-                  maxLength={15}
-                />
-              </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tradingName">Nome Fantasia</Label>
+              <Input
+                id="tradingName"
+                value={tradingName}
+                onChange={(e) => setTradingName(e.target.value)}
+                placeholder="Nome fantasia"
+              />
             </div>
             
-            <div>
+            <div className="space-y-2">
+              <Label htmlFor="cnpj">CNPJ *</Label>
+              <Input
+                id="cnpj"
+                value={cnpj}
+                onChange={(e) => setCnpj(e.target.value)}
+                placeholder="00.000.000/0000-00"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="director">Diretor(a)</Label>
+              <Input
+                id="director"
+                value={director}
+                onChange={(e) => setDirector(e.target.value)}
+                placeholder="Nome do diretor ou diretora"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="responsibleName">Responsável *</Label>
+              <Input
+                id="responsibleName"
+                value={responsibleName}
+                onChange={(e) => setResponsibleName(e.target.value)}
+                placeholder="Nome do responsável"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@exemplo.com"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            
+            <div className="space-y-2">
               <Label htmlFor="address">Endereço</Label>
               <Input
                 id="address"
@@ -208,8 +188,8 @@ export function SchoolForm({
               />
             </div>
             
-            <div>
-              <Label htmlFor="cityState">Cidade/UF</Label>
+            <div className="space-y-2">
+              <Label htmlFor="cityState">Cidade/Estado</Label>
               <Input
                 id="cityState"
                 value={cityState}
@@ -217,29 +197,27 @@ export function SchoolForm({
                 placeholder="Cidade/UF"
               />
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="responsible">Nome do Responsável *</Label>
-                <Input
-                  id="responsible"
-                  value={responsibleName}
-                  onChange={(e) => setResponsibleName(e.target.value)}
-                  placeholder="Nome completo do responsável"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">E-mail de Contato *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email@exemplo.com"
-                  required
-                />
-              </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="logo">Logotipo (URL)</Label>
+              <Input
+                id="logo"
+                value={logo}
+                onChange={(e) => setLogo(e.target.value)}
+                placeholder="URL da imagem"
+              />
+              {logo && (
+                <div className="mt-2 p-2 border rounded flex justify-center">
+                  <img 
+                    src={logo} 
+                    alt="Logo preview" 
+                    className="h-20 object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "https://via.placeholder.com/150?text=Logo+error";
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
           

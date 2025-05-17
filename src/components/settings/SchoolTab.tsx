@@ -24,6 +24,7 @@ export function SchoolTab() {
     {
       id: "1",
       name: "Escola Municipal João Silva",
+      tradingName: "Escola João Silva",
       cnpj: "12.345.678/0001-90",
       address: "Rua das Flores, 123",
       cityState: "São Paulo/SP",
@@ -31,12 +32,15 @@ export function SchoolTab() {
       phone: "(11) 91234-5678",
       email: "contato@emjs.edu.br",
       status: "active",
+      director: "Carlos Eduardo Santos",
+      logo: "https://via.placeholder.com/150?text=Logo+Escola",
       createdAt: new Date(),
       updatedAt: new Date(),
     },
     {
       id: "2",
       name: "Colégio Estadual Pedro Alves",
+      tradingName: "Colégio Pedro Alves",
       cnpj: "23.456.789/0001-12",
       address: "Av. Principal, 456",
       cityState: "Rio de Janeiro/RJ",
@@ -44,6 +48,8 @@ export function SchoolTab() {
       phone: "(21) 98765-4321",
       email: "secretaria@cepa.edu.br",
       status: "suspended",
+      director: "Ana Maria Lima",
+      logo: "https://via.placeholder.com/150?text=Logo+Colegio",
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -149,8 +155,8 @@ export function SchoolTab() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>CNPJ</TableHead>
+              <TableHead>Diretor(a)</TableHead>
               <TableHead>Responsável</TableHead>
-              <TableHead>E-mail</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -158,10 +164,29 @@ export function SchoolTab() {
           <TableBody>
             {schools.map((school) => (
               <TableRow key={school.id}>
-                <TableCell className="font-medium">{school.name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {school.logo && (
+                      <img 
+                        src={school.logo} 
+                        alt={`Logo ${school.name}`} 
+                        className="h-8 w-8 object-contain rounded"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <div>
+                      <div>{school.name}</div>
+                      {school.tradingName && (
+                        <div className="text-xs text-gray-500">{school.tradingName}</div>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
                 <TableCell>{school.cnpj}</TableCell>
+                <TableCell>{school.director || "—"}</TableCell>
                 <TableCell>{school.responsibleName}</TableCell>
-                <TableCell>{school.email}</TableCell>
                 <TableCell>
                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                     school.status === "active" 

@@ -15,6 +15,9 @@ export interface School {
   address?: string;
   cityState?: string;
   phone?: string;
+  tradingName?: string; // Nome Fantasia
+  logo?: string; // Path to logo image
+  director?: string; // Diretor(a)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,4 +58,23 @@ export interface UserRole {
   id: string;
   name: string;
   description: string;
+}
+
+export interface PurchasingCenter {
+  id: string;
+  name: string;
+  description: string;
+  schoolIds: string[]; // IDs of schools that are part of this purchasing center
+  status: "active" | "inactive";
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SchoolUser {
+  id: string;
+  schoolId: string;
+  userId: string;
+  roleId: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

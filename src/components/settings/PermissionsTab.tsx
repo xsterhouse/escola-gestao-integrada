@@ -1,33 +1,22 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Save, Plus } from "lucide-react";
+import { Shield, Save, Plus, Trash2, Pencil } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// Define types for module permissions
-interface ModulePermission {
-  id: string;
-  name: string;
-  description: string;
-  create: boolean;
-  read: boolean;
-  update: boolean;
-  delete: boolean;
-}
-
-// Define types for user roles
-interface UserRole {
-  id: string;
-  name: string;
-  description: string;
-}
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ModulePermission, UserRole } from "@/lib/types";
 
 export function PermissionsTab() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("modules");
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<UserRole | null>(null);
 
   // Mock data for module permissions
   const [modulePermissions, setModulePermissions] = useState<ModulePermission[]>([
@@ -120,6 +109,23 @@ export function PermissionsTab() {
     }
   ]);
 
+  const [roleForm, setRoleForm] = useState({
+    name: "",
+    description: ""
+  });
+
+  // Store role permissions (combination of roles and modules)
+  const [rolePermissions, setRolePermissions] = useState<{
+    [roleId: string]: {
+      [moduleId: string]: boolean;
+    }
+  }>({
+    "1": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": true },
+    "2": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": false },
+    "3": { "1": true, "2": true, "3": true, "4": false, "5": false, "6": false, "7": false },
+    "4": { "1": true, "2": false, "3": false, "4": false, "5": false, "6": false, "7": false }
+  });
+
   const handleTogglePermission = (moduleId: string, permission: "create" | "read" | "update" | "delete") => {
     setModulePermissions(prevPermissions => 
       prevPermissions.map(module => 
@@ -135,6 +141,98 @@ export function PermissionsTab() {
       title: "Permissões salvas",
       description: "As configurações de permissões foram atualizadas com sucesso."
     });
+  };
+
+  const handleOpenRoleModal = (role?: UserRole) => {
+    if (role) {
+      setEditingRole(role);
+      setRoleForm({
+        name: role.name,
+        description: role.description
+      });
+    } else {
+      setEditingRole(null);
+      setRoleForm({
+        name: "",
+        description: ""
+      });
+    }
+    setIsRoleModalOpen(true);
+  };
+
+  const handleSaveRole = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!roleForm.name) {
+      toast({
+        title: "Campo obrigatório",
+        description: "O nome do perfil é obrigatório.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (editingRole) {
+      // Update existing role
+      const updatedRoles = userRoles.map(role => 
+        role.id === editingRole.id
+          ? { ...role, name: roleForm.name, description: roleForm.description }
+          : role
+      );
+      setUserRoles(updatedRoles);
+      toast({
+        title: "Perfil atualizado",
+        description: "O perfil foi atualizado com sucesso."
+      });
+    } else {
+      // Create new role
+      const newRole: UserRole = {
+        id: `${userRoles.length + 1}`,
+        name: roleForm.name,
+        description: roleForm.description
+      };
+      setUserRoles([...userRoles, newRole]);
+      
+      // Initialize permissions for the new role
+      setRolePermissions(prev => ({
+        ...prev,
+        [newRole.id]: modulePermissions.reduce((acc, module) => {
+          acc[module.id] = false;
+          return acc;
+        }, {} as { [key: string]: boolean })
+      }));
+      
+      toast({
+        title: "Perfil criado",
+        description: "O novo perfil foi criado com sucesso."
+      });
+    }
+    
+    setIsRoleModalOpen(false);
+  };
+
+  const handleDeleteRole = (roleId: string) => {
+    setUserRoles(prev => prev.filter(role => role.id !== roleId));
+    
+    // Clean up role permissions
+    const newRolePermissions = { ...rolePermissions };
+    delete newRolePermissions[roleId];
+    setRolePermissions(newRolePermissions);
+    
+    toast({
+      title: "Perfil excluído",
+      description: "O perfil foi excluído com sucesso."
+    });
+  };
+
+  const handleToggleRolePermission = (roleId: string, moduleId: string) => {
+    setRolePermissions(prev => ({
+      ...prev,
+      [roleId]: {
+        ...prev[roleId],
+        [moduleId]: !prev[roleId]?.[moduleId]
+      }
+    }));
   };
 
   return (
@@ -217,48 +315,128 @@ export function PermissionsTab() {
           
           <TabsContent value="roles">
             <div className="space-y-6">
-              <p className="text-sm text-muted-foreground">
-                Configure os perfis de usuário padrão e suas permissões associadas.
-              </p>
-              
-              {userRoles.map((role) => (
-                <Card key={role.id} className="bg-slate-50">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-5 w-5 text-[#012340]" />
-                      <CardTitle className="text-lg">{role.name}</CardTitle>
-                    </div>
-                    <CardDescription>{role.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                      {modulePermissions.map((module) => (
-                        <div key={module.id} className="flex items-center space-x-2 bg-white p-2 rounded-md border">
-                          <Switch id={`${role.id}-${module.id}`} />
-                          <label htmlFor={`${role.id}-${module.id}`} className="text-sm font-medium cursor-pointer">
-                            {module.name}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <Button variant="outline" size="sm" onClick={() => toast({ title: "Permissões salvas", description: `Perfil ${role.name} atualizado.` })}>
-                        Salvar
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              
-              <div className="flex justify-center">
-                <Button variant="outline" className="mt-4" onClick={() => toast({ title: "Em desenvolvimento", description: "A criação de novos perfis estará disponível em breve." })}>
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-muted-foreground">
+                  Configure os perfis de usuário padrão e suas permissões associadas.
+                </p>
+                <Button variant="outline" onClick={() => handleOpenRoleModal()}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Novo Perfil
+                  Novo Perfil
                 </Button>
+              </div>
+              
+              <div className="grid gap-4">
+                {userRoles.map((role) => (
+                  <Card key={role.id} className="bg-slate-50">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-5 w-5 text-[#012340]" />
+                          <CardTitle className="text-lg">{role.name}</CardTitle>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleOpenRoleModal(role)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDeleteRole(role.id)}
+                            className="text-destructive hover:text-destructive/90"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <CardDescription>{role.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {modulePermissions.map((module) => (
+                          <div key={module.id} className="flex items-center space-x-2 bg-white p-2 rounded-md border">
+                            <Switch 
+                              id={`${role.id}-${module.id}`} 
+                              checked={!!rolePermissions[role.id]?.[module.id]}
+                              onCheckedChange={() => handleToggleRolePermission(role.id, module.id)}
+                            />
+                            <Label htmlFor={`${role.id}-${module.id}`} className="text-sm font-medium cursor-pointer">
+                              {module.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 flex justify-end">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => toast({ 
+                            title: "Permissões salvas", 
+                            description: `Perfil ${role.name} atualizado.` 
+                          })}
+                        >
+                          Salvar
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           </TabsContent>
         </Tabs>
+        
+        <Dialog open={isRoleModalOpen} onOpenChange={setIsRoleModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {editingRole ? "Editar Perfil" : "Novo Perfil"}
+              </DialogTitle>
+              <DialogDescription>
+                {editingRole 
+                  ? "Edite as informações do perfil de usuário." 
+                  : "Crie um novo perfil de usuário no sistema."}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <form onSubmit={handleSaveRole}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="roleName">Nome do Perfil *</Label>
+                  <Input
+                    id="roleName"
+                    value={roleForm.name}
+                    onChange={(e) => setRoleForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Ex: Gerente Financeiro"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="roleDescription">Descrição</Label>
+                  <Input
+                    id="roleDescription"
+                    value={roleForm.description}
+                    onChange={(e) => setRoleForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Ex: Acesso ao módulo financeiro e relatórios"
+                  />
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsRoleModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  {editingRole ? "Atualizar" : "Criar Perfil"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
