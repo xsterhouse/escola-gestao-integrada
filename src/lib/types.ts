@@ -1,3 +1,4 @@
+
 export interface Permission {
   id: string;
   name: string;
@@ -11,11 +12,13 @@ export interface School {
   responsibleName: string;
   email: string;
   status: "active" | "suspended";
+  address?: string;
+  cityState?: string;
+  phone?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Add the status field to the User interface
 export interface User {
   id: string;
   name: string;
@@ -35,4 +38,20 @@ export interface DashboardMetric {
   icon: string;
   color: string;
   additionalInfo?: string;
+}
+
+export interface ModulePermission {
+  id: string;
+  name: string;
+  description: string;
+  create: boolean;
+  read: boolean;
+  update: boolean;
+  delete: boolean;
+}
+
+export interface UserRole {
+  id: string;
+  name: string;
+  description: string;
 }
