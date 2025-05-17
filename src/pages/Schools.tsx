@@ -23,6 +23,7 @@ const MOCK_SCHOOLS: School[] = [
     cnpj: "12.345.678/0001-90",
     responsibleName: "Maria Oliveira",
     email: "contato@joaodasilva.edu.br",
+    status: "active", // Adding the required status property
     createdAt: new Date(),
     updatedAt: new Date(),
   },
@@ -32,6 +33,7 @@ const MOCK_SCHOOLS: School[] = [
     cnpj: "98.765.432/0001-10",
     responsibleName: "Carlos Santos",
     email: "contato@paulofreire.edu.br",
+    status: "active", // Adding the required status property
     createdAt: new Date(),
     updatedAt: new Date(),
   },

@@ -96,6 +96,7 @@ export function SchoolForm({
         cnpj,
         responsibleName,
         email,
+        status: "active", // Adding the required status property with default value "active"
       });
       
       toast({
