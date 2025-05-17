@@ -6,7 +6,24 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { 
+  Menu, 
+  X, 
+  ChevronDown, 
+  LayoutDashboard, 
+  Package, 
+  Store, 
+  DollarSign, 
+  ClipboardList, 
+  FileText, 
+  BookOpen, 
+  Settings, 
+  Building, 
+  Users, 
+  ShoppingCart, 
+  Shield, 
+  LogOut 
+} from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type SidebarProps = {
@@ -24,49 +41,49 @@ export function Sidebar({ className }: SidebarProps) {
     {
       id: "dashboard",
       name: "Painel",
-      icon: "dashboard",
+      icon: <LayoutDashboard className="h-5 w-5" />,
       path: "/dashboard",
       permission: "dashboard",
     },
     {
       id: "products",
       name: "Produtos",
-      icon: "products",
+      icon: <Package className="h-5 w-5" />,
       path: "/products",
       permission: "products",
     },
     {
       id: "inventory",
       name: "Estoque",
-      icon: "stock",
+      icon: <Store className="h-5 w-5" />,
       path: "/inventory",
       permission: "inventory",
     },
     {
       id: "financial",
       name: "Financeiro",
-      icon: "finance",
+      icon: <DollarSign className="h-5 w-5" />,
       path: "/financial",
       permission: "financial",
     },
     {
       id: "planning",
       name: "Planejamento",
-      icon: "planning",
+      icon: <ClipboardList className="h-5 w-5" />,
       path: "/planning",
       permission: "planning",
     },
     {
       id: "contracts",
       name: "Contratos",
-      icon: "contracts",
+      icon: <FileText className="h-5 w-5" />,
       path: "/contracts",
       permission: "contracts",
     },
     {
       id: "accounting",
       name: "Contabilidade",
-      icon: "contabilidade",
+      icon: <BookOpen className="h-5 w-5" />,
       path: "/accounting",
       permission: "accounting",
     },
@@ -75,23 +92,9 @@ export function Sidebar({ className }: SidebarProps) {
   // These routes are only visible to the master user
   const adminRoutes = [
     {
-      id: "schools",
-      name: "Escolas",
-      icon: "users",
-      path: "/schools",
-      permission: "settings",
-    },
-    {
-      id: "users",
-      name: "Usuários",
-      icon: "settings",
-      path: "/users",
-      permission: "settings",
-    },
-    {
       id: "settings",
       name: "Configurações",
-      icon: "settings",
+      icon: <Settings className="h-5 w-5" />,
       path: "/settings",
       permission: "settings",
     },
@@ -126,18 +129,18 @@ export function Sidebar({ className }: SidebarProps) {
           <span className="sr-only">Toggle Menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-0">
+      <SheetContent side="left" className="w-72 p-0 bg-blue-900">
         <div className="flex flex-col h-full">
-          <div className="px-6 py-4 border-b">
-            <h2 className="text-lg font-semibold">SIGRE</h2>
+          <div className="px-6 py-4 border-b border-blue-800">
+            <h2 className="text-lg font-semibold text-white">SIGRE</h2>
             {currentSchool && (
-              <p className="text-sm text-muted-foreground truncate">{currentSchool.name}</p>
+              <p className="text-sm text-blue-300 truncate">{currentSchool.name}</p>
             )}
           </div>
           <ScrollArea className="flex-1 p-6">
             <div className="space-y-6">
               <div className="space-y-2">
-                <h3 className="text-sm font-medium">Módulos</h3>
+                <h3 className="text-sm font-medium text-blue-300">Módulos</h3>
                 <nav className="space-y-1">
                   {allowedModules.map((module) => (
                     <Link
@@ -146,11 +149,12 @@ export function Sidebar({ className }: SidebarProps) {
                       className={cn(
                         "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                         isActive(module.path)
-                          ? "bg-accent text-accent-foreground font-medium"
-                          : "hover:bg-accent hover:text-accent-foreground"
+                          ? "bg-blue-800 text-white font-medium"
+                          : "text-blue-100 hover:bg-blue-800 hover:text-white"
                       )}
                       onClick={() => setIsOpen(false)}
                     >
+                      {module.icon}
                       <span>{module.name}</span>
                     </Link>
                   ))}
@@ -158,7 +162,7 @@ export function Sidebar({ className }: SidebarProps) {
               </div>
               {user?.role === "master" && allowedAdminRoutes.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Administração</h3>
+                  <h3 className="text-sm font-medium text-blue-300">Administração</h3>
                   <nav className="space-y-1">
                     {allowedAdminRoutes.map((route) => (
                       <Link
@@ -167,11 +171,12 @@ export function Sidebar({ className }: SidebarProps) {
                         className={cn(
                           "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                           isActive(route.path)
-                            ? "bg-accent text-accent-foreground font-medium"
-                            : "hover:bg-accent hover:text-accent-foreground"
+                            ? "bg-blue-800 text-white font-medium"
+                            : "text-blue-100 hover:bg-blue-800 hover:text-white"
                         )}
                         onClick={() => setIsOpen(false)}
                       >
+                        {route.icon}
                         <span>{route.name}</span>
                       </Link>
                     ))}
@@ -180,21 +185,23 @@ export function Sidebar({ className }: SidebarProps) {
               )}
             </div>
           </ScrollArea>
-          <div className="px-6 py-4 border-t">
+          <div className="px-6 py-4 border-t border-blue-800">
             <div className="flex items-center gap-2">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user?.name}</p>
-                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+                <p className="text-xs text-blue-300 truncate">{user?.email}</p>
               </div>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
                   logout();
                   setIsOpen(false);
                 }}
+                className="text-blue-100 hover:text-white hover:bg-blue-800"
               >
-                Sair
+                <LogOut className="h-4 w-4" />
+                <span className="sr-only">Sair</span>
               </Button>
             </div>
           </div>
@@ -207,22 +214,22 @@ export function Sidebar({ className }: SidebarProps) {
   const DesktopSidebar = (
     <div
       className={cn(
-        "hidden md:flex flex-col h-full border-r bg-background",
+        "hidden md:flex flex-col h-full bg-blue-900 border-r border-blue-800",
         isCollapsed ? "w-16" : "w-64",
         className
       )}
     >
       <div className={cn(
-        "flex h-14 items-center border-b px-4",
+        "flex h-14 items-center px-4 bg-blue-950 border-b border-blue-800",
         isCollapsed ? "justify-center" : "justify-between"
       )}>
-        {!isCollapsed && <h2 className="text-lg font-semibold">SIGRE</h2>}
+        {!isCollapsed && <h2 className="text-lg font-semibold text-white">SIGRE</h2>}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
           title={isCollapsed ? "Expandir" : "Recolher"}
-          className="h-9 w-9"
+          className="h-9 w-9 text-white hover:bg-blue-800"
         >
           {isCollapsed ? <ChevronDown className="h-5 w-5 rotate-90" /> : <ChevronDown className="h-5 w-5 -rotate-90" />}
         </Button>
@@ -231,9 +238,9 @@ export function Sidebar({ className }: SidebarProps) {
       <ScrollArea className="flex-1 py-2">
         <div className="space-y-4 px-2">
           <TooltipProvider delayDuration={0}>
-            <div className="space-y-1">
+            <div className="space-y-2">
               {!isCollapsed && (
-                <h3 className="px-4 text-xs font-medium text-muted-foreground">
+                <h3 className="px-4 text-xs font-medium text-blue-300 uppercase tracking-wider">
                   Módulos
                 </h3>
               )}
@@ -246,16 +253,13 @@ export function Sidebar({ className }: SidebarProps) {
                         className={cn(
                           "flex items-center rounded-md px-3 py-2 text-sm transition-colors",
                           isActive(module.path)
-                            ? "bg-accent text-accent-foreground font-medium"
-                            : "hover:bg-accent hover:text-accent-foreground",
-                          isCollapsed && "justify-center"
+                            ? "bg-blue-800 text-white font-medium"
+                            : "text-blue-100 hover:bg-blue-800 hover:text-white",
+                          isCollapsed ? "justify-center" : "gap-3"
                         )}
                       >
-                        {isCollapsed ? (
-                          <span className="text-base">{module.name[0]}</span>
-                        ) : (
-                          <span>{module.name}</span>
-                        )}
+                        {module.icon}
+                        {!isCollapsed && <span>{module.name}</span>}
                       </Link>
                     </TooltipTrigger>
                     {isCollapsed && (
@@ -269,9 +273,9 @@ export function Sidebar({ className }: SidebarProps) {
             </div>
             
             {user?.role === "master" && allowedAdminRoutes.length > 0 && (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {!isCollapsed && (
-                  <h3 className="px-4 text-xs font-medium text-muted-foreground">
+                  <h3 className="px-4 text-xs font-medium text-blue-300 uppercase tracking-wider">
                     Administração
                   </h3>
                 )}
@@ -284,16 +288,13 @@ export function Sidebar({ className }: SidebarProps) {
                           className={cn(
                             "flex items-center rounded-md px-3 py-2 text-sm transition-colors",
                             isActive(route.path)
-                              ? "bg-accent text-accent-foreground font-medium"
-                              : "hover:bg-accent hover:text-accent-foreground",
-                            isCollapsed && "justify-center"
+                              ? "bg-blue-800 text-white font-medium"
+                              : "text-blue-100 hover:bg-blue-800 hover:text-white",
+                            isCollapsed ? "justify-center" : "gap-3"
                           )}
                         >
-                          {isCollapsed ? (
-                            <span className="text-base">{route.name[0]}</span>
-                          ) : (
-                            <span>{route.name}</span>
-                          )}
+                          {route.icon}
+                          {!isCollapsed && <span>{route.name}</span>}
                         </Link>
                       </TooltipTrigger>
                       {isCollapsed && (
@@ -311,11 +312,11 @@ export function Sidebar({ className }: SidebarProps) {
       </ScrollArea>
       
       <div className={cn(
-        "border-t p-4", 
+        "border-t border-blue-800 p-4", 
         isCollapsed && "flex flex-col items-center"
       )}>
         {currentSchool && !isCollapsed && (
-          <p className="text-xs text-muted-foreground truncate mb-2">
+          <p className="text-xs text-blue-300 truncate mb-2">
             {currentSchool.name}
           </p>
         )}
@@ -325,17 +326,18 @@ export function Sidebar({ className }: SidebarProps) {
         )}>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+              <p className="text-xs text-blue-300 truncate">{user?.email}</p>
             </div>
           )}
           <Button
-            variant="outline"
+            variant="ghost"
             size={isCollapsed ? "icon" : "sm"}
             onClick={logout}
             title="Sair"
+            className="text-blue-100 hover:text-white hover:bg-blue-800"
           >
-            {isCollapsed ? <X className="h-4 w-4" /> : "Sair"}
+            {isCollapsed ? <LogOut className="h-4 w-4" /> : "Sair"}
           </Button>
         </div>
       </div>

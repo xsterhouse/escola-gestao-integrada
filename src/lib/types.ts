@@ -22,8 +22,12 @@ export type School = {
   id: string;
   name: string;
   cnpj: string;
+  address?: string;
+  cityState?: string;
   responsibleName: string;
+  phone?: string;
   email: string;
+  status: "active" | "suspended";
   createdAt: Date;
   updatedAt: Date;
 };
@@ -44,4 +48,14 @@ export type DashboardMetric = {
   change?: number;
   icon: string;
   color: string;
+  additionalInfo?: string;
+};
+
+export type PurchasingCenter = {
+  id: string;
+  name: string;
+  description: string;
+  schoolIds: string[];
+  createdAt: Date;
+  updatedAt: Date;
 };
