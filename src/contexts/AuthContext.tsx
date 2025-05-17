@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User, School } from "@/lib/types";
 
@@ -17,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const MOCK_MASTER_USER: User = {
   id: "1",
   name: "Admin Master",
-  email: "admin@sigre.com",
+  email: "admin@sigre.net.br", // Atualizado para o email correto
   role: "master",
   schoolId: null,
   permissions: [
@@ -86,7 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // In a real app, this would be an API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (email === "admin@sigre.com" && password === "password") {
+      // Verificação correta das credenciais do admin master
+      if (email === "admin@sigre.net.br" && password === "Sigre101020@") {
         setUser(MOCK_MASTER_USER);
         
         if (remember) {

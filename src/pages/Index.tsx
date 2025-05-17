@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading, login } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   
   useEffect(() => {
     // Set admin credentials in localStorage for demo purposes
@@ -35,7 +35,7 @@ const Index = () => {
         navigate("/login");
       }
     }
-  }, [isAuthenticated, isLoading, navigate, login]);
+  }, [isAuthenticated, isLoading, navigate]);
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
