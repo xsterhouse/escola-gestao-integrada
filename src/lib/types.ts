@@ -1,61 +1,38 @@
-
-export type UserRole = "master" | "admin" | "user" | "viewer";
-
-export type ModulePermission = {
+export interface Permission {
   id: string;
   name: string;
   hasAccess: boolean;
-};
+}
 
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  schoolId: string | null;
-  permissions: ModulePermission[];
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type School = {
+export interface School {
   id: string;
   name: string;
   cnpj: string;
-  address?: string;
-  cityState?: string;
   responsibleName: string;
-  phone?: string;
   email: string;
   status: "active" | "suspended";
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
-export type Module = {
+// Add the status field to the User interface
+export interface User {
   id: string;
   name: string;
-  icon: string;
-  path: string;
-  description: string;
-  requiredPermission: string;
-};
+  email: string;
+  role: string;
+  schoolId: string | null;
+  permissions: Permission[];
+  status?: "active" | "inactive";
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-export type DashboardMetric = {
+export interface DashboardMetric {
   id: string;
   title: string;
-  value: string | number;
-  change?: number;
+  value: string;
   icon: string;
   color: string;
   additionalInfo?: string;
-};
-
-export type PurchasingCenter = {
-  id: string;
-  name: string;
-  description: string;
-  schoolIds: string[];
-  createdAt: Date;
-  updatedAt: Date;
-};
+}

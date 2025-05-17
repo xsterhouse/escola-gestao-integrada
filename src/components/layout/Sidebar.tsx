@@ -22,7 +22,8 @@ import {
   Users, 
   ShoppingCart, 
   Shield, 
-  LogOut 
+  LogOut,
+  School
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -129,28 +130,31 @@ export function Sidebar({ className }: SidebarProps) {
           <span className="sr-only">Toggle Menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-0 bg-blue-900">
+      <SheetContent side="left" className="w-72 p-0 bg-[#012340]">
         <div className="flex flex-col h-full">
-          <div className="px-6 py-4 border-b border-blue-800">
+          <div className="px-6 py-4 border-b border-[#01356b]">
             <h2 className="text-lg font-semibold text-white">SIGRE</h2>
             {currentSchool && (
-              <p className="text-sm text-blue-300 truncate">{currentSchool.name}</p>
+              <div className="flex items-center gap-2 mt-2 text-sm text-blue-300">
+                <School className="h-4 w-4" />
+                <p className="truncate">{currentSchool.name}</p>
+              </div>
             )}
           </div>
           <ScrollArea className="flex-1 p-6">
-            <div className="space-y-6">
-              <div className="space-y-2">
+            <div className="space-y-8">
+              <div className="space-y-3">
                 <h3 className="text-sm font-medium text-blue-300">Módulos</h3>
-                <nav className="space-y-1">
+                <nav className="space-y-2.5">
                   {allowedModules.map((module) => (
                     <Link
                       key={module.id}
                       to={module.path}
                       className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                        "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
                         isActive(module.path)
-                          ? "bg-blue-800 text-white font-medium"
-                          : "text-blue-100 hover:bg-blue-800 hover:text-white"
+                          ? "bg-[#01356b] text-white font-medium"
+                          : "text-blue-100 hover:bg-[#01356b] hover:text-white"
                       )}
                       onClick={() => setIsOpen(false)}
                     >
@@ -161,18 +165,18 @@ export function Sidebar({ className }: SidebarProps) {
                 </nav>
               </div>
               {user?.role === "master" && allowedAdminRoutes.length > 0 && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <h3 className="text-sm font-medium text-blue-300">Administração</h3>
-                  <nav className="space-y-1">
+                  <nav className="space-y-2.5">
                     {allowedAdminRoutes.map((route) => (
                       <Link
                         key={route.id}
                         to={route.path}
                         className={cn(
-                          "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                          "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
                           isActive(route.path)
-                            ? "bg-blue-800 text-white font-medium"
-                            : "text-blue-100 hover:bg-blue-800 hover:text-white"
+                            ? "bg-[#01356b] text-white font-medium"
+                            : "text-blue-100 hover:bg-[#01356b] hover:text-white"
                         )}
                         onClick={() => setIsOpen(false)}
                       >
@@ -185,7 +189,7 @@ export function Sidebar({ className }: SidebarProps) {
               )}
             </div>
           </ScrollArea>
-          <div className="px-6 py-4 border-t border-blue-800">
+          <div className="px-6 py-4 border-t border-[#01356b]">
             <div className="flex items-center gap-2">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">{user?.name}</p>
@@ -198,7 +202,7 @@ export function Sidebar({ className }: SidebarProps) {
                   logout();
                   setIsOpen(false);
                 }}
-                className="text-blue-100 hover:text-white hover:bg-blue-800"
+                className="text-blue-100 hover:text-white hover:bg-[#01356b]"
               >
                 <LogOut className="h-4 w-4" />
                 <span className="sr-only">Sair</span>
@@ -214,13 +218,13 @@ export function Sidebar({ className }: SidebarProps) {
   const DesktopSidebar = (
     <div
       className={cn(
-        "hidden md:flex flex-col h-full bg-blue-900 border-r border-blue-800",
+        "hidden md:flex flex-col h-full bg-[#012340] border-r border-[#01356b]",
         isCollapsed ? "w-16" : "w-64",
         className
       )}
     >
       <div className={cn(
-        "flex h-14 items-center px-4 bg-blue-950 border-b border-blue-800",
+        "flex h-14 items-center px-4 bg-[#01183a] border-b border-[#01356b]",
         isCollapsed ? "justify-center" : "justify-between"
       )}>
         {!isCollapsed && <h2 className="text-lg font-semibold text-white">SIGRE</h2>}
@@ -229,32 +233,41 @@ export function Sidebar({ className }: SidebarProps) {
           size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
           title={isCollapsed ? "Expandir" : "Recolher"}
-          className="h-9 w-9 text-white hover:bg-blue-800"
+          className="h-9 w-9 text-white hover:bg-[#01356b]"
         >
           {isCollapsed ? <ChevronDown className="h-5 w-5 rotate-90" /> : <ChevronDown className="h-5 w-5 -rotate-90" />}
         </Button>
       </div>
       
-      <ScrollArea className="flex-1 py-2">
-        <div className="space-y-4 px-2">
+      <ScrollArea className="flex-1 py-4">
+        <div className="space-y-8 px-3">
           <TooltipProvider delayDuration={0}>
+            {currentSchool && !isCollapsed && (
+              <div className="px-3 py-2 mb-4 flex items-center gap-2 rounded-md bg-[#01356b]/50">
+                <School className="h-5 w-5 text-blue-300" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{currentSchool.name}</p>
+                </div>
+              </div>
+            )}
+            
             <div className="space-y-2">
               {!isCollapsed && (
                 <h3 className="px-4 text-xs font-medium text-blue-300 uppercase tracking-wider">
                   Módulos
                 </h3>
               )}
-              <nav className="space-y-1">
+              <nav className="space-y-2.5">
                 {allowedModules.map((module) => (
                   <Tooltip key={module.id} delayDuration={0}>
                     <TooltipTrigger asChild>
                       <Link
                         to={module.path}
                         className={cn(
-                          "flex items-center rounded-md px-3 py-2 text-sm transition-colors",
+                          "flex items-center rounded-md px-3 py-2.5 text-sm transition-colors",
                           isActive(module.path)
-                            ? "bg-blue-800 text-white font-medium"
-                            : "text-blue-100 hover:bg-blue-800 hover:text-white",
+                            ? "bg-[#01356b] text-white font-medium"
+                            : "text-blue-100 hover:bg-[#01356b] hover:text-white",
                           isCollapsed ? "justify-center" : "gap-3"
                         )}
                       >
@@ -275,21 +288,21 @@ export function Sidebar({ className }: SidebarProps) {
             {user?.role === "master" && allowedAdminRoutes.length > 0 && (
               <div className="space-y-2">
                 {!isCollapsed && (
-                  <h3 className="px-4 text-xs font-medium text-blue-300 uppercase tracking-wider">
+                  <h3 className="px-4 text-xs font-medium text-blue-300 uppercase tracking-wider mt-6">
                     Administração
                   </h3>
                 )}
-                <nav className="space-y-1">
+                <nav className="space-y-2.5">
                   {allowedAdminRoutes.map((route) => (
                     <Tooltip key={route.id} delayDuration={0}>
                       <TooltipTrigger asChild>
                         <Link
                           to={route.path}
                           className={cn(
-                            "flex items-center rounded-md px-3 py-2 text-sm transition-colors",
+                            "flex items-center rounded-md px-3 py-2.5 text-sm transition-colors",
                             isActive(route.path)
-                              ? "bg-blue-800 text-white font-medium"
-                              : "text-blue-100 hover:bg-blue-800 hover:text-white",
+                              ? "bg-[#01356b] text-white font-medium"
+                              : "text-blue-100 hover:bg-[#01356b] hover:text-white",
                             isCollapsed ? "justify-center" : "gap-3"
                           )}
                         >
@@ -312,7 +325,7 @@ export function Sidebar({ className }: SidebarProps) {
       </ScrollArea>
       
       <div className={cn(
-        "border-t border-blue-800 p-4", 
+        "border-t border-[#01356b] p-4", 
         isCollapsed && "flex flex-col items-center"
       )}>
         {currentSchool && !isCollapsed && (
@@ -335,7 +348,7 @@ export function Sidebar({ className }: SidebarProps) {
             size={isCollapsed ? "icon" : "sm"}
             onClick={logout}
             title="Sair"
-            className="text-blue-100 hover:text-white hover:bg-blue-800"
+            className="text-blue-100 hover:text-white hover:bg-[#01356b]"
           >
             {isCollapsed ? <LogOut className="h-4 w-4" /> : "Sair"}
           </Button>

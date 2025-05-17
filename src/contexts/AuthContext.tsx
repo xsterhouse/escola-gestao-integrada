@@ -1,6 +1,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User, School } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
 type AuthContextType = {
   user: User | null;
@@ -10,6 +11,7 @@ type AuthContextType = {
   login: (email: string, password: string, remember: boolean) => Promise<void>;
   logout: () => void;
   setCurrentSchool: (school: School) => void;
+  availableSchools: School[];
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,12 +59,57 @@ const MOCK_SCHOOLS: School[] = [
     createdAt: new Date(),
     updatedAt: new Date(),
   },
+  {
+    id: "3",
+    name: "Escola Municipal Maria José",
+    cnpj: "45.678.901/0001-23",
+    responsibleName: "Pedro Alves",
+    email: "contato@mariajose.edu.br",
+    status: "active",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
+
+// Mock school users
+const MOCK_SCHOOL_USERS: User[] = [
+  {
+    id: "2",
+    name: "João Silva",
+    email: "joao@escola1.com",
+    role: "admin",
+    schoolId: "1",
+    permissions: [
+      { id: "1", name: "dashboard", hasAccess: true },
+      { id: "2", name: "products", hasAccess: true },
+      { id: "3", name: "inventory", hasAccess: true },
+      { id: "4", name: "financial", hasAccess: true }
+    ],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: "3",
+    name: "Maria Oliveira",
+    email: "maria@escola2.com",
+    role: "admin",
+    schoolId: "2",
+    permissions: [
+      { id: "1", name: "dashboard", hasAccess: true },
+      { id: "2", name: "products", hasAccess: true },
+      { id: "3", name: "inventory", hasAccess: true }
+    ],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [currentSchool, setCurrentSchool] = useState<School | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [availableSchools, setAvailableSchools] = useState<School[]>([]);
 
   // Check for saved authentication on mount
   useEffect(() => {
@@ -70,9 +117,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const savedSchool = localStorage.getItem("sigre_school");
     
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      const parsedUser = JSON.parse(savedUser);
+      setUser(parsedUser);
+      
+      // Set available schools based on user role
+      if (parsedUser.role === "master") {
+        setAvailableSchools(MOCK_SCHOOLS);
+      } else if (parsedUser.schoolId) {
+        const userSchool = MOCK_SCHOOLS.find(school => school.id === parsedUser.schoolId);
+        if (userSchool) {
+          setAvailableSchools([userSchool]);
+        }
+      }
+      
       if (savedSchool) {
         setCurrentSchool(JSON.parse(savedSchool));
+      } else if (parsedUser.schoolId) {
+        // If no saved school but user has a schoolId, set that as current
+        const userSchool = MOCK_SCHOOLS.find(school => school.id === parsedUser.schoolId);
+        if (userSchool) {
+          setCurrentSchool(userSchool);
+          localStorage.setItem("sigre_school", JSON.stringify(userSchool));
+        }
       }
     }
     
@@ -90,17 +156,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Verificação correta das credenciais do admin master
       if (email === "admin@sigre.net.br" && password === "Sigre101020@") {
         setUser(MOCK_MASTER_USER);
+        setAvailableSchools(MOCK_SCHOOLS);
         
         if (remember) {
           localStorage.setItem("sigre_user", JSON.stringify(MOCK_MASTER_USER));
         }
         
+        toast({
+          title: "Login realizado com sucesso",
+          description: "Bem-vindo ao SIGRE!"
+        });
+        
         return;
       }
       
-      throw new Error("Invalid credentials");
+      // Check school users
+      const schoolUser = MOCK_SCHOOL_USERS.find(
+        user => user.email === email && password === "password" // For demo, all school users have "password" as password
+      );
+      
+      if (schoolUser) {
+        setUser(schoolUser);
+        
+        // Find user's school
+        const userSchool = MOCK_SCHOOLS.find(school => school.id === schoolUser.schoolId);
+        if (userSchool) {
+          setCurrentSchool(userSchool);
+          setAvailableSchools([userSchool]);
+          
+          if (remember) {
+            localStorage.setItem("sigre_user", JSON.stringify(schoolUser));
+            localStorage.setItem("sigre_school", JSON.stringify(userSchool));
+          }
+          
+          toast({
+            title: "Login realizado com sucesso",
+            description: `Bem-vindo ao ambiente da ${userSchool.name}!`
+          });
+          
+          return;
+        }
+      }
+      
+      throw new Error("Credenciais inválidas");
     } catch (error) {
       console.error("Login failed:", error);
+      toast({
+        title: "Erro de autenticação",
+        description: "Email ou senha incorretos",
+        variant: "destructive"
+      });
       throw error;
     } finally {
       setIsLoading(false);
@@ -110,13 +215,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     setCurrentSchool(null);
+    setAvailableSchools([]);
     localStorage.removeItem("sigre_user");
     localStorage.removeItem("sigre_school");
+    toast({
+      title: "Logout realizado",
+      description: "Você saiu do sistema com sucesso."
+    });
   };
 
   const handleSetCurrentSchool = (school: School) => {
     setCurrentSchool(school);
     localStorage.setItem("sigre_school", JSON.stringify(school));
+    toast({
+      title: "Escola selecionada",
+      description: `Você está visualizando o ambiente da ${school.name}`,
+    });
   };
 
   const value = {
@@ -127,6 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     setCurrentSchool: handleSetCurrentSchool,
+    availableSchools,
   };
 
   return (

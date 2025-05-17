@@ -5,20 +5,24 @@ import { DashboardCards } from "@/components/dashboard/DashboardCards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { DashboardMetric } from "@/lib/types";
+import { DashboardMetric, School } from "@/lib/types";
 import { 
   FileText, 
   Package, 
   Receipt, 
   DollarSign,
   BarChart3,
-  PieChart
+  PieChart,
+  School as SchoolIcon,
+  Import
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Dashboard = () => {
-  const { user, currentSchool } = useAuth();
+  const { user, currentSchool, setCurrentSchool } = useAuth();
   const [lastAccess, setLastAccess] = useState("");
   const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
+  const [availableSchools, setAvailableSchools] = useState<School[]>([]);
   
   useEffect(() => {
     // Format current date for last access display
@@ -68,7 +72,40 @@ const Dashboard = () => {
         additionalInfo: "12 pagamentos pendentes"
       },
     ]);
-  }, []);
+
+    // Mock data for schools (in a real app, this would be fetched from an API)
+    if (user?.role === "master") {
+      setAvailableSchools([
+        {
+          id: "1",
+          name: "Escola Municipal João da Silva",
+          cnpj: "12.345.678/0001-90",
+          responsibleName: "Maria Oliveira",
+          email: "contato@joaodasilva.edu.br",
+          status: "active",
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          id: "2",
+          name: "Colégio Estadual Paulo Freire",
+          cnpj: "98.765.432/0001-10",
+          responsibleName: "Carlos Santos",
+          email: "contato@paulofreire.edu.br",
+          status: "active",
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ]);
+    }
+  }, [user]);
+
+  const handleSchoolChange = (schoolId: string) => {
+    const school = availableSchools.find(s => s.id === schoolId);
+    if (school) {
+      setCurrentSchool(school);
+    }
+  };
 
   return (
     <AppLayout>
@@ -82,17 +119,36 @@ const Dashboard = () => {
               Bem-vindo ao SIGRE - Sistema Integrado de Gestão de Recursos Escolares
             </p>
           </div>
-          <div className="text-sm text-muted-foreground mt-2 md:mt-0">
-            Último acesso: {lastAccess}
+          <div className="flex flex-col gap-2 mt-4 md:mt-0">
+            {user?.role === "master" && (
+              <Select onValueChange={handleSchoolChange} value={currentSchool?.id}>
+                <SelectTrigger className="w-[280px]">
+                  <SelectValue placeholder="Selecione uma escola" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSchools.map(school => (
+                    <SelectItem key={school.id} value={school.id}>
+                      <div className="flex items-center gap-2">
+                        <SchoolIcon className="h-4 w-4" />
+                        <span>{school.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="text-sm text-muted-foreground">
+              Último acesso: {lastAccess}
+            </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-white shadow-sm border-l-4 border-l-blue-600">
+          <Card className="bg-white shadow-sm border-l-4 border-l-[#012340]">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
-                <div className="bg-blue-100 p-3 rounded-lg">
-                  <FileText className="h-6 w-6 text-blue-600" />
+                <div className="bg-[#012340]/10 p-3 rounded-lg">
+                  <FileText className="h-6 w-6 text-[#012340]" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Novo Contrato</p>
@@ -102,11 +158,11 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          <Card className="bg-white shadow-sm border-l-4 border-l-amber-600">
+          <Card className="bg-white shadow-sm border-l-4 border-l-[#012340]">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
-                <div className="bg-amber-100 p-3 rounded-lg">
-                  <Package className="h-6 w-6 text-amber-600" />
+                <div className="bg-[#012340]/10 p-3 rounded-lg">
+                  <Package className="h-6 w-6 text-[#012340]" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Registrar Produto</p>
@@ -116,25 +172,25 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          <Card className="bg-white shadow-sm border-l-4 border-l-orange-600">
+          <Card className="bg-white shadow-sm border-l-4 border-l-[#012340]">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
-                <div className="bg-orange-100 p-3 rounded-lg">
-                  <Receipt className="h-6 w-6 text-orange-600" />
+                <div className="bg-[#012340]/10 p-3 rounded-lg">
+                  <Import className="h-6 w-6 text-[#012340]" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Emitir Nota</p>
-                  <p className="text-sm text-muted-foreground">Gerar nova nota fiscal</p>
+                  <p className="text-sm font-medium text-muted-foreground">Importar Nota</p>
+                  <p className="text-sm text-muted-foreground">Importar Nota XML</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-white shadow-sm border-l-4 border-l-green-600">
+          <Card className="bg-white shadow-sm border-l-4 border-l-[#012340]">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
-                <div className="bg-green-100 p-3 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-green-600" />
+                <div className="bg-[#012340]/10 p-3 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-[#012340]" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Novo Pagamento</p>
@@ -146,15 +202,15 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="border-t-4 border-t-blue-600 md:col-span-1">
+          <Card className="border-t-4 border-t-[#012340] md:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-medium">Contratos Ativos</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-3xl font-bold">32</div>
-                <div className="bg-blue-100 p-2 rounded-lg">
-                  <FileText className="h-5 w-5 text-blue-600" />
+                <div className="bg-[#012340]/10 p-2 rounded-lg">
+                  <FileText className="h-5 w-5 text-[#012340]" />
                 </div>
               </div>
               <div className="text-xs text-green-600 mt-2">
@@ -165,15 +221,15 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          <Card className="border-t-4 border-t-amber-600 md:col-span-1">
+          <Card className="border-t-4 border-t-[#012340] md:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-medium">Produtos em Estoque</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-3xl font-bold">1.250</div>
-                <div className="bg-amber-100 p-2 rounded-lg">
-                  <Package className="h-5 w-5 text-amber-600" />
+                <div className="bg-[#012340]/10 p-2 rounded-lg">
+                  <Package className="h-5 w-5 text-[#012340]" />
                 </div>
               </div>
               <div className="text-xs text-amber-600 mt-2">
@@ -184,15 +240,15 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          <Card className="border-t-4 border-t-orange-600 md:col-span-1">
+          <Card className="border-t-4 border-t-[#012340] md:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-medium">Notas e Recibos</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-3xl font-bold">145</div>
-                <div className="bg-orange-100 p-2 rounded-lg">
-                  <Receipt className="h-5 w-5 text-orange-600" />
+                <div className="bg-[#012340]/10 p-2 rounded-lg">
+                  <Receipt className="h-5 w-5 text-[#012340]" />
                 </div>
               </div>
               <div className="text-xs text-orange-600 mt-2">
@@ -203,15 +259,15 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          <Card className="border-t-4 border-t-green-600 md:col-span-1">
+          <Card className="border-t-4 border-t-[#012340] md:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-medium">Financeiro</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-3xl font-bold">R$ 24.500</div>
-                <div className="bg-green-100 p-2 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-green-600" />
+                <div className="bg-[#012340]/10 p-2 rounded-lg">
+                  <DollarSign className="h-5 w-5 text-[#012340]" />
                 </div>
               </div>
               <div className="text-xs text-green-600 mt-2">
@@ -230,7 +286,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent className="pt-4">
               <div className="flex justify-center items-center h-60">
-                <BarChart3 className="h-40 w-40 text-green-500 opacity-50" />
+                <BarChart3 className="h-40 w-40 text-[#012340]/50" />
                 <p className="text-sm text-muted-foreground absolute">
                   Gráficos serão exibidos aqui
                 </p>
@@ -244,7 +300,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent className="pt-4">
               <div className="flex justify-center items-center h-60">
-                <PieChart className="h-40 w-40 text-amber-500 opacity-50" />
+                <PieChart className="h-40 w-40 text-[#012340]/50" />
                 <p className="text-sm text-muted-foreground absolute">
                   Gráficos serão exibidos aqui
                 </p>

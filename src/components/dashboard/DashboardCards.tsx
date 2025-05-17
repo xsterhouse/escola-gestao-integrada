@@ -10,52 +10,30 @@ type DashboardCardsProps = {
 const getIconComponent = (icon: string) => {
   switch (icon) {
     case "contracts":
-      return <FileText className="h-5 w-5 text-blue-600" />;
+      return <FileText className="h-5 w-5 text-[#012340]" />;
     case "stock":
-      return <Package className="h-5 w-5 text-amber-600" />;
+      return <Package className="h-5 w-5 text-[#012340]" />;
     case "receipt":
-      return <Receipt className="h-5 w-5 text-orange-600" />;
+      return <Receipt className="h-5 w-5 text-[#012340]" />;
     case "finance":
-      return <DollarSign className="h-5 w-5 text-green-600" />;
+      return <DollarSign className="h-5 w-5 text-[#012340]" />;
     default:
-      return <FileText className="h-5 w-5" />;
+      return <FileText className="h-5 w-5 text-[#012340]" />;
   }
 };
 
-const getBackgroundColor = (color: string) => {
-  switch (color) {
-    case "blue":
-      return "bg-blue-100";
-    case "amber":
-      return "bg-amber-100";
-    case "orange":
-      return "bg-orange-100";
-    case "green":
-      return "bg-green-100";
-    default:
-      return "bg-gray-100";
-  }
+const getBackgroundColor = () => {
+  return "bg-[#012340]/10";
 };
 
-const getBorderColor = (color: string) => {
-  switch (color) {
-    case "blue":
-      return "border-t-blue-600";
-    case "amber":
-      return "border-t-amber-600";
-    case "orange":
-      return "border-t-orange-600";
-    case "green":
-      return "border-t-green-600";
-    default:
-      return "border-t-gray-600";
-  }
+const getBorderColor = () => {
+  return "border-t-[#012340]";
 };
 
 const getTextColor = (color: string) => {
   switch (color) {
     case "blue":
-      return "text-blue-600";
+      return "text-[#012340]";
     case "amber":
       return "text-amber-600";
     case "orange":
@@ -63,7 +41,7 @@ const getTextColor = (color: string) => {
     case "green":
       return "text-green-600";
     default:
-      return "text-gray-600";
+      return "text-[#012340]";
   }
 };
 
@@ -73,7 +51,7 @@ export function DashboardCards({ metrics }: DashboardCardsProps) {
       {metrics.map((metric) => (
         <Card 
           key={metric.id} 
-          className={`border-t-4 ${getBorderColor(metric.color)}`}
+          className={`border-t-4 ${getBorderColor()}`}
         >
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">{metric.title}</CardTitle>
@@ -81,7 +59,7 @@ export function DashboardCards({ metrics }: DashboardCardsProps) {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-3xl font-bold">{metric.value}</div>
-              <div className={`${getBackgroundColor(metric.color)} p-2 rounded-lg`}>
+              <div className={`${getBackgroundColor()} p-2 rounded-lg`}>
                 {getIconComponent(metric.icon)}
               </div>
             </div>
