@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { User } from "@/lib/types";
+import { User, School } from "@/lib/types";
 import { UserForm } from "@/components/users/UserForm";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, Pencil, Trash2, Ban, ShieldCheck, Plus } from "lucide-react";
@@ -43,6 +43,30 @@ export function UserTab() {
       status: "inactive",
       createdAt: new Date(),
       updatedAt: new Date()
+    }
+  ]);
+  
+  // Add mock schools data
+  const [schools, setSchools] = useState<School[]>([
+    {
+      id: "1",
+      name: "Escola Municipal João da Silva",
+      cnpj: "12.345.678/0001-90",
+      responsibleName: "Maria Oliveira",
+      email: "contato@joaodasilva.edu.br",
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "2",
+      name: "Colégio Estadual Paulo Freire",
+      cnpj: "98.765.432/0001-10",
+      responsibleName: "Carlos Santos",
+      email: "contato@paulofreire.edu.br",
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }
   ]);
 
@@ -223,6 +247,7 @@ export function UserTab() {
             onClose={() => setIsModalOpen(false)}
             onSave={handleSaveUser}
             initialData={currentUser || undefined}
+            schools={schools}
           />
         )}
       </CardContent>

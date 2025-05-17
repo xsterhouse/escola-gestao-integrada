@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { School, User, ModulePermission, UserRole } from "@/lib/types";
+import { School, User, Permission } from "@/lib/types";
 
 type UserFormProps = {
   isOpen: boolean;
@@ -35,13 +35,13 @@ export function UserForm({
   onClose,
   onSave,
   initialData,
-  schools,
+  schools = [], // Provide default empty array to prevent undefined errors
 }: UserFormProps) {
   const [name, setName] = useState(initialData?.name || "");
   const [email, setEmail] = useState(initialData?.email || "");
-  const [role, setRole] = useState<UserRole>(initialData?.role || "user");
+  const [role, setRole] = useState(initialData?.role || "user");
   const [schoolId, setSchoolId] = useState(initialData?.schoolId || "");
-  const [permissions, setPermissions] = useState<ModulePermission[]>(
+  const [permissions, setPermissions] = useState<Permission[]>(
     initialData?.permissions || [
       { id: "1", name: "dashboard", hasAccess: true },
       { id: "2", name: "products", hasAccess: false },
@@ -171,7 +171,7 @@ export function UserForm({
               <Label htmlFor="role">Tipo de Usuário *</Label>
               <Select
                 value={role}
-                onValueChange={(value) => setRole(value as UserRole)}
+                onValueChange={(value) => setRole(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />

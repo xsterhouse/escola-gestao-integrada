@@ -48,6 +48,7 @@ export interface ModulePermission {
   read: boolean;
   update: boolean;
   delete: boolean;
+  hasAccess?: boolean; // Added for compatibility
 }
 
 export interface UserRole {
