@@ -3,7 +3,7 @@ import { useState, useCallback, useRef } from "react";
 import mammoth from "mammoth";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
-import { FileText, Plus, Filter, Download, Trash2, Eye, Import, FileX } from "lucide-react";
+import { FileText, Plus, Filter, Download, Trash2, Eye, Import } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -67,7 +67,7 @@ export default function Products() {
     } finally {
       setLoading(false);
     }
-  }, [saveProducts, products]);
+  }, []);
 
   // Process DOCX file
   const processDocxFile = async (file: File) => {
@@ -313,7 +313,7 @@ export default function Products() {
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => setDeleteMode("multiple")}>
+                <Button variant="outline" onClick={() => setDeleteMode("multiple")} disabled={selectedProducts.length === 0}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Excluir Itens
                 </Button>

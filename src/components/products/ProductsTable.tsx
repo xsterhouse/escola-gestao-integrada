@@ -82,7 +82,7 @@ export function ProductsTable({
             <TableHead className="w-[50px]">
               <Checkbox 
                 checked={products.length > 0 && selectedProducts.length === products.length} 
-                onCheckedChange={handleSelectAll}
+                onCheckedChange={(checked) => handleSelectAll(!!checked)}
               />
             </TableHead>
             <TableHead className="w-[80px]">Item</TableHead>
