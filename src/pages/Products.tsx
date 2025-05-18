@@ -92,26 +92,41 @@ export default function Products() {
       
       // Get table rows
       const rows = Array.from(table.querySelectorAll('tr'));
+      if (rows.length < 2) {
+        toast.error("A tabela não contém dados suficientes");
+        return;
+      }
       
       // Get headers from the first row
       const headers = Array.from(rows[0].querySelectorAll('th, td')).map(cell => 
         cell.textContent?.trim().toLowerCase() || '');
       
-      // Check if headers match expected format
-      const requiredHeaders = ['item', 'descrição de produtos', 'unid', 'quant.'];
-      const headersMatch = requiredHeaders.every(header => 
-        headers.some(h => h.includes(header)));
+      console.log("Headers encontrados:", headers);
       
-      if (!headersMatch) {
-        toast.error("Formato de tabela inválido. Certifique-se de que a tabela contém os cabeçalhos: Item, Descrição de produtos, Unid, Quant.");
+      // Define os possíveis cabeçalhos para cada coluna (permite variações)
+      const itemHeaders = ['item', 'número', 'num', 'nº', 'n°', 'número do item'];
+      const descHeaders = ['descrição', 'descrição do produto', 'descrição de produtos', 'descrição dos produtos', 'produto', 'produtos'];
+      const unitHeaders = ['unid', 'unidade', 'un', 'und', 'medida', 'un. medida', 'unidade de medida'];
+      const quantHeaders = ['quantidade', 'quant', 'quant.', 'qtde', 'qtd', 'qtd.', 'qtde.'];
+      
+      // Find the indices of the required headers
+      const itemIndex = headers.findIndex(h => itemHeaders.some(keyword => h.includes(keyword)));
+      const descriptionIndex = headers.findIndex(h => descHeaders.some(keyword => h.includes(keyword)));
+      const unitIndex = headers.findIndex(h => unitHeaders.some(keyword => h.includes(keyword)));
+      const quantityIndex = headers.findIndex(h => quantHeaders.some(keyword => h.includes(keyword)));
+      
+      // Verificar se todos os cabeçalhos necessários foram encontrados
+      if (itemIndex === -1 || descriptionIndex === -1 || unitIndex === -1 || quantityIndex === -1) {
+        console.error("Índices encontrados:", {
+          itemIndex,
+          descriptionIndex,
+          unitIndex,
+          quantityIndex
+        });
+        
+        toast.error("Formato de tabela inválido. Certifique-se de que a tabela contém os cabeçalhos: ITEM, DESCRIÇÃO DO PRODUTO, UNID, QUANT.");
         return;
       }
-      
-      // Get column indices
-      const itemIndex = headers.findIndex(h => h.includes('item'));
-      const descriptionIndex = headers.findIndex(h => h.includes('descrição'));
-      const unitIndex = headers.findIndex(h => h.includes('unid'));
-      const quantityIndex = headers.findIndex(h => h.includes('quant'));
       
       // Parse data rows (skip header row)
       const newProducts: Product[] = [];
@@ -124,6 +139,7 @@ export default function Products() {
         // Skip empty rows
         if (cells.length < 3) continue;
         
+        // Obter os valores das células
         const itemText = cells[itemIndex]?.textContent?.trim() || '';
         const item = parseInt(itemText);
         
@@ -137,6 +153,12 @@ export default function Products() {
         const unit = cells[unitIndex]?.textContent?.trim() || '';
         const quantity = cells[quantityIndex]?.textContent?.trim() || '';
         
+        // Validar dados obrigatórios
+        if (!description || !unit) {
+          invalidRows++;
+          continue;
+        }
+        
         // Create new product
         newProducts.push({
           id: uuidv4(),
@@ -144,7 +166,7 @@ export default function Products() {
           description,
           unit,
           quantity,
-          familyAgriculture: false, // Default value
+          familyAgriculture: false, // Default value, will be set manually
           createdAt: new Date(),
           updatedAt: new Date()
         });
@@ -174,7 +196,9 @@ export default function Products() {
     accept: {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
     },
-    multiple: false
+    multiple: false,
+    noClick: false,
+    noKeyboard: false
   });
 
   // Handle adding a new product
@@ -258,7 +282,7 @@ export default function Products() {
           <CardHeader>
             <CardTitle>Importar Tabela de Produtos</CardTitle>
             <CardDescription>
-              Importe produtos a partir de um arquivo .docx contendo uma tabela com os campos: Item, Descrição de produtos, Unid, Quant.
+              Importe produtos a partir de um arquivo .docx contendo uma tabela com os campos: ITEM, DESCRIÇÃO DO PRODUTO, UNID, QUANT.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -279,7 +303,7 @@ export default function Products() {
                     Arraste e solte um arquivo .docx aqui, ou clique para selecionar
                   </p>
                   <p className="text-sm text-muted-foreground mt-2">
-                    O arquivo deve conter uma tabela com as colunas: Item, Descrição de produtos, Unid e Quant.
+                    O arquivo deve conter uma tabela com as colunas: ITEM, DESCRIÇÃO DO PRODUTO, UNID e QUANT.
                   </p>
                 </div>
               )}

@@ -85,10 +85,10 @@ export function ProductsTable({
                 onCheckedChange={(checked) => handleSelectAll(!!checked)}
               />
             </TableHead>
-            <TableHead className="w-[80px]">Item</TableHead>
-            <TableHead>Descrição de produtos</TableHead>
-            <TableHead className="w-[100px]">Unid</TableHead>
-            <TableHead className="w-[100px]">Quant.</TableHead>
+            <TableHead className="w-[80px]">ITEM</TableHead>
+            <TableHead>DESCRIÇÃO DO PRODUTO</TableHead>
+            <TableHead className="w-[100px]">UNID</TableHead>
+            <TableHead className="w-[100px]">QUANT.</TableHead>
             <TableHead className="w-[160px]">Agricultura Familiar</TableHead>
             <TableHead className="w-[150px]">Ações</TableHead>
           </TableRow>
