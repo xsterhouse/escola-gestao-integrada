@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Product } from "@/lib/types";
 
+// Update the schema to make required fields non-optional
 const productSchema = z.object({
   item: z.number().int().positive("O número do item deve ser positivo"),
   description: z.string().min(1, "A descrição é obrigatória"),
@@ -29,7 +30,7 @@ export function AddProductDialog({ open, onOpenChange, onSave }: AddProductDialo
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      item: 0,
+      item: undefined, // Changed from 0 to undefined to trigger validation
       description: "",
       unit: "",
       quantity: "",
@@ -38,7 +39,16 @@ export function AddProductDialog({ open, onOpenChange, onSave }: AddProductDialo
   });
 
   function onSubmit(data: ProductFormValues) {
-    onSave(data);
+    // Ensure all required fields are present before saving
+    const productToSave: Omit<Product, "id" | "createdAt" | "updatedAt"> = {
+      item: data.item,
+      description: data.description,
+      unit: data.unit,
+      quantity: data.quantity,
+      familyAgriculture: data.familyAgriculture,
+    };
+    
+    onSave(productToSave);
     form.reset();
     onOpenChange(false);
   }
@@ -66,7 +76,8 @@ export function AddProductDialog({ open, onOpenChange, onSave }: AddProductDialo
                         type="number" 
                         placeholder="Número do item" 
                         {...field} 
-                        onChange={e => field.onChange(parseInt(e.target.value) || 0)} 
+                        onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} 
+                        value={field.value || ""}
                       />
                     </FormControl>
                     <FormMessage />
