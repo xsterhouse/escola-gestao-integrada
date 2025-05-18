@@ -1,19 +1,15 @@
 
 import { useState, useCallback, useRef } from "react";
-import mammoth from "mammoth";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
-import { FileText, Plus, Filter, Download, Trash2, Eye, Import } from "lucide-react";
-import { useDropzone } from "react-dropzone";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ProductsTable } from "@/components/products/ProductsTable";
 import { AddProductDialog } from "@/components/products/AddProductDialog";
 import { ViewProductDialog } from "@/components/products/ViewProductDialog";
 import { DeleteProductDialog } from "@/components/products/DeleteProductDialog";
+import { ImportProductsCard } from "@/components/products/ImportProductsCard";
+import { ProductsListCard } from "@/components/products/ProductsListCard";
+import { ProductsHeader } from "@/components/products/ProductsHeader";
 import { Product } from "@/lib/types";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { generatePDF } from "@/lib/pdf-utils";
 
 export default function Products() {
@@ -22,14 +18,13 @@ export default function Products() {
     return saved ? JSON.parse(saved) : [];
   });
   
-  const [loading, setLoading] = useState(false);
   const [filterValue, setFilterValue] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [deleteMode, setDeleteMode] = useState<"single" | "multiple" | null>(null);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-
+  
   // Ref to the file input element
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -43,162 +38,6 @@ export default function Products() {
   const filteredProducts = products.filter(product => {
     if (filterValue === "all") return true;
     return filterValue === "yes" ? product.familyAgriculture : !product.familyAgriculture;
-  });
-
-  // Handle file drop
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-
-    setLoading(true);
-    try {
-      // Check file extension
-      const fileExtension = file.name.split('.').pop()?.toLowerCase();
-      
-      if (fileExtension === 'docx') {
-        // Process DOCX file
-        await processDocxFile(file);
-      } else {
-        toast.error("Formato de arquivo não suportado. Por favor, envie um arquivo .docx");
-      }
-    } catch (error) {
-      console.error("Error processing file:", error);
-      toast.error("Erro ao processar o arquivo. Verifique se o formato está correto.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Process DOCX file
-  const processDocxFile = async (file: File) => {
-    try {
-      // Convert the file to arrayBuffer
-      const arrayBuffer = await file.arrayBuffer();
-      
-      // Use mammoth to extract HTML from the DOCX
-      const result = await mammoth.convertToHtml({ arrayBuffer });
-      const html = result.value;
-      
-      // Create a DOM parser
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      
-      // Find the first table
-      const table = doc.querySelector('table');
-      if (!table) {
-        toast.error("Nenhuma tabela encontrada no documento");
-        return;
-      }
-      
-      // Get table rows
-      const rows = Array.from(table.querySelectorAll('tr'));
-      if (rows.length < 2) {
-        toast.error("A tabela não contém dados suficientes");
-        return;
-      }
-      
-      // Get headers from the first row
-      const headers = Array.from(rows[0].querySelectorAll('th, td')).map(cell => 
-        cell.textContent?.trim().toLowerCase() || '');
-      
-      console.log("Headers encontrados:", headers);
-      
-      // Define os possíveis cabeçalhos para cada coluna (permite variações)
-      const itemHeaders = ['item', 'número', 'num', 'nº', 'n°', 'número do item'];
-      const descHeaders = ['descrição', 'descrição do produto', 'descrição de produtos', 'descrição dos produtos', 'produto', 'produtos'];
-      const unitHeaders = ['unid', 'unidade', 'un', 'und', 'medida', 'un. medida', 'unidade de medida'];
-      const quantHeaders = ['quantidade', 'quant', 'quant.', 'qtde', 'qtd', 'qtd.', 'qtde.'];
-      
-      // Find the indices of the required headers
-      const itemIndex = headers.findIndex(h => itemHeaders.some(keyword => h.includes(keyword)));
-      const descriptionIndex = headers.findIndex(h => descHeaders.some(keyword => h.includes(keyword)));
-      const unitIndex = headers.findIndex(h => unitHeaders.some(keyword => h.includes(keyword)));
-      const quantityIndex = headers.findIndex(h => quantHeaders.some(keyword => h.includes(keyword)));
-      
-      // Verificar se todos os cabeçalhos necessários foram encontrados
-      if (itemIndex === -1 || descriptionIndex === -1 || unitIndex === -1 || quantityIndex === -1) {
-        console.error("Índices encontrados:", {
-          itemIndex,
-          descriptionIndex,
-          unitIndex,
-          quantityIndex
-        });
-        
-        toast.error("Formato de tabela inválido. Certifique-se de que a tabela contém os cabeçalhos: ITEM, DESCRIÇÃO DO PRODUTO, UNID, QUANT.");
-        return;
-      }
-      
-      // Parse data rows (skip header row)
-      const newProducts: Product[] = [];
-      let validRows = 0;
-      let invalidRows = 0;
-      
-      for (let i = 1; i < rows.length; i++) {
-        const cells = Array.from(rows[i].querySelectorAll('td, th'));
-        
-        // Skip empty rows
-        if (cells.length < 3) continue;
-        
-        // Obter os valores das células
-        const itemText = cells[itemIndex]?.textContent?.trim() || '';
-        const item = parseInt(itemText);
-        
-        // Validate item (must be a number)
-        if (isNaN(item)) {
-          invalidRows++;
-          continue;
-        }
-        
-        const description = cells[descriptionIndex]?.textContent?.trim() || '';
-        const unit = cells[unitIndex]?.textContent?.trim() || '';
-        const quantity = cells[quantityIndex]?.textContent?.trim() || '';
-        
-        // Validar dados obrigatórios
-        if (!description || !unit) {
-          invalidRows++;
-          continue;
-        }
-        
-        // Create new product
-        newProducts.push({
-          id: uuidv4(),
-          item,
-          description,
-          unit,
-          quantity,
-          familyAgriculture: false, // Default value, will be set manually
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-        
-        validRows++;
-      }
-      
-      if (newProducts.length === 0) {
-        toast.error("Nenhum produto válido encontrado na tabela.");
-        return;
-      }
-      
-      // Update products array
-      const updatedProducts = [...products, ...newProducts];
-      saveProducts(updatedProducts);
-      
-      toast.success(`${validRows} produtos importados com sucesso${invalidRows > 0 ? `. ${invalidRows} linhas inválidas foram ignoradas.` : '.'}`);
-    } catch (error) {
-      console.error("Error processing DOCX file:", error);
-      toast.error("Erro ao processar o arquivo DOCX.");
-    }
-  };
-
-  // Dropzone setup
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
-    },
-    multiple: false,
-    noClick: false,
-    noKeyboard: false
   });
 
   // Handle adding a new product
@@ -222,6 +61,12 @@ export default function Products() {
     );
     saveProducts(updatedProducts);
     toast.success("Produto atualizado com sucesso!");
+  };
+
+  // Handle importing products
+  const handleImportProducts = (newProducts: Product[]) => {
+    const updatedProducts = [...products, ...newProducts];
+    saveProducts(updatedProducts);
   };
 
   // Handle deleting products
@@ -251,117 +96,32 @@ export default function Products() {
   return (
     <AppLayout>
       <div className="container mx-auto py-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Produtos</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Import className="mr-2 h-4 w-4" />
-              Importar Produtos
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleExportPDF(false)}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Exportar PDF
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleExportPDF(true)}
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              Exportar Todos
-            </Button>
-          </div>
-        </div>
+        <ProductsHeader 
+          onImport={() => fileInputRef.current?.click()}
+          onExportCurrent={() => handleExportPDF(false)}
+          onExportAll={() => handleExportPDF(true)}
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Importar Tabela de Produtos</CardTitle>
-            <CardDescription>
-              Importe produtos a partir de um arquivo .docx contendo uma tabela com os campos: ITEM, DESCRIÇÃO DO PRODUTO, UNID, QUANT.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div 
-              {...getRootProps()} 
-              className={`border-2 border-dashed rounded-md p-10 text-center cursor-pointer transition-colors
-                ${isDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'}`}
-            >
-              <input {...getInputProps()} ref={fileInputRef} />
-              {loading ? (
-                <p className="text-muted-foreground">Processando arquivo...</p>
-              ) : isDragActive ? (
-                <p className="text-primary">Solte o arquivo aqui...</p>
-              ) : (
-                <div>
-                  <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="font-medium">
-                    Arraste e solte um arquivo .docx aqui, ou clique para selecionar
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    O arquivo deve conter uma tabela com as colunas: ITEM, DESCRIÇÃO DO PRODUTO, UNID e QUANT.
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <ImportProductsCard 
+          onProductsImported={handleImportProducts}
+          existingProducts={products}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Lista de Produtos</CardTitle>
-              <CardDescription>
-                Gerencie seus produtos importados
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select
-                  value={filterValue}
-                  onValueChange={setFilterValue}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Agricultura Familiar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os produtos</SelectItem>
-                    <SelectItem value="yes">Agricultura Familiar: Sim</SelectItem>
-                    <SelectItem value="no">Agricultura Familiar: Não</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => setDeleteMode("multiple")} disabled={selectedProducts.length === 0}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Excluir Itens
-                </Button>
-                <Button onClick={() => setIsAddDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Inserir Produto
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ProductsTable
-              products={filteredProducts}
-              onUpdate={handleUpdateProduct}
-              onView={setViewProduct}
-              onDelete={(id) => {
-                setProductToDelete(id);
-                setDeleteMode("single");
-              }}
-              selectedProducts={selectedProducts}
-              onSelectProducts={setSelectedProducts}
-            />
-          </CardContent>
-        </Card>
+        <ProductsListCard 
+          products={filteredProducts}
+          selectedProducts={selectedProducts}
+          filterValue={filterValue}
+          onUpdateProduct={handleUpdateProduct}
+          onViewProduct={setViewProduct}
+          onDeleteProduct={(id) => {
+            setProductToDelete(id);
+            setDeleteMode("single");
+          }}
+          onSelectProducts={setSelectedProducts}
+          onFilterChange={setFilterValue}
+          onAddProduct={() => setIsAddDialogOpen(true)}
+          onDeleteMultiple={() => setDeleteMode("multiple")}
+        />
       </div>
 
       {/* Dialogs */}
@@ -390,6 +150,41 @@ export default function Products() {
           }
         }}
         onConfirm={handleDelete}
+      />
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept=".docx"
+        onChange={(e) => {
+          if (e.target.files && e.target.files[0]) {
+            // Create a new FileReader
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              if (event.target && event.target.result) {
+                // Process the file here or pass it to a function
+                const file = e.target.files![0];
+                // Trigger the dropzone's file handler by simulating a drop event
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                
+                // Now we need to trigger the dropzone's handler manually
+                // Since we can't directly call the onDrop function from ImportProductsDropzone
+                // We'll dispatch a custom event that our app can listen for
+                const dropzoneElement = document.querySelector('[role="presentation"]');
+                if (dropzoneElement) {
+                  const dropEvent = new DragEvent('drop');
+                  Object.defineProperty(dropEvent, 'dataTransfer', {
+                    value: dataTransfer,
+                  });
+                  dropzoneElement.dispatchEvent(dropEvent);
+                }
+              }
+            };
+            reader.readAsArrayBuffer(e.target.files[0]);
+          }
+        }}
       />
     </AppLayout>
   );
