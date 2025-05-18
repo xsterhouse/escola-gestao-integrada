@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -25,9 +25,6 @@ export default function Products() {
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   
-  // Ref to the file input element
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   // Save products to localStorage whenever they change
   const saveProducts = useCallback((newProducts: Product[]) => {
     localStorage.setItem("products", JSON.stringify(newProducts));
@@ -97,7 +94,7 @@ export default function Products() {
     <AppLayout>
       <div className="container mx-auto py-6 space-y-6">
         <ProductsHeader 
-          onImport={() => fileInputRef.current?.click()}
+          onImport={() => setIsAddDialogOpen(true)}
           onExportCurrent={() => handleExportPDF(false)}
           onExportAll={() => handleExportPDF(true)}
         />
@@ -150,41 +147,6 @@ export default function Products() {
           }
         }}
         onConfirm={handleDelete}
-      />
-
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        accept=".docx"
-        onChange={(e) => {
-          if (e.target.files && e.target.files[0]) {
-            // Create a new FileReader
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              if (event.target && event.target.result) {
-                // Process the file here or pass it to a function
-                const file = e.target.files![0];
-                // Trigger the dropzone's file handler by simulating a drop event
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                
-                // Now we need to trigger the dropzone's handler manually
-                // Since we can't directly call the onDrop function from ImportProductsDropzone
-                // We'll dispatch a custom event that our app can listen for
-                const dropzoneElement = document.querySelector('[role="presentation"]');
-                if (dropzoneElement) {
-                  const dropEvent = new DragEvent('drop');
-                  Object.defineProperty(dropEvent, 'dataTransfer', {
-                    value: dataTransfer,
-                  });
-                  dropzoneElement.dispatchEvent(dropEvent);
-                }
-              }
-            };
-            reader.readAsArrayBuffer(e.target.files[0]);
-          }
-        }}
       />
     </AppLayout>
   );

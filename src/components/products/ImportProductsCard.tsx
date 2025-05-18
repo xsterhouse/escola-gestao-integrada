@@ -15,6 +15,33 @@ export function ImportProductsCard({ onProductsImported, existingProducts }: Imp
   // Ref to the file input element
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // This function will be called when a file is selected via the button
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      
+      // Get the dropzone element
+      const dropzoneElement = document.querySelector('[role="presentation"]');
+      
+      // Create a DataTransfer object to simulate a drop
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      
+      // Create and dispatch a drop event
+      const dropEvent = new Event('drop', { bubbles: true });
+      Object.defineProperty(dropEvent, 'dataTransfer', {
+        value: dataTransfer,
+      });
+      
+      if (dropzoneElement) {
+        dropzoneElement.dispatchEvent(dropEvent);
+      }
+      
+      // Reset the file input
+      event.target.value = '';
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -41,19 +68,7 @@ export function ImportProductsCard({ onProductsImported, existingProducts }: Imp
             ref={fileInputRef}
             className="hidden"
             accept=".docx"
-            onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                // Trigger the dropzone's file handler
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(e.target.files[0]);
-                const event = new Event('drop', { bubbles: true });
-                Object.defineProperty(event, 'dataTransfer', {
-                  value: dataTransfer,
-                });
-                const dropzoneElement = document.querySelector('[role="presentation"]');
-                dropzoneElement?.dispatchEvent(event);
-              }
-            }}
+            onChange={handleFileChange}
           />
         </div>
       </CardContent>
