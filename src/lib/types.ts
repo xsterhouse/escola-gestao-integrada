@@ -78,3 +78,15 @@ export interface SchoolUser {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Product interface
+export interface Product {
+  id: string;
+  item: number; // Item number (required)
+  description: string; // Product description
+  unit: string; // Unit of measure (Kg, Pct, etc)
+  quantity?: string; // Optional quantity
+  familyAgriculture: boolean; // Whether the product is from family agriculture
+  createdAt: Date;
+  updatedAt: Date;
+}
