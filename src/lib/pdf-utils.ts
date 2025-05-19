@@ -365,7 +365,7 @@ export const exportToCsv = <T extends object>(
       
       // Format dates
       if (value instanceof Date) {
-        value = format(value, 'dd/MM/yyyy') as any;
+        value = formatDate(value, 'dd/MM/yyyy') as any;
       }
       
       // Format currency values
@@ -413,7 +413,7 @@ export const exportToCsv = <T extends object>(
 };
 
 // Helper function to format dates for CSV
-function format(date: Date, format: string): string {
+function formatDate(date: Date, format: string): string {
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear();

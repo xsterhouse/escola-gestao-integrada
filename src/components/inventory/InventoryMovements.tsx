@@ -35,7 +35,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
   const [isAddManualMovementOpen, setIsAddManualMovementOpen] = useState(false);
   
   // Create movements from invoices
-  const entriesFromInvoices = invoices.flatMap(invoice => 
+  const entriesFromInvoices: InventoryMovement[] = invoices.flatMap(invoice => 
     invoice.items.map(item => ({
       id: `movement-${item.id}`,
       type: 'entrada' as const,
@@ -46,7 +46,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       unitPrice: item.unitPrice,
       totalCost: item.totalPrice,
       invoiceId: invoice.id,
-      source: 'invoice',
+      source: 'invoice' as const,
       createdAt: invoice.createdAt,
       updatedAt: invoice.updatedAt,
     }))
@@ -244,7 +244,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
                       {movement.source === 'manual' ? (
                         <div className="flex items-center">
                           <span>Manual</span>
-                          <AlertTriangle className="h-4 w-4 ml-1 text-yellow-500" title="Item inserido manualmente" />
+                          <AlertTriangle className="h-4 w-4 ml-1 text-yellow-500" aria-label="Item inserido manualmente" />
                         </div>
                       ) : movement.source === 'invoice' ? (
                         <span>Nota Fiscal</span>

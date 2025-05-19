@@ -138,7 +138,7 @@ export interface InventoryMovement {
   totalCost: number;
   invoiceId?: string; // Reference to invoice if type is 'entrada'
   requestId?: string; // Reference to request if type is 'saida'
-  source?: 'manual' | 'invoice' | 'system'; // Source of the movement
+  source: 'manual' | 'invoice' | 'system'; // Source of the movement
   createdAt: Date;
   updatedAt: Date;
 }
