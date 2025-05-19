@@ -92,3 +92,74 @@ export interface Product {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// New inventory-related interfaces
+export interface Supplier {
+  id: string;
+  name: string;
+  cnpj: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface InvoiceItem {
+  id: string;
+  productId?: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  unitOfMeasure: string; // Un, Pc, Kg, Gr, etc.
+  invoiceId: string;
+}
+
+export interface Invoice {
+  id: string;
+  supplierId: string;
+  supplier: Supplier;
+  issueDate: Date;
+  danfeNumber: string;
+  totalValue: number;
+  items: InvoiceItem[];
+  financialProgramming?: string; // Added during XML import
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface InventoryMovement {
+  id: string;
+  type: 'entrada' | 'saida'; // Type of movement (in/out)
+  date: Date;
+  productDescription: string;
+  quantity: number;
+  unitOfMeasure: string; // Un, Pc, Kg, Gr, etc.
+  unitPrice: number;
+  totalCost: number;
+  invoiceId?: string; // Reference to invoice if type is 'entrada'
+  requestId?: string; // Reference to request if type is 'saida'
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface InventoryReport {
+  productCode: string;
+  productName: string;
+  lastEntryDate: Date;
+  supplierCode: string;
+  supplierName: string;
+  currentQuantity: number;
+  unitCost: number;
+  totalCost: number;
+}
+
+export interface PurchaseReport {
+  productCode: string;
+  description: string;
+  supplier: string;
+  entryDate: Date;
+  quantity: number;
+  unitOfMeasure: string;
+  value: number;
+  currentBalance: number;
+}

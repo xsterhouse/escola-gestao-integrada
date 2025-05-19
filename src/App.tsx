@@ -13,6 +13,7 @@ import Schools from "./pages/Schools";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import Products from "./pages/Products";
+import Inventory from "./pages/Inventory";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
               <Route path="/users" element={<Users />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/products" element={<Products />} />
+              <Route path="/inventory" element={<Inventory />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
