@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { useState } from "react";
+import React from "react";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -17,8 +17,7 @@ import Inventory from "./pages/Inventory";
 import NotFound from "./pages/NotFound";
 
 function App() {
-  // Create a new QueryClient instance inside the component
-  const [queryClient] = useState(() => new QueryClient());
+  const queryClient = React.useMemo(() => new QueryClient(), []);
 
   return (
     <QueryClientProvider client={queryClient}>
