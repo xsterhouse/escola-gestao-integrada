@@ -37,7 +37,7 @@ export function Sidebar({ className }: SidebarProps) {
   const { user, currentSchool, logout } = useAuth();
   const location = useLocation();
   
-  // Define the system modules
+  // Define the system modules with the new order
   const modules = [
     {
       id: "dashboard",
@@ -81,16 +81,9 @@ export function Sidebar({ className }: SidebarProps) {
       path: "/contracts",
       permission: "contracts",
     },
-    {
-      id: "accounting",
-      name: "Contabilidade",
-      icon: <BookOpen className="h-5 w-5" />,
-      path: "/accounting",
-      permission: "accounting",
-    },
   ];
 
-  // These routes are only visible to the master user
+  // These routes are only visible to the master user - reordered
   const adminRoutes = [
     {
       id: "settings",
@@ -98,6 +91,13 @@ export function Sidebar({ className }: SidebarProps) {
       icon: <Settings className="h-5 w-5" />,
       path: "/settings",
       permission: "settings",
+    },
+    {
+      id: "accounting",
+      name: "Contabilidade",
+      icon: <BookOpen className="h-5 w-5" />,
+      path: "/accounting",
+      permission: "accounting",
     },
   ];
 
@@ -145,7 +145,7 @@ export function Sidebar({ className }: SidebarProps) {
             <div className="space-y-8">
               <div className="space-y-3">
                 <h3 className="text-sm font-medium text-blue-300">Módulos</h3>
-                <nav className="space-y-2.5">
+                <nav className="space-y-4"> {/* Increased spacing between items */}
                   {allowedModules.map((module) => (
                     <Link
                       key={module.id}
@@ -167,7 +167,7 @@ export function Sidebar({ className }: SidebarProps) {
               {user?.role === "master" && allowedAdminRoutes.length > 0 && (
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-blue-300">Administração</h3>
-                  <nav className="space-y-2.5">
+                  <nav className="space-y-4"> {/* Increased spacing between items */}
                     {allowedAdminRoutes.map((route) => (
                       <Link
                         key={route.id}
@@ -257,7 +257,7 @@ export function Sidebar({ className }: SidebarProps) {
                   Módulos
                 </h3>
               )}
-              <nav className="space-y-2.5">
+              <nav className="space-y-4"> {/* Increased spacing between items */}
                 {allowedModules.map((module) => (
                   <Tooltip key={module.id} delayDuration={0}>
                     <TooltipTrigger asChild>
@@ -292,7 +292,7 @@ export function Sidebar({ className }: SidebarProps) {
                     Administração
                   </h3>
                 )}
-                <nav className="space-y-2.5">
+                <nav className="space-y-4"> {/* Increased spacing between items */}
                   {allowedAdminRoutes.map((route) => (
                     <Tooltip key={route.id} delayDuration={0}>
                       <TooltipTrigger asChild>

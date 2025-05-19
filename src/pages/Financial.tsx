@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FinancialHeader } from "@/components/financial/FinancialHeader";
@@ -18,8 +18,58 @@ import {
 
 export default function Financial() {
   // State for all financial data
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([
+    {
+      id: "ba1",
+      schoolId: "school1",
+      bankName: "Banco do Brasil",
+      accountNumber: "12345-6",
+      accountType: "movimento",
+      initialBalance: 5000,
+      currentBalance: 6250,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: "ba2",
+      schoolId: "school1",
+      bankName: "Caixa Econômica",
+      accountNumber: "98765-4",
+      accountType: "aplicacao",
+      initialBalance: 10000,
+      currentBalance: 10500,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  ]);
+  
+  const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([
+    {
+      id: "tr1",
+      schoolId: "school1",
+      bankAccountId: "ba1",
+      date: new Date(2023, 4, 10),
+      description: "Transferência Recebida",
+      value: 2500,
+      transactionType: "credito",
+      reconciliationStatus: "conciliado",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: "tr2",
+      schoolId: "school1",
+      bankAccountId: "ba1",
+      date: new Date(2023, 4, 15),
+      description: "Pagamento Fornecedor",
+      value: 1250,
+      transactionType: "debito",
+      reconciliationStatus: "nao_conciliado",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  ]);
+  
   const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
   const [receivableAccounts, setReceivableAccounts] = useState<ReceivableAccount[]>([]);
   
@@ -91,11 +141,37 @@ export default function Financial() {
       monthlyRevenues
     });
   };
+
+  // Calculate summary when the component mounts or data changes
+  useEffect(() => {
+    calculateFinancialSummary();
+  }, [bankAccounts, bankTransactions, paymentAccounts, receivableAccounts]);
+  
+  // Handlers for new transactions from header
+  const handleAddTransaction = (transaction: BankTransaction) => {
+    setBankTransactions([...bankTransactions, transaction]);
+  };
+  
+  const handleImportTransactions = (transactions: BankTransaction[]) => {
+    setBankTransactions([...bankTransactions, ...transactions]);
+  };
+  
+  const handleAddPayment = (payment: PaymentAccount) => {
+    setPaymentAccounts([...paymentAccounts, payment]);
+  };
+  
+  const handleAddReceivable = (receivable: ReceivableAccount) => {
+    setReceivableAccounts([...receivableAccounts, receivable]);
+  };
   
   return (
     <AppLayout requireAuth={true} requiredPermission="financial">
       <div className="space-y-6">
-        <FinancialHeader />
+        <FinancialHeader 
+          bankAccounts={bankAccounts}
+          onAddTransaction={handleAddTransaction}
+          onImportTransactions={handleImportTransactions}
+        />
         
         <Tabs defaultValue="dashboard" className="w-full">
           <TabsList className="grid w-full max-w-4xl grid-cols-5">
@@ -111,6 +187,8 @@ export default function Financial() {
               summary={financialSummary}
               payables={paymentAccounts}
               receivables={receivableAccounts}
+              onAddPayment={handleAddPayment}
+              onAddReceivable={handleAddReceivable}
             />
           </TabsContent>
 
