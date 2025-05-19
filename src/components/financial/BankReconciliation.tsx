@@ -197,7 +197,7 @@ export function BankReconciliation({
                 <SelectValue placeholder="Selecione uma conta" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as contas</SelectItem>
+                <SelectItem value="all">Todas as contas</SelectItem>
                 {bankAccounts.map(account => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.bankName} - {account.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}
