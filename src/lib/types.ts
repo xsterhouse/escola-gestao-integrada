@@ -138,6 +138,7 @@ export interface InventoryMovement {
   totalCost: number;
   invoiceId?: string; // Reference to invoice if type is 'entrada'
   requestId?: string; // Reference to request if type is 'saida'
+  source?: 'manual' | 'invoice' | 'system'; // Source of the movement
   createdAt: Date;
   updatedAt: Date;
 }
@@ -162,4 +163,14 @@ export interface PurchaseReport {
   unitOfMeasure: string;
   value: number;
   currentBalance: number;
+}
+
+export interface DeletionRecord {
+  id: string;
+  entityType: string;
+  entityId: string;
+  entityData: string; // JSON string of deleted entity
+  deletedBy: string; // User ID
+  deletionReason: string;
+  createdAt: Date;
 }

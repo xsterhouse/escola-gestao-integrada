@@ -1,7 +1,7 @@
 
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Product, Invoice, InventoryReport, PurchaseReport } from "./types";
+import { Product, Invoice, InventoryReport, PurchaseReport, InventoryMovement } from "./types";
 
 export const generatePDF = (products: Product[]) => {
   // Create a new jsPDF instance
@@ -78,7 +78,7 @@ export const generatePDF = (products: Product[]) => {
   doc.save("produtos.pdf");
 };
 
-// New function for exporting inventory data
+// Function for exporting inventory data
 export const generateInventoryPDF = (invoices: Invoice[]) => {
   const doc = new jsPDF();
   
@@ -273,3 +273,150 @@ export const generatePurchaseReportPDF = (reports: PurchaseReport[]) => {
   // Save the PDF
   doc.save("relatorio-compras.pdf");
 };
+
+// Function for exporting inventory movements to PDF
+export const generateInventoryMovementsPDF = (movements: InventoryMovement[]) => {
+  const doc = new jsPDF();
+  
+  // Add title
+  doc.setFontSize(18);
+  doc.text("Relatório de Movimentações de Estoque", 14, 22);
+  
+  // Add date
+  doc.setFontSize(11);
+  const date = new Date().toLocaleString();
+  doc.text(`Gerado em: ${date}`, 14, 30);
+  
+  // Define columns
+  const columns = [
+    { header: "Tipo", dataKey: "type" },
+    { header: "Data", dataKey: "date" },
+    { header: "Produto", dataKey: "product" },
+    { header: "Quantidade", dataKey: "quantity" },
+    { header: "Unidade", dataKey: "unit" },
+    { header: "Valor Unitário", dataKey: "unitValue" },
+    { header: "Valor Total", dataKey: "totalValue" },
+    { header: "Origem", dataKey: "source" }
+  ];
+  
+  // Format data
+  const data = movements.map((movement) => ({
+    type: movement.type === 'entrada' ? 'Entrada' : 'Saída',
+    date: new Date(movement.date).toLocaleDateString(),
+    product: movement.productDescription,
+    quantity: movement.quantity.toString(),
+    unit: movement.unitOfMeasure,
+    unitValue: new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(movement.unitPrice),
+    totalValue: new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(movement.totalCost),
+    source: movement.source === 'manual' ? 'Manual' : 
+            movement.source === 'invoice' ? 'Nota Fiscal' : 'Sistema'
+  }));
+  
+  // Create table
+  autoTable(doc, {
+    startY: 40,
+    head: [columns.map(column => column.header)],
+    body: data.map(row => columns.map(column => row[column.dataKey as keyof typeof row])),
+    headStyles: {
+      fillColor: [1, 35, 64],
+      textColor: 255,
+      fontStyle: "bold"
+    },
+    alternateRowStyles: {
+      fillColor: [240, 240, 240]
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: 5
+    },
+    margin: { top: 40 }
+  });
+  
+  // Get footer y position
+  const finalY = (doc as any).lastAutoTable.finalY || 40;
+  
+  // Add footer
+  doc.setFontSize(10);
+  doc.text(`Total de movimentações: ${movements.length}`, 14, finalY + 15);
+  
+  // Save the PDF
+  doc.save("movimentacoes-estoque.pdf");
+};
+
+// Function to export data to CSV format
+export const exportToCsv = <T extends object>(
+  data: T[], 
+  filename: string, 
+  columns: {header: string, key: string}[]
+) => {
+  // Create CSV header
+  const header = columns.map(col => col.header).join(',');
+  
+  // Create CSV rows
+  const rows = data.map(item => {
+    return columns.map(col => {
+      let value = item[col.key as keyof T];
+      
+      // Format dates
+      if (value instanceof Date) {
+        value = format(value, 'dd/MM/yyyy') as any;
+      }
+      
+      // Format currency values
+      if (typeof value === 'number' && 
+          (col.key.includes('cost') || col.key.includes('price') || 
+           col.key.includes('value') || col.key.includes('Cost') || 
+           col.key.includes('Price') || col.key.includes('Value'))) {
+        value = new Intl.NumberFormat('pt-BR', {
+          style: 'currency',
+          currency: 'BRL'
+        }).format(value) as any;
+      }
+      
+      // Handle objects, null or undefined values
+      if (value === null || value === undefined) {
+        value = '' as any;
+      } else if (typeof value === 'object' && !(value instanceof Date)) {
+        value = JSON.stringify(value) as any;
+      }
+      
+      // Escape commas and quotes
+      if (typeof value === 'string') {
+        if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+          value = `"${value.replace(/"/g, '""')}"` as any;
+        }
+      }
+      
+      return value;
+    }).join(',');
+  }).join('\n');
+  
+  // Combine header and rows
+  const csv = `${header}\n${rows}`;
+  
+  // Create a download link
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${filename}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+// Helper function to format dates for CSV
+function format(date: Date, format: string): string {
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  
+  return format.replace('dd', day).replace('MM', month).replace('yyyy', year);
+}

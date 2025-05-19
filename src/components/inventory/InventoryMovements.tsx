@@ -10,11 +10,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, FileDown, Minus } from "lucide-react";
+import { Search, FileDown, Minus, Eye, Plus, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { Invoice, InventoryMovement } from "@/lib/types";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { ViewMovementDialog } from "./ViewMovementDialog";
+import { AddManualMovementDialog } from "./AddManualMovementDialog";
+import { 
+  generateInventoryPDF,
+  generateInventoryMovementsPDF, 
+  exportToCsv 
+} from "@/lib/pdf-utils";
 
 interface InventoryMovementsProps {
   invoices: Invoice[];
@@ -22,6 +31,8 @@ interface InventoryMovementsProps {
 
 export function InventoryMovements({ invoices }: InventoryMovementsProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedMovement, setSelectedMovement] = useState<InventoryMovement | null>(null);
+  const [isAddManualMovementOpen, setIsAddManualMovementOpen] = useState(false);
   
   // Create movements from invoices
   const entriesFromInvoices = invoices.flatMap(invoice => 
@@ -35,6 +46,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       unitPrice: item.unitPrice,
       totalCost: item.totalPrice,
       invoiceId: invoice.id,
+      source: 'invoice',
       createdAt: invoice.createdAt,
       updatedAt: invoice.updatedAt,
     }))
@@ -52,6 +64,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       unitPrice: 2.5,
       totalCost: 25,
       requestId: "req-001",
+      source: 'system',
       createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
       updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
     },
@@ -65,8 +78,22 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       unitPrice: 20,
       totalCost: 60,
       requestId: "req-002",
+      source: 'system',
       createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
       updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    },
+    {
+      id: "manual-1",
+      type: 'entrada',
+      date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+      productDescription: "Arroz Tipo 1",
+      quantity: 50,
+      unitOfMeasure: "Kg",
+      unitPrice: 5.50,
+      totalCost: 275,
+      source: 'manual',
+      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
     }
   ];
   
@@ -82,6 +109,10 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       movement.productDescription.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
+  const handleViewMovement = (movement: InventoryMovement) => {
+    setSelectedMovement(movement);
+  };
+  
   const handleMovementOut = (movementId: string) => {
     // Simulate creating an outgoing movement
     toast({
@@ -90,14 +121,43 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
     });
   };
   
+  const handleAddManualMovement = (movement: Omit<InventoryMovement, "id" | "createdAt" | "updatedAt">) => {
+    const newMovement: InventoryMovement = {
+      ...movement,
+      id: `manual-${Date.now()}`,
+      source: 'manual',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    setAllMovements([...allMovements, newMovement]);
+    
+    toast({
+      title: "Movimentação manual registrada",
+      description: "O item foi adicionado manualmente ao inventário.",
+      variant: "default",
+    });
+    
+    setIsAddManualMovementOpen(false);
+  };
+  
   const handleExportCsv = () => {
-    // Implementation for CSV export
-    console.log("Export to CSV");
+    // Export to CSV
+    exportToCsv(filteredMovements, 'movimentacoes-estoque', [
+      { header: 'Tipo', key: 'type' },
+      { header: 'Data', key: 'date' },
+      { header: 'Produto', key: 'productDescription' },
+      { header: 'Quantidade', key: 'quantity' },
+      { header: 'Unidade', key: 'unitOfMeasure' },
+      { header: 'Valor Unitário', key: 'unitPrice' },
+      { header: 'Custo Total', key: 'totalCost' },
+      { header: 'Origem', key: 'source' }
+    ]);
   };
   
   const handleExportPdf = () => {
-    // Implementation for PDF export
-    console.log("Export to PDF");
+    // Export to PDF
+    generateInventoryMovementsPDF(filteredMovements);
   };
 
   return (
@@ -105,6 +165,10 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle>Movimentação de Produtos</CardTitle>
         <div className="flex items-center gap-2">
+          <Button onClick={() => setIsAddManualMovementOpen(true)} variant="outline" size="sm">
+            <Plus className="h-4 w-4 mr-1" />
+            Adicionar Manual
+          </Button>
           <Button onClick={handleExportCsv} variant="outline" size="sm">
             <FileDown className="h-4 w-4 mr-1" />
             CSV
@@ -137,13 +201,14 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
                 <TableHead>Unidade</TableHead>
                 <TableHead>Valor Unit.</TableHead>
                 <TableHead>Custo Total</TableHead>
+                <TableHead>Origem</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredMovements.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center">
+                  <TableCell colSpan={9} className="text-center">
                     Nenhuma movimentação encontrada
                   </TableCell>
                 </TableRow>
@@ -176,15 +241,36 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
                       }).format(movement.totalCost)}
                     </TableCell>
                     <TableCell>
-                      {movement.type === 'entrada' && (
+                      {movement.source === 'manual' ? (
+                        <div className="flex items-center">
+                          <span>Manual</span>
+                          <AlertTriangle className="h-4 w-4 ml-1 text-yellow-500" title="Item inserido manualmente" />
+                        </div>
+                      ) : movement.source === 'invoice' ? (
+                        <span>Nota Fiscal</span>
+                      ) : (
+                        <span>Sistema</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
                         <Button 
                           size="sm" 
                           variant="ghost"
-                          onClick={() => handleMovementOut(movement.id)}
+                          onClick={() => handleViewMovement(movement)}
                         >
-                          <Minus className="h-4 w-4" />
+                          <Eye className="h-4 w-4" />
                         </Button>
-                      )}
+                        {movement.type === 'entrada' && (
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => handleMovementOut(movement.id)}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -193,6 +279,20 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
           </Table>
         </div>
       </CardContent>
+
+      {selectedMovement && (
+        <ViewMovementDialog
+          movement={selectedMovement}
+          open={!!selectedMovement}
+          onOpenChange={() => setSelectedMovement(null)}
+        />
+      )}
+
+      <AddManualMovementDialog
+        open={isAddManualMovementOpen}
+        onOpenChange={setIsAddManualMovementOpen}
+        onSubmit={handleAddManualMovement}
+      />
     </Card>
   );
 }

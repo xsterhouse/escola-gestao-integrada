@@ -12,12 +12,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Search, FileDown, CalendarIcon } from "lucide-react";
+import { Search, FileDown, CalendarIcon, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { InventoryReport, PurchaseReport, Invoice } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
+import { ViewReportDialog } from "./ViewReportDialog";
+import { DeleteReportDialog } from "./DeleteReportDialog";
+import { 
+  generateInventoryReportPDF, 
+  generatePurchaseReportPDF,
+  exportToCsv
+} from "@/lib/pdf-utils";
 
 interface InventoryReportsProps {
   invoices: Invoice[];
@@ -29,6 +36,9 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
     new Date(new Date().setDate(new Date().getDate() - 30))
   );
   const [toDate, setToDate] = useState<Date | undefined>(new Date());
+  const [selectedReport, setSelectedReport] = useState<InventoryReport | PurchaseReport | null>(null);
+  const [reportType, setReportType] = useState<'inventory' | 'purchases'>('inventory');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Mock data for inventory report
   const inventoryReports: InventoryReport[] = [
@@ -117,14 +127,57 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
     return date ? format(date, 'dd/MM/yyyy') : '';
   };
 
+  const handleViewReport = (report: InventoryReport | PurchaseReport) => {
+    setSelectedReport(report);
+  };
+
+  const handleDeleteClick = (report: InventoryReport | PurchaseReport) => {
+    setSelectedReport(report);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteReport = (password: string, reason: string) => {
+    // In a real application, validate the password against the user's password
+    
+    // Log the deletion for audit trails
+    console.log(`Report deleted: ${selectedReport?.productCode} by User. Reason: ${reason}`);
+    
+    // Close the dialog
+    setIsDeleteDialogOpen(false);
+    setSelectedReport(null);
+  };
+
   const handleExportCsv = () => {
-    // Implementation for CSV export
-    console.log("Export to CSV");
+    if (reportType === 'inventory') {
+      exportToCsv(filteredInventoryReports, 'produtos-em-estoque', [
+        { header: 'Código', key: 'productCode' },
+        { header: 'Produto', key: 'productName' },
+        { header: 'Última Entrada', key: 'lastEntryDate' },
+        { header: 'Fornecedor', key: 'supplierName' },
+        { header: 'Quantidade', key: 'currentQuantity' },
+        { header: 'Custo Unit.', key: 'unitCost' },
+        { header: 'Custo Total', key: 'totalCost' }
+      ]);
+    } else {
+      exportToCsv(filteredPurchaseReports, 'compras', [
+        { header: 'Código', key: 'productCode' },
+        { header: 'Descrição', key: 'description' },
+        { header: 'Fornecedor', key: 'supplier' },
+        { header: 'Data Entrada', key: 'entryDate' },
+        { header: 'Quantidade', key: 'quantity' },
+        { header: 'Unidade', key: 'unitOfMeasure' },
+        { header: 'Valor', key: 'value' },
+        { header: 'Saldo', key: 'currentBalance' }
+      ]);
+    }
   };
 
   const handleExportPdf = () => {
-    // Implementation for PDF export
-    console.log("Export to PDF");
+    if (reportType === 'inventory') {
+      generateInventoryReportPDF(filteredInventoryReports);
+    } else {
+      generatePurchaseReportPDF(filteredPurchaseReports);
+    }
   };
 
   return (
@@ -143,7 +196,7 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="inventory" className="w-full">
+        <Tabs defaultValue="inventory" className="w-full" onValueChange={(value) => setReportType(value as 'inventory' | 'purchases')}>
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="inventory">Produtos em Estoque</TabsTrigger>
             <TabsTrigger value="purchases">Compras</TabsTrigger>
@@ -222,12 +275,13 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
                     <TableHead>Quantidade Atual</TableHead>
                     <TableHead>Custo Unitário</TableHead>
                     <TableHead>Custo Total</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredInventoryReports.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center">
+                      <TableCell colSpan={9} className="text-center">
                         Nenhum resultado encontrado
                       </TableCell>
                     </TableRow>
@@ -252,6 +306,24 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
                             currency: 'BRL'
                           }).format(report.totalCost)}
                         </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              onClick={() => handleViewReport(report)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => handleDeleteClick(report)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -273,12 +345,13 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
                     <TableHead>Unidade</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Saldo Atual</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredPurchaseReports.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center">
+                      <TableCell colSpan={9} className="text-center">
                         Nenhum resultado encontrado
                       </TableCell>
                     </TableRow>
@@ -298,6 +371,24 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
                           }).format(report.value)}
                         </TableCell>
                         <TableCell>{report.currentBalance}</TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              onClick={() => handleViewReport(report)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => handleDeleteClick(report)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -307,6 +398,25 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
           </TabsContent>
         </Tabs>
       </CardContent>
+
+      {selectedReport && !isDeleteDialogOpen && (
+        <ViewReportDialog
+          report={selectedReport}
+          reportType={reportType}
+          open={!!selectedReport && !isDeleteDialogOpen}
+          onOpenChange={() => setSelectedReport(null)}
+        />
+      )}
+
+      {selectedReport && isDeleteDialogOpen && (
+        <DeleteReportDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          onDelete={handleDeleteReport}
+          reportType={reportType}
+          report={selectedReport}
+        />
+      )}
     </Card>
   );
 }
