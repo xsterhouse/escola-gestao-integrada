@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -67,9 +66,10 @@ export function BankReconciliation({
   
   const confirmReconciliation = () => {
     if (selectedTransaction) {
+      // Update the reconciliation status with the correct type
       const updatedTransactions = transactions.map(t => 
         t.id === selectedTransaction.id 
-          ? { ...t, reconciliationStatus: 'conciliado' }
+          ? { ...t, reconciliationStatus: "conciliado" as "conciliado" | "nao_conciliado" }
           : t
       );
       setTransactions(updatedTransactions);
