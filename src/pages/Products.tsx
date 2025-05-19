@@ -37,6 +37,12 @@ export default function Products() {
     return filterValue === "yes" ? product.familyAgriculture : !product.familyAgriculture;
   });
 
+  // Calculate next item number based on existing products
+  const getNextItemNumber = () => {
+    if (products.length === 0) return 1;
+    return Math.max(...products.map(product => product.item)) + 1;
+  };
+
   // Handle adding a new product
   const handleAddProduct = (product: Omit<Product, "id" | "createdAt" | "updatedAt">) => {
     const newProduct: Product = {
@@ -126,6 +132,7 @@ export default function Products() {
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         onSave={handleAddProduct}
+        existingProducts={products}
       />
       
       <ViewProductDialog

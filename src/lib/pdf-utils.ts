@@ -22,7 +22,9 @@ export const generatePDF = (products: Product[]) => {
     { header: "Descrição", dataKey: "description" },
     { header: "Unidade", dataKey: "unit" },
     { header: "Quantidade", dataKey: "quantity" },
-    { header: "Agric. Familiar", dataKey: "familyAgriculture" }
+    { header: "Agric. Familiar", dataKey: "familyAgriculture" },
+    { header: "Indicação", dataKey: "indication" },
+    { header: "Restrição", dataKey: "restriction" }
   ];
   
   // Format data
@@ -31,7 +33,9 @@ export const generatePDF = (products: Product[]) => {
     description: product.description,
     unit: product.unit,
     quantity: product.quantity || "-",
-    familyAgriculture: product.familyAgriculture ? "Sim" : "Não"
+    familyAgriculture: product.familyAgriculture ? "Sim" : "Não",
+    indication: product.indication || "Não informado",
+    restriction: product.restriction || "Não informado"
   }));
   
   // Create table
@@ -48,15 +52,17 @@ export const generatePDF = (products: Product[]) => {
       fillColor: [240, 240, 240]
     },
     styles: {
-      fontSize: 10,
-      cellPadding: 6
+      fontSize: 9, // Slightly smaller font to fit all columns
+      cellPadding: 5
     },
     columnStyles: {
-      0: { cellWidth: 20 },
-      1: { cellWidth: "auto" },
-      2: { cellWidth: 30 },
-      3: { cellWidth: 30 },
-      4: { cellWidth: 30 }
+      0: { cellWidth: 15 }, // Item
+      1: { cellWidth: "auto" }, // Description (flexible)
+      2: { cellWidth: 20 }, // Unit
+      3: { cellWidth: 20 }, // Quantity
+      4: { cellWidth: 25 }, // Family Agriculture
+      5: { cellWidth: 30 }, // Indication
+      6: { cellWidth: 30 }  // Restriction
     },
     margin: { top: 40 }
   });

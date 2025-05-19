@@ -7,15 +7,19 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Product } from "@/lib/types";
+import { useEffect, useState } from "react";
 
-// Update the schema to make required fields non-optional
+// Update the schema to include the new fields
 const productSchema = z.object({
   item: z.number().int().positive("O número do item deve ser positivo"),
   description: z.string().min(1, "A descrição é obrigatória"),
   unit: z.string().min(1, "A unidade é obrigatória"),
   quantity: z.string().optional(),
   familyAgriculture: z.boolean().default(false),
+  indication: z.string().max(50, "A indicação deve ter no máximo 50 caracteres").optional(),
+  restriction: z.string().max(50, "A restrição deve ter no máximo 50 caracteres").optional(),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -24,19 +28,37 @@ interface AddProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (product: Omit<Product, "id" | "createdAt" | "updatedAt">) => void;
+  existingProducts: Product[];
 }
 
-export function AddProductDialog({ open, onOpenChange, onSave }: AddProductDialogProps) {
+export function AddProductDialog({ open, onOpenChange, onSave, existingProducts }: AddProductDialogProps) {
+  const [nextItemNumber, setNextItemNumber] = useState<number>(1);
+
+  // Calculate the next item number based on existing products
+  useEffect(() => {
+    if (existingProducts.length > 0) {
+      const maxItem = Math.max(...existingProducts.map(p => p.item));
+      setNextItemNumber(maxItem + 1);
+    }
+  }, [existingProducts]);
+
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      item: undefined, // Changed from 0 to undefined to trigger validation
+      item: nextItemNumber,
       description: "",
       unit: "",
       quantity: "",
       familyAgriculture: false,
+      indication: "",
+      restriction: "",
     },
   });
+
+  // Update form values when nextItemNumber changes
+  useEffect(() => {
+    form.setValue("item", nextItemNumber);
+  }, [nextItemNumber, form]);
 
   function onSubmit(data: ProductFormValues) {
     // Ensure all required fields are present before saving
@@ -46,10 +68,20 @@ export function AddProductDialog({ open, onOpenChange, onSave }: AddProductDialo
       unit: data.unit,
       quantity: data.quantity,
       familyAgriculture: data.familyAgriculture,
+      indication: data.indication || undefined,
+      restriction: data.restriction || undefined,
     };
     
     onSave(productToSave);
-    form.reset();
+    form.reset({
+      item: nextItemNumber + 1,
+      description: "",
+      unit: "",
+      quantity: "",
+      familyAgriculture: false,
+      indication: "",
+      restriction: "",
+    });
     onOpenChange(false);
   }
 
@@ -74,8 +106,9 @@ export function AddProductDialog({ open, onOpenChange, onSave }: AddProductDialo
                     <FormControl>
                       <Input 
                         type="number" 
-                        placeholder="Número do item" 
-                        {...field} 
+                        placeholder="Número do item"
+                        {...field}
+                        disabled={true} 
                         onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} 
                         value={field.value || ""}
                       />
@@ -152,6 +185,45 @@ export function AddProductDialog({ open, onOpenChange, onSave }: AddProductDialo
                 )}
               />
             </div>
+
+            {/* New fields for indication and restriction */}
+            <FormField
+              control={form.control}
+              name="indication"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Indicação</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Indicação do produto (até 50 caracteres)" 
+                      {...field} 
+                      className="max-h-24"
+                      maxLength={50}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="restriction"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Restrição</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Restrição do produto (até 50 caracteres)" 
+                      {...field}
+                      className="max-h-24"
+                      maxLength={50}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <DialogFooter>
               <Button 

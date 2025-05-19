@@ -42,6 +42,14 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
             <span className="col-span-3">{product.familyAgriculture ? "Sim" : "Não"}</span>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
+            <span className="font-medium text-right">Indicação:</span>
+            <span className="col-span-3">{product.indication || "Não informado"}</span>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <span className="font-medium text-right">Restrição:</span>
+            <span className="col-span-3">{product.restriction || "Não informado"}</span>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
             <span className="font-medium text-right">Data de Criação:</span>
             <span className="col-span-3">
               {new Date(product.createdAt).toLocaleString()}

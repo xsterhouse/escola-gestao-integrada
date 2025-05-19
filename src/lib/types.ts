@@ -87,6 +87,8 @@ export interface Product {
   unit: string; // Unit of measure (Kg, Pct, etc)
   quantity?: string; // Optional quantity
   familyAgriculture: boolean; // Whether the product is from family agriculture
+  indication?: string; // New field: Product indication
+  restriction?: string; // New field: Product restriction
   createdAt: Date;
   updatedAt: Date;
 }
