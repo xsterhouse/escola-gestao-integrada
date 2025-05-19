@@ -1,4 +1,3 @@
-
 export interface Permission {
   id: string;
   name: string;
@@ -174,3 +173,93 @@ export interface DeletionRecord {
   deletionReason: string;
   createdAt: Date;
 }
+
+// Financial Module Types
+export interface BankAccount {
+  id: string;
+  schoolId: string;
+  bankName: string;
+  accountNumber: string;
+  accountType: 'movimento' | 'aplicacao';
+  description: string;
+  initialBalance: number;
+  currentBalance: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BankTransaction {
+  id: string;
+  schoolId: string;
+  bankAccountId: string;
+  date: Date;
+  description: string;
+  value: number;
+  transactionType: 'credito' | 'debito';
+  reconciliationStatus: 'conciliado' | 'nao_conciliado';
+  category?: string;
+  resourceType?: string;
+  documentId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PaymentAccount {
+  id: string;
+  schoolId: string;
+  description: string;
+  supplier: string;
+  dueDate: Date;
+  value: number;
+  expenseType: string;
+  resourceCategory: string;
+  status: 'a_pagar' | 'pago';
+  paymentDate?: Date;
+  documentUrl?: string;
+  invoiceId?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ReceivableAccount {
+  id: string;
+  schoolId: string;
+  description: string;
+  origin: string;
+  resourceType: string;
+  expectedDate: Date;
+  value: number;
+  status: 'recebido' | 'pendente';
+  receivedDate?: Date;
+  documentUrl?: string;
+  contractId?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface FinancialReportFilter {
+  startDate?: Date;
+  endDate?: Date;
+  resourceType?: string;
+  expenseCategory?: string;
+  status?: string;
+  supplier?: string;
+  origin?: string;
+}
+
+export interface FinancialSummary {
+  initialBalance: number;
+  totalRevenues: number;
+  totalExpenses: number;
+  finalBalance: number;
+  paymentsToday: number;
+  receivablesToday: number;
+  monthlyExpenses: number;
+  monthlyRevenues: number;
+}
+
+// Enum types for financial module
+export type ResourceType = 'PNATE' | 'PNAE' | 'Recursos Próprios' | 'Outros';
+export type ExpenseCategory = 'Alimentação' | 'Transporte' | 'Material Didático' | 'Infraestrutura' | 'Serviços' | 'Outros';
