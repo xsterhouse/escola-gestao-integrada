@@ -413,10 +413,11 @@ export const exportToCsv = <T extends object>(
 };
 
 // Helper function to format dates for CSV
-function formatDate(date: Date, format: string): string {
+function formatDate(date: Date, formatStr: string): string {
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear();
   
-  return format.replace('dd', day).replace('MM', month).replace('yyyy', year);
+  // Use string replacement instead of treating formatStr as a function
+  return formatStr.replace('dd', day).replace('MM', month).replace('yyyy', year.toString());
 }
