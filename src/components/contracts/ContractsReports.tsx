@@ -116,7 +116,7 @@ export default function ContractsReports() {
                     <SelectValue placeholder="Todos os status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os status</SelectItem>
+                    <SelectItem value="all">Todos os status</SelectItem>
                     <SelectItem value="open">Aberto</SelectItem>
                     <SelectItem value="closed">Encerrado</SelectItem>
                     <SelectItem value="settled">Liquidado</SelectItem>
