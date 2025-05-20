@@ -68,6 +68,13 @@ export function Sidebar({ className }: SidebarProps) {
       permission: "financial",
     },
     {
+      id: "contracts",
+      name: "Contratos",
+      icon: <FileText className="h-5 w-5" />,
+      path: "/contracts",
+      permission: "contracts",
+    },
+    {
       id: "planning",
       name: "Planejamento",
       icon: <ClipboardList className="h-5 w-5" />,
@@ -75,11 +82,11 @@ export function Sidebar({ className }: SidebarProps) {
       permission: "planning",
     },
     {
-      id: "contracts",
+      id: "contracts_old",
       name: "Contratos",
       icon: <FileText className="h-5 w-5" />,
-      path: "/contracts",
-      permission: "contracts",
+      path: "/contracts_old",
+      permission: "contracts_old",
     },
   ];
 
