@@ -25,6 +25,7 @@ export default function Financial() {
       bankName: "Banco do Brasil",
       accountNumber: "12345-6",
       accountType: "movimento",
+      description: "Conta principal",  // Added description
       initialBalance: 5000,
       currentBalance: 6250,
       createdAt: new Date(),
@@ -36,6 +37,7 @@ export default function Financial() {
       bankName: "Caixa Econômica",
       accountNumber: "98765-4",
       accountType: "aplicacao",
+      description: "Conta de investimentos",  // Added description
       initialBalance: 10000,
       currentBalance: 10500,
       createdAt: new Date(),

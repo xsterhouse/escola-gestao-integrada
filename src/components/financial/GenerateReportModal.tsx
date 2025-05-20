@@ -45,7 +45,7 @@ export function GenerateReportModal({
       data: []
     };
     
-    generatePDF(reportData, "conciliacao_bancaria");
+    generatePDF(reportData); // Removed the second argument
     onClose();
   };
   

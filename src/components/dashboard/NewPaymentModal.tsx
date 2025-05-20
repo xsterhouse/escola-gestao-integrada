@@ -89,8 +89,9 @@ export function NewPaymentModal({
         value: parseFloat(value),
         dueDate,
         expenseType: resourceType,
+        resourceCategory: resourceType, // Added this field as it's required
         status: "a_pagar",
-        attachmentUrl: file ? URL.createObjectURL(file) : undefined,
+        documentUrl: file ? URL.createObjectURL(file) : undefined,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -108,7 +109,7 @@ export function NewPaymentModal({
         value: parseFloat(value),
         expectedDate: dueDate,
         status: "pendente",
-        attachmentUrl: file ? URL.createObjectURL(file) : undefined,
+        documentUrl: file ? URL.createObjectURL(file) : undefined,
         createdAt: new Date(),
         updatedAt: new Date()
       };
