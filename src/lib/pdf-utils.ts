@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Product, Invoice, InventoryReport, PurchaseReport, InventoryMovement } from "./types";
+import { FoodItem } from "@/pages/Planning";
 
 // Original generatePDF function for products
 export const generatePDF = (products: Product[]) => {
@@ -422,7 +423,80 @@ function formatDate(date: Date, formatStr: string): string {
   return formatStr.replace('dd', day).replace('MM', month).replace('yyyy', year.toString());
 }
 
-// New function for generating financial reports
+// New function for exporting food planning to PDF
+export const generatePlanningPDF = (planningData: {
+  ataNumber: string;
+  date: string;
+  schoolName: string;
+  userName: string;
+  items: FoodItem[];
+}) => {
+  // Create a new jsPDF instance
+  const doc = new jsPDF();
+  
+  // Add title
+  doc.setFontSize(18);
+  doc.text("Planejamento de Alimentos", 14, 22);
+  
+  // Add ATA number
+  doc.setFontSize(14);
+  doc.text(`${planningData.ataNumber}`, 14, 32);
+  
+  // Add metadata
+  doc.setFontSize(11);
+  doc.text(`Escola: ${planningData.schoolName}`, 14, 42);
+  doc.text(`Responsável: ${planningData.userName}`, 14, 48);
+  doc.text(`Data: ${planningData.date}`, 14, 54);
+  doc.text(`Total de Itens: ${planningData.items.length}`, 14, 60);
+  
+  // Define columns
+  const columns = [
+    { header: "Item", dataKey: "name" },
+    { header: "Quantidade", dataKey: "quantity" },
+    { header: "Unidade", dataKey: "unit" },
+    { header: "Descrição", dataKey: "description" }
+  ];
+  
+  // Format data
+  const data = planningData.items.map((item) => ({
+    name: item.name,
+    quantity: item.quantity.toString(),
+    unit: item.unit,
+    description: item.description || "-"
+  }));
+  
+  // Create table
+  autoTable(doc, {
+    startY: 70,
+    head: [columns.map(column => column.header)],
+    body: data.map(row => columns.map(column => row[column.dataKey as keyof typeof row])),
+    headStyles: {
+      fillColor: [1, 35, 64],
+      textColor: 255,
+      fontStyle: "bold"
+    },
+    alternateRowStyles: {
+      fillColor: [240, 240, 240]
+    },
+    styles: {
+      fontSize: 10,
+      cellPadding: 5
+    },
+    margin: { top: 70 }
+  });
+  
+  // Get footer y position
+  const finalY = (doc as any).lastAutoTable.finalY || 70;
+  
+  // Add footer
+  doc.setFontSize(10);
+  doc.text(`Documento gerado automaticamente em ${new Date().toLocaleString()}`, 14, finalY + 15);
+  
+  // Save the PDF
+  doc.save(`planejamento_${planningData.ataNumber}.pdf`);
+};
+
+// Function for generating financial reports
 export const generateFinancialReportPDF = (reportData: {
   title: string;
   period: string;

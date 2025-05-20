@@ -263,3 +263,24 @@ export interface FinancialSummary {
 // Enum types for financial module
 export type ResourceType = 'PNATE' | 'PNAE' | 'Recursos Próprios' | 'Outros';
 export type ExpenseCategory = 'Alimentação' | 'Transporte' | 'Material Didático' | 'Infraestrutura' | 'Serviços' | 'Outros';
+
+// Add new types for the planning module
+export interface PlanningItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  description?: string;
+  addedAt: Date;
+}
+
+export interface FoodPlanning {
+  id: string;
+  ataNumber: string;
+  schoolId: string;
+  userId: string;
+  items: PlanningItem[];
+  status: 'draft' | 'finalized';
+  createdAt: Date;
+  finalizedAt?: Date;
+}
