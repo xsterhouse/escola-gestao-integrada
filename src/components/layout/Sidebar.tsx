@@ -14,7 +14,7 @@ import {
   CircleDollarSign,
   ClipboardList,
 } from "lucide-react";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 
 const sidebarWidth = 240;
@@ -22,7 +22,7 @@ const sidebarCollapsedWidth = 70;
 
 export function Sidebar() {
   const location = useLocation();
-  const { isMobile } = useMobile();
+  const { isMobile } = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
   const { user } = useAuth();
 

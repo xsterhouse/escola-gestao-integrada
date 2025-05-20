@@ -1,138 +1,124 @@
 
-import React from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { FoodItem } from "@/pages/Planning";
+import { Plus } from "lucide-react";
 
 interface FoodPlanningFormProps {
-  onAddItem: (item: Omit<FoodItem, "id">) => void;
+  onAddItem: (newItem: Omit<FoodItem, "id">) => void;
 }
 
-const formSchema = z.object({
-  name: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres." }),
-  quantity: z.coerce.number().positive({ message: "Quantidade deve ser maior que zero." }),
-  unit: z.enum(["kg", "unidade", "litros"], { 
-    required_error: "Selecione uma unidade." 
-  }),
-  description: z.string().optional(),
-});
-
 export function FoodPlanningForm({ onAddItem }: FoodPlanningFormProps) {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      quantity: 1,
-      unit: "kg",
-      description: "",
-    },
-  });
+  const [name, setName] = useState("");
+  const [quantity, setQuantity] = useState<number>(1);
+  const [unit, setUnit] = useState<"kg" | "unidade" | "litros">("kg");
+  const [description, setDescription] = useState("");
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
-    onAddItem(data);
-    form.reset();
-  }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Make sure all required fields are filled
+    if (!name || quantity <= 0) {
+      return;
+    }
+
+    // Pass all required properties (name, quantity, unit are required, description is optional)
+    onAddItem({
+      name,
+      quantity,
+      unit,
+      description
+    });
+    
+    // Reset form
+    setName("");
+    setQuantity(1);
+    setUnit("kg");
+    setDescription("");
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Adicionar Item</CardTitle>
+        <CardTitle>Adicionar Item ao Planejamento</CardTitle>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome do item</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Arroz Branco" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quantidade</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0.01" 
-                          step="0.01" 
-                          placeholder="Ex: 10" 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="unit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Unidade</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="kg">kg</SelectItem>
-                          <SelectItem value="unidade">unidade</SelectItem>
-                          <SelectItem value="litros">litros</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Adicione detalhes sobre o item..." 
-                      className="resize-none" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="name" className="text-sm font-medium">
+              Nome do Item
+            </label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: Arroz, Feijão, etc."
+              required
             />
-
-            <Button type="submit" className="w-full">Adicionar Item</Button>
-          </form>
-        </Form>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="quantity" className="text-sm font-medium">
+                Quantidade
+              </label>
+              <Input
+                id="quantity"
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="unit" className="text-sm font-medium">
+                Unidade
+              </label>
+              <Select value={unit} onValueChange={(value: "kg" | "unidade" | "litros") => setUnit(value)}>
+                <SelectTrigger id="unit">
+                  <SelectValue placeholder="Selecione a unidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="kg">Kg</SelectItem>
+                    <SelectItem value="unidade">Unidade</SelectItem>
+                    <SelectItem value="litros">Litros</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="description" className="text-sm font-medium">
+              Descrição
+            </label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Adicione detalhes sobre este item (opcional)"
+              rows={3}
+            />
+          </div>
+          
+          <Button type="submit" className="w-full">
+            <Plus className="mr-2 h-4 w-4" /> Adicionar Item
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );
