@@ -14,7 +14,8 @@ import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import Products from "./pages/Products";
 import Inventory from "./pages/Inventory";
-import Financial from "./pages/Financial"; // Add the new Financial page
+import Financial from "./pages/Financial"; 
+import Contracts from "./pages/Contracts"; // Add the new Contracts page
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -36,7 +37,8 @@ function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/products" element={<Products />} />
               <Route path="/inventory" element={<Inventory />} />
-              <Route path="/financial" element={<Financial />} /> {/* Add the new route */}
+              <Route path="/financial" element={<Financial />} />
+              <Route path="/contracts" element={<Contracts />} /> {/* Add the new route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>
