@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -22,7 +23,7 @@ const sidebarCollapsedWidth = 70;
 
 export function Sidebar() {
   const location = useLocation();
-  const { isMobile } = useIsMobile();
+  const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
   const { user } = useAuth();
 
