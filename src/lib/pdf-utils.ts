@@ -1,8 +1,8 @@
-
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Product, Invoice, InventoryReport, PurchaseReport, InventoryMovement } from "./types";
 
+// Original generatePDF function for products
 export const generatePDF = (products: Product[]) => {
   // Create a new jsPDF instance
   const doc = new jsPDF();
@@ -421,3 +421,63 @@ function formatDate(date: Date, formatStr: string): string {
   // Use string replacement instead of treating formatStr as a function
   return formatStr.replace('dd', day).replace('MM', month).replace('yyyy', year.toString());
 }
+
+// New function for generating financial reports
+export const generateFinancialReportPDF = (reportData: {
+  title: string;
+  period: string;
+  bankAccount: string;
+  accountType: string;
+  status: string;
+  data: any[];
+}) => {
+  // Create a new jsPDF instance
+  const doc = new jsPDF();
+  
+  // Add title
+  doc.setFontSize(18);
+  doc.text(reportData.title, 14, 22);
+  
+  // Add date and filters info
+  doc.setFontSize(11);
+  const date = new Date().toLocaleString();
+  doc.text(`Gerado em: ${date}`, 14, 30);
+  doc.text(`Período: ${reportData.period}`, 14, 38);
+  doc.text(`Banco: ${reportData.bankAccount}`, 14, 46);
+  doc.text(`Tipo de Conta: ${reportData.accountType}`, 14, 54);
+  doc.text(`Status: ${reportData.status}`, 14, 62);
+  
+  // Define columns for the report table
+  const columns = [
+    { header: "Data", dataKey: "date" },
+    { header: "Descrição", dataKey: "description" },
+    { header: "Valor", dataKey: "value" },
+    { header: "Tipo", dataKey: "type" },
+    { header: "Situação", dataKey: "status" }
+  ];
+  
+  // Create table (empty for now, in a real app this would use reportData.data)
+  autoTable(doc, {
+    startY: 70,
+    head: [columns.map(column => column.header)],
+    body: reportData.data.length > 0 ? 
+      reportData.data.map(row => columns.map(column => row[column.dataKey] || "")) :
+      [["Não há dados para exibir no período selecionado.", "", "", "", ""]],
+    headStyles: {
+      fillColor: [1, 35, 64], // #012340
+      textColor: 255,
+      fontStyle: "bold"
+    },
+    alternateRowStyles: {
+      fillColor: [240, 240, 240]
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: 5
+    },
+    margin: { top: 70 }
+  });
+  
+  // Save the PDF
+  doc.save("conciliacao_bancaria.pdf");
+};

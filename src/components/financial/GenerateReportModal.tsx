@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, FileDown, FileText, X } from "lucide-react";
@@ -11,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { generatePDF, exportToCsv } from "@/lib/pdf-utils";
+import { generateFinancialReportPDF, exportToCsv } from "@/lib/pdf-utils";
 
 interface GenerateReportModalProps {
   isOpen: boolean;
@@ -45,7 +44,7 @@ export function GenerateReportModal({
       data: []
     };
     
-    generatePDF(reportData); // Removed the second argument
+    generateFinancialReportPDF(reportData);
     onClose();
   };
   
