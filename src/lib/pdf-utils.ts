@@ -481,3 +481,88 @@ export const generateFinancialReportPDF = (reportData: {
   // Save the PDF
   doc.save("conciliacao_bancaria.pdf");
 };
+
+// Function to generate a planning report PDF
+export const generatePlanningReportPDF = (reportData: {
+  ataNumber: string;
+  schoolName: string;
+  userName: string;
+  date: Date;
+  items: {
+    id: string;
+    name: string;
+    quantity: number;
+    unit: string;
+    description: string;
+  }[];
+}) => {
+  const doc = new jsPDF();
+  
+  // Add title
+  doc.setFontSize(18);
+  doc.text("ATA DE REGISTRO DE PREÇO", 14, 22);
+  
+  // Add report information
+  doc.setFontSize(12);
+  doc.text(`Número da ATA: ${reportData.ataNumber}`, 14, 35);
+  doc.text(`Escola: ${reportData.schoolName}`, 14, 45);
+  doc.text(`Responsável: ${reportData.userName}`, 14, 55);
+  doc.text(`Data: ${reportData.date.toLocaleDateString()}`, 14, 65);
+  
+  // Define columns
+  const columns = [
+    { header: "Nome do Item", dataKey: "name" },
+    { header: "Quantidade", dataKey: "quantity" },
+    { header: "Unidade", dataKey: "unit" },
+    { header: "Descrição", dataKey: "description" }
+  ];
+  
+  // Format data
+  const data = reportData.items.map((item) => ({
+    name: item.name,
+    quantity: item.quantity.toString(),
+    unit: item.unit,
+    description: item.description || "-"
+  }));
+  
+  // Create table
+  autoTable(doc, {
+    startY: 75,
+    head: [columns.map(column => column.header)],
+    body: data.map(row => columns.map(column => row[column.dataKey as keyof typeof row])),
+    headStyles: {
+      fillColor: [1, 35, 64], // #012340
+      textColor: 255,
+      fontStyle: "bold"
+    },
+    alternateRowStyles: {
+      fillColor: [240, 240, 240]
+    },
+    styles: {
+      fontSize: 10,
+      cellPadding: 5
+    },
+    columnStyles: {
+      0: { cellWidth: 50 }, // Nome do Item
+      1: { cellWidth: 25 }, // Quantidade
+      2: { cellWidth: 25 }, // Unidade
+      3: { cellWidth: "auto" } // Descrição (flexible)
+    },
+    margin: { top: 75 }
+  });
+  
+  // Get footer y position
+  const finalY = (doc as any).lastAutoTable.finalY || 75;
+  
+  // Add footer
+  doc.setFontSize(10);
+  doc.text(`Total de itens: ${reportData.items.length}`, 14, finalY + 15);
+  
+  // Format filename: ATA_Escola_Nome_YYYY-MM-DD.pdf
+  const schoolNameFormatted = reportData.schoolName.replace(/\s+/g, '_');
+  const dateFormatted = reportData.date.toISOString().split('T')[0]; // YYYY-MM-DD
+  const filename = `ATA_${schoolNameFormatted}_${dateFormatted}.pdf`;
+  
+  // Save the PDF
+  doc.save(filename);
+};
