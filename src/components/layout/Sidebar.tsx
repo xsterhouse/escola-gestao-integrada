@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -68,13 +67,6 @@ export function Sidebar({ className }: SidebarProps) {
       permission: "financial",
     },
     {
-      id: "contracts",
-      name: "Contratos",
-      icon: <FileText className="h-5 w-5" />,
-      path: "/contracts",
-      permission: "contracts",
-    },
-    {
       id: "planning",
       name: "Planejamento",
       icon: <ClipboardList className="h-5 w-5" />,
@@ -82,11 +74,11 @@ export function Sidebar({ className }: SidebarProps) {
       permission: "planning",
     },
     {
-      id: "contracts_old",
+      id: "contracts",
       name: "Contratos",
       icon: <FileText className="h-5 w-5" />,
-      path: "/contracts_old",
-      permission: "contracts_old",
+      path: "/contracts",
+      permission: "contracts",
     },
   ];
 

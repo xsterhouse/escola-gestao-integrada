@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Filter } from "lucide-react";
+import { Filter, Eye, Download } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -62,6 +62,18 @@ export default function ContractsReports() {
       (filter.status === "" || report.status === filter.status)
     );
   });
+
+  // Handle view report
+  const handleViewReport = (reportId: number) => {
+    console.log("Viewing report:", reportId);
+    // In a real app, this would show details in a modal or navigate to a detail page
+  };
+
+  // Handle export report
+  const handleExportReport = (reportId: number) => {
+    console.log("Exporting report:", reportId);
+    // In a real app, this would generate and download a PDF/Excel file
+  };
 
   // Colors for pie chart
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28"];
@@ -137,12 +149,13 @@ export default function ContractsReports() {
                   <TableHead>Entregue</TableHead>
                   <TableHead>Pago</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredReports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4 text-gray-500">
+                    <TableCell colSpan={7} className="text-center py-4 text-gray-500">
                       Nenhum resultado encontrado para os filtros aplicados.
                     </TableCell>
                   </TableRow>
@@ -172,6 +185,28 @@ export default function ContractsReports() {
                             ? "Encerrado" 
                             : "Liquidado"}
                         </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="h-8 px-2"
+                            onClick={() => handleViewReport(report.id)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Visualizar
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="h-8 px-2"
+                            onClick={() => handleExportReport(report.id)}
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            Exportar
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
