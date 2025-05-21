@@ -21,27 +21,32 @@ const PlanningPage = () => {
   // Load plans for current school
   useEffect(() => {
     if (currentSchool) {
-      // In a real app, this would be an API call
-      // For now, we'll use mock data from localStorage
-      const storedPlans = localStorage.getItem(`plans_${currentSchool.id}`);
-      if (storedPlans) {
-        const parsedPlans: Planning[] = JSON.parse(storedPlans);
-        setPlans(parsedPlans);
-        
-        // Find draft plan or create a new one
-        const draftPlan = parsedPlans.find(p => p.status === "draft");
-        if (draftPlan) {
-          setCurrentPlan(draftPlan);
-          setItems(draftPlan.items || []);
+      try {
+        // In a real app, this would be an API call
+        // For now, we'll use mock data from localStorage
+        const storedPlans = localStorage.getItem(`plans_${currentSchool.id}`);
+        if (storedPlans) {
+          const parsedPlans: Planning[] = JSON.parse(storedPlans);
+          setPlans(parsedPlans);
+          
+          // Find draft plan or create a new one
+          const draftPlan = parsedPlans.find(p => p.status === "draft");
+          if (draftPlan) {
+            setCurrentPlan(draftPlan);
+            setItems(draftPlan.items || []);
+          } else {
+            createNewPlan();
+          }
         } else {
           createNewPlan();
         }
-      } else {
+      } catch (error) {
+        console.error("Error loading plans:", error);
         createNewPlan();
       }
       setIsLoading(false);
     }
-  }, [currentSchool]);
+  }, [currentSchool?.id]); // Added dependency to prevent infinite loop
 
   const createNewPlan = () => {
     if (!currentSchool || !user) return;
@@ -208,7 +213,7 @@ const PlanningPage = () => {
     
     // Search by date
     const date = plan.finalizedAt || plan.createdAt;
-    return date.toLocaleDateString().includes(searchTerm);
+    return new Date(date).toLocaleDateString().includes(searchTerm);
   });
 
   const selectPlan = (planId: string) => {
