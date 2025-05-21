@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -15,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Check } from "lucide-react";
+import { Plus, Check, FileText } from "lucide-react";
 import { PlanItem } from "@/lib/types";
 import {
   Dialog,
