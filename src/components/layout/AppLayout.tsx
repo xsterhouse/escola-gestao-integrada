@@ -1,5 +1,5 @@
 
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -16,7 +16,6 @@ export function AppLayout({
   requiredPermission 
 }: AppLayoutProps) {
   const { isAuthenticated, user, isLoading } = useAuth();
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
 
   // Check if user is authenticated when required
   if (requireAuth && !isLoading && !isAuthenticated) {
@@ -48,10 +47,7 @@ export function AppLayout({
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
-      />
+      <Sidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6">

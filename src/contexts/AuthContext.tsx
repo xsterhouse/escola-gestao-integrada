@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User, School } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -82,8 +83,7 @@ const MOCK_SCHOOL_USERS: User[] = [
       { id: "1", name: "dashboard", hasAccess: true },
       { id: "2", name: "products", hasAccess: true },
       { id: "3", name: "inventory", hasAccess: true },
-      { id: "4", name: "financial", hasAccess: true },
-      { id: "5", name: "planning", hasAccess: true }
+      { id: "4", name: "financial", hasAccess: true }
     ],
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -97,8 +97,7 @@ const MOCK_SCHOOL_USERS: User[] = [
     permissions: [
       { id: "1", name: "dashboard", hasAccess: true },
       { id: "2", name: "products", hasAccess: true },
-      { id: "3", name: "inventory", hasAccess: true },
-      { id: "5", name: "planning", hasAccess: true }
+      { id: "3", name: "inventory", hasAccess: true }
     ],
     createdAt: new Date(),
     updatedAt: new Date(),

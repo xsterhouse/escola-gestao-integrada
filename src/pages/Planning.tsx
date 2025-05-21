@@ -1,39 +1,97 @@
 
-import React from "react";
-import { Navigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import PlanningHeader from "@/components/planning/PlanningHeader";
-import PlanningForm from "@/components/planning/PlanningForm";
-import PlanningList from "@/components/planning/PlanningList";
-import PlanningTransfer from "@/components/planning/PlanningTransfer";
-import PlanningImport from "@/components/planning/PlanningImport";
+import React, { useState } from "react";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { FoodPlanningForm } from "@/components/planning/FoodPlanningForm";
+import { FoodPlanningTable } from "@/components/planning/FoodPlanningTable";
+import { FinalizeModal } from "@/components/planning/FinalizeModal";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 
-const Planning = () => {
-  const { isAuthenticated, currentSchool } = useAuth();
+export interface FoodItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: "kg" | "unidade" | "litros";
+  description: string;
+}
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
+export default function Planning() {
+  const [items, setItems] = useState<FoodItem[]>([]);
+  const [showFinalizeModal, setShowFinalizeModal] = useState(false);
+  const [ataNumber, setAtaNumber] = useState("");
 
-  if (!currentSchool) {
-    return <Navigate to="/dashboard" />;
-  }
+  const addItem = (newItem: Omit<FoodItem, "id">) => {
+    const itemWithId = {
+      ...newItem,
+      id: Math.random().toString(36).substring(2, 9),
+    };
+    setItems([...items, itemWithId]);
+    toast({
+      title: "Item adicionado",
+      description: `${newItem.name} foi adicionado ao planejamento.`,
+    });
+  };
+
+  const removeItem = (id: string) => {
+    setItems(items.filter(item => item.id !== id));
+    toast({
+      title: "Item removido",
+      description: "Item removido do planejamento.",
+    });
+  };
+
+  const finalizePlanning = () => {
+    if (items.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Adicione pelo menos um item ao planejamento.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Generate unique ATA number
+    const timestamp = Date.now();
+    const newAtaNumber = `ATA-${timestamp}`;
+    setAtaNumber(newAtaNumber);
+    setShowFinalizeModal(true);
+  };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <PlanningHeader />
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <div className="md:col-span-2 space-y-6">
-          <PlanningForm />
-          <PlanningList />
+    <AppLayout requireAuth={true} requiredPermission="view_planning">
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Planejamento de Alimentos</h1>
+          <p className="text-muted-foreground">Adicione itens ao planejamento e gere uma ATA.</p>
         </div>
-        <div className="space-y-6">
-          <PlanningTransfer />
-          <PlanningImport />
-        </div>
-      </div>
-    </div>
-  );
-};
 
-export default Planning;
+        <FoodPlanningForm onAddItem={addItem} />
+        
+        {items.length > 0 && (
+          <div className="space-y-4">
+            <FoodPlanningTable items={items} onRemoveItem={removeItem} />
+            
+            <div className="flex justify-end mt-6">
+              <Button 
+                size="lg" 
+                onClick={finalizePlanning} 
+                className="bg-primary hover:bg-primary/90"
+              >
+                Finalizar Planejamento da ATA
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {showFinalizeModal && (
+          <FinalizeModal 
+            isOpen={showFinalizeModal} 
+            onClose={() => setShowFinalizeModal(false)} 
+            ataNumber={ataNumber}
+            items={items}
+          />
+        )}
+      </div>
+    </AppLayout>
+  );
+}

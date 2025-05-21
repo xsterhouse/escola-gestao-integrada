@@ -1,144 +1,142 @@
-import {
-  LayoutDashboard,
-  Building,
-  Users,
-  ShoppingCart,
-  PackageOpen,
-  DollarSign,
-  CalendarRange,
-  FileText,
-  Settings,
-} from "lucide-react";
-import { NavLink } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  School,
+  Users,
+  Settings,
+  Package,
+  ChevronLeft,
+  ChevronRight,
+  BoxIcon,
+  FileText,
+  CircleDollarSign,
+  ClipboardList,
+} from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface SidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+const sidebarWidth = 240;
+const sidebarCollapsedWidth = 70;
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { user } = useAuth();
+export function Sidebar() {
+  const location = useLocation();
   const isMobile = useIsMobile();
-  const [showSidebar, setShowSidebar] = useState(isOpen);
+  const [collapsed, setCollapsed] = useState(isMobile);
+  const { user } = useAuth();
 
-  useEffect(() => {
-    setShowSidebar(isOpen);
-  }, [isOpen]);
-
-  const handleClose = () => {
-    onClose();
-    setShowSidebar(false);
-  };
-
-  // Conditionally render based on screen size and open state
-  if (isMobile && !showSidebar) {
-    return null;
-  }
-
-  const navigation = [
+  const menuItems = [
     {
+      id: "dashboard",
       name: "Dashboard",
-      href: "/dashboard",
-      icon: LayoutDashboard,
+      icon: <BoxIcon className="h-5 w-5" />,
+      path: "/dashboard",
       permission: "dashboard",
     },
     {
+      id: "schools",
       name: "Escolas",
-      href: "/schools",
-      icon: Building,
-      permission: "master", // Only master users can access
+      icon: <School className="h-5 w-5" />,
+      path: "/schools",
+      permission: "schools",
     },
     {
+      id: "users",
       name: "Usuários",
-      href: "/users",
-      icon: Users,
-      permission: "master", // Only master users can access
+      icon: <Users className="h-5 w-5" />,
+      path: "/users",
+      permission: "users",
     },
     {
+      id: "products",
       name: "Produtos",
-      href: "/products",
-      icon: ShoppingCart,
+      icon: <Package className="h-5 w-5" />,
+      path: "/products",
       permission: "products",
     },
     {
+      id: "inventory",
       name: "Estoque",
-      href: "/inventory",
-      icon: PackageOpen,
+      icon: <BoxIcon className="h-5 w-5" />,
+      path: "/inventory",
       permission: "inventory",
     },
     {
+      id: "financial",
       name: "Financeiro",
-      href: "/financial",
-      icon: DollarSign,
+      icon: <CircleDollarSign className="h-5 w-5" />,
+      path: "/financial",
       permission: "financial",
     },
     {
+      id: "planning",
       name: "Planejamento",
-      href: "/planning",
-      icon: CalendarRange,
+      icon: <ClipboardList className="h-5 w-5" />,
+      path: "/planning",
       permission: "planning",
     },
     {
+      id: "contracts",
       name: "Contratos",
-      href: "/contracts",
-      icon: FileText,
+      icon: <FileText className="h-5 w-5" />,
+      path: "/contracts",
       permission: "contracts",
     },
-    {
-      name: "Configurações",
-      href: "/settings",
-      icon: Settings,
-      permission: "settings",
-    },
   ];
+
+  const toggleSidebar = () => {
+    setCollapsed(!collapsed);
+  };
 
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 py-4 border-r bg-secondary text-secondary-foreground w-60",
-        isMobile ? "fixed inset-y-0 left-0 z-50" : "",
-        isOpen ? "translate-x-0" : "-translate-x-full",
-        "transition-transform duration-300 ease-in-out"
+        "flex flex-col h-full bg-secondary border-r",
+        collapsed ? "w-[70px]" : "w-[240px]",
+        "transition-all duration-300 ease-in-out",
+        "md:block hidden"
       )}
     >
-      <div className="px-4">
-        <span className="font-bold text-lg">SIGRE</span>
+      <div className="flex items-center justify-between p-4">
+        {!collapsed && (
+          <span className="font-bold text-xl">
+            {user?.schoolId ? "Painel Escolar" : "Painel Administrativo"}
+          </span>
+        )}
+        <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+          {collapsed ? <ChevronRight /> : <ChevronLeft />}
+          <span className="sr-only">Toggle Sidebar</span>
+        </Button>
       </div>
-      <nav className="flex flex-col gap-1 px-2">
-        {navigation.map((item) => {
-          if (item.permission === "master" && user?.role !== "master") {
-            return null;
+      <div className="flex-1 space-y-1">
+        {menuItems.map((item) => {
+          if (user?.role === "master" || user?.permissions.some((p) => p.name === item.permission && p.hasAccess)) {
+            return (
+              <Link
+                key={item.id}
+                to={item.path}
+                className={cn(
+                  "flex items-center gap-2 p-3 rounded-md hover:bg-secondary/50",
+                  location.pathname === item.path ? "bg-secondary/50" : ""
+                )}
+              >
+                <div className="flex items-center">
+                  {item.icon}
+                  {!collapsed && <span className="ml-2">{item.name}</span>}
+                </div>
+              </Link>
+            );
           }
-
-          if (
-            user &&
-            !user.permissions.find((p) => p.name === item.permission)?.hasAccess
-          ) {
-            return null;
-          }
-
-          return (
-            <NavLink
-              key={item.name}
-              to={item.href}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium hover:bg-secondary/50",
-                  isActive ? "bg-secondary/50" : "transparent"
-                )
-              }
-              onClick={isMobile ? handleClose : undefined}
-            >
-              <item.icon className="size-4" />
-              {item.name}
-            </NavLink>
-          );
+          return null;
         })}
-      </nav>
+      </div>
+      <div className="p-4">
+        <p className="text-xs text-muted-foreground">
+          &copy; {new Date().getFullYear()}
+        </p>
+      </div>
     </div>
   );
 }

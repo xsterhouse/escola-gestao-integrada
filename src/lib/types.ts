@@ -264,35 +264,23 @@ export interface FinancialSummary {
 export type ResourceType = 'PNATE' | 'PNAE' | 'Recursos Próprios' | 'Outros';
 export type ExpenseCategory = 'Alimentação' | 'Transporte' | 'Material Didático' | 'Infraestrutura' | 'Serviços' | 'Outros';
 
-// Planning related interfaces
-export interface PlanItem {
+// Add new types for the planning module
+export interface PlanningItem {
   id: string;
   name: string;
   quantity: number;
   unit: string;
-  description: string;
+  description?: string;
+  addedAt: Date;
 }
 
-export interface PlanningAta {
+export interface FoodPlanning {
   id: string;
-  ataNumber: string; // Format: ATA-YYYY-XXXX
+  ataNumber: string;
   schoolId: string;
-  schoolName: string;
-  items: PlanItem[];
-  status: "draft" | "finalized";
-  finalizedBy?: string;
-  finalizedAt?: Date;
+  userId: string;
+  items: PlanningItem[];
+  status: 'draft' | 'finalized';
   createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface PlanningTransfer {
-  id: string;
-  fromSchoolId: string;
-  toSchoolId: string;
-  itemName: string;
-  quantity: number;
-  unit: string;
-  transferDate: Date;
-  createdBy: string;
+  finalizedAt?: Date;
 }

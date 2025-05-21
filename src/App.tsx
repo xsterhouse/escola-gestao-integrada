@@ -16,7 +16,7 @@ import Products from "./pages/Products";
 import Inventory from "./pages/Inventory";
 import Financial from "./pages/Financial";
 import Contracts from "./pages/Contracts";
-import Planning from "./pages/Planning"; // Import the new Planning page
+import Planning from "./pages/Planning"; // Add the new Planning page
 import NotFound from "./pages/NotFound";
 
 function App() {
