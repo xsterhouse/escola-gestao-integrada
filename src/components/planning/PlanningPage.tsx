@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,37 +17,8 @@ const PlanningPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load plans for current school
-  useEffect(() => {
-    if (currentSchool) {
-      try {
-        // In a real app, this would be an API call
-        // For now, we'll use mock data from localStorage
-        const storedPlans = localStorage.getItem(`plans_${currentSchool.id}`);
-        if (storedPlans) {
-          const parsedPlans: Planning[] = JSON.parse(storedPlans);
-          setPlans(parsedPlans);
-          
-          // Find draft plan or create a new one
-          const draftPlan = parsedPlans.find(p => p.status === "draft");
-          if (draftPlan) {
-            setCurrentPlan(draftPlan);
-            setItems(draftPlan.items || []);
-          } else {
-            createNewPlan();
-          }
-        } else {
-          createNewPlan();
-        }
-      } catch (error) {
-        console.error("Error loading plans:", error);
-        createNewPlan();
-      }
-      setIsLoading(false);
-    }
-  }, [currentSchool?.id]); // Added dependency to prevent infinite loop
-
-  const createNewPlan = () => {
+  // Define createNewPlan function before using it in useEffect
+  const createNewPlan = useCallback(() => {
     if (!currentSchool || !user) return;
     
     const newPlan: Planning = {
@@ -65,12 +35,61 @@ const PlanningPage = () => {
     setPlans(prevPlans => [...prevPlans, newPlan]);
     
     // Save to localStorage
-    savePlansToStorage([...plans, newPlan]);
-  };
+    try {
+      localStorage.setItem(`plans_${currentSchool.id}`, JSON.stringify([...plans, newPlan]));
+    } catch (error) {
+      console.error("Error saving new plan to storage:", error);
+    }
+  }, [currentSchool, user, plans]);
+
+  // Load plans for current school
+  useEffect(() => {
+    if (!currentSchool || !currentSchool.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // In a real app, this would be an API call
+      // For now, we'll use mock data from localStorage
+      const storedPlans = localStorage.getItem(`plans_${currentSchool.id}`);
+      let parsedPlans: Planning[] = [];
+      
+      if (storedPlans) {
+        parsedPlans = JSON.parse(storedPlans);
+        setPlans(parsedPlans);
+        
+        // Find draft plan or create a new one
+        const draftPlan = parsedPlans.find(p => p.status === "draft");
+        if (draftPlan) {
+          setCurrentPlan(draftPlan);
+          setItems(draftPlan.items || []);
+        } else {
+          createNewPlan();
+        }
+      } else {
+        createNewPlan();
+      }
+    } catch (error) {
+      console.error("Error loading plans:", error);
+      createNewPlan();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentSchool?.id, createNewPlan]); // Added dependency to prevent infinite loop
 
   const savePlansToStorage = (updatedPlans: Planning[]) => {
     if (currentSchool) {
-      localStorage.setItem(`plans_${currentSchool.id}`, JSON.stringify(updatedPlans));
+      try {
+        localStorage.setItem(`plans_${currentSchool.id}`, JSON.stringify(updatedPlans));
+      } catch (error) {
+        console.error("Error saving plans to storage:", error);
+        toast({
+          title: "Erro ao salvar",
+          description: "Não foi possível salvar as alterações",
+          variant: "destructive"
+        });
+      }
     }
   };
 
