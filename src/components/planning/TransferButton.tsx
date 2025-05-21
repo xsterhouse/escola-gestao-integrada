@@ -18,7 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { TransferIcon } from "lucide-react"; 
+import { ArrowLeft } from "lucide-react"; // Changed from TransferIcon to ArrowLeft
 import { v4 as uuidv4 } from "uuid";
 import { Planning, PlanningItem, TransferRecord, School, PurchasingCenter } from "@/lib/types";
 
@@ -162,7 +162,7 @@ export function TransferButton({ itemId, planningId, quantity }: TransferButtonP
     
     // Add to target school's planning
     const targetPlans = JSON.parse(localStorage.getItem(`plans_${data.toSchoolId}`) || "[]");
-    const sourcePlan = sourcePlans.find((p: Planning) => p.id === planningId);
+    // Fixed: Don't redeclare sourcePlan, reuse the one above
     const sourceItem = sourcePlan?.items.find((item: PlanningItem) => item.id === itemId);
     
     if (sourceItem) {
@@ -214,7 +214,7 @@ export function TransferButton({ itemId, planningId, quantity }: TransferButtonP
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon">
-          <TransferIcon className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4" /> {/* Changed from TransferIcon to ArrowLeft */}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
