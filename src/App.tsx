@@ -16,6 +16,7 @@ import Products from "./pages/Products";
 import Inventory from "./pages/Inventory";
 import Financial from "./pages/Financial";
 import Contracts from "./pages/Contracts"; // Import the Contracts page
+import Planning from "./pages/Planning"; // Import the new Planning page
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
                 <Route path="/inventory" element={<Inventory />} />
                 <Route path="/financial" element={<Financial />} />
                 <Route path="/contracts" element={<Contracts />} />
+                <Route path="/planning" element={<Planning />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </TooltipProvider>

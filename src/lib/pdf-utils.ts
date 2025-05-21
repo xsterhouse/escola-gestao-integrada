@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Product, Invoice, InventoryReport, PurchaseReport, InventoryMovement } from "./types";
+import { Product, Invoice, InventoryReport, PurchaseReport, InventoryMovement, Planning } from "./types";
 
 // Original generatePDF function for products
 export const generatePDF = (products: Product[]) => {
@@ -480,4 +480,85 @@ export const generateFinancialReportPDF = (reportData: {
   
   // Save the PDF
   doc.save("conciliacao_bancaria.pdf");
+};
+
+// New function for generating planning reports
+export const generatePlanningPDF = (planning: Planning) => {
+  // Create a new jsPDF instance
+  const doc = new jsPDF();
+  
+  // Add title
+  doc.setFontSize(18);
+  doc.text("ATA DE REGISTRO DE PREÇO", 14, 22);
+  
+  // Add ATA number
+  doc.setFontSize(14);
+  doc.text(`${planning.ataNumber || "RASCUNHO"}`, 14, 30);
+  
+  // Add metadata
+  doc.setFontSize(11);
+  const finalizedDate = planning.finalizedAt 
+    ? new Date(planning.finalizedAt).toLocaleDateString() 
+    : "Não finalizado";
+  
+  doc.setFontSize(11);
+  doc.text(`Status: ${planning.status === "finalized" ? "Finalizado" : "Rascunho"}`, 14, 42);
+  doc.text(`Data de Finalização: ${finalizedDate}`, 14, 48);
+  doc.text(`Responsável: ${planning.finalizedBy || "—"}`, 14, 54);
+  
+  // Define columns
+  const columns = [
+    { header: "Item", dataKey: "name" },
+    { header: "Qtde.", dataKey: "quantity" },
+    { header: "Unidade", dataKey: "unit" },
+    { header: "Descrição", dataKey: "description" },
+    { header: "Disponível", dataKey: "available" },
+  ];
+  
+  // Format data
+  const data = planning.items.map((item) => {
+    return {
+      name: item.name,
+      quantity: item.quantity.toString(),
+      unit: item.unit,
+      description: item.description || "—",
+      available: (item.availableQuantity !== undefined 
+        ? item.availableQuantity 
+        : item.quantity).toString()
+    };
+  });
+  
+  // Create table
+  autoTable(doc, {
+    startY: 60,
+    head: [columns.map(column => column.header)],
+    body: data.map(row => columns.map(column => row[column.dataKey as keyof typeof row])),
+    headStyles: {
+      fillColor: [1, 35, 64], // #012340
+      textColor: 255,
+      fontStyle: "bold"
+    },
+    alternateRowStyles: {
+      fillColor: [240, 240, 240]
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: 5
+    },
+    margin: { top: 60 }
+  });
+  
+  // Get footer y position
+  const finalY = (doc as any).lastAutoTable.finalY || 60;
+  
+  // Add footer
+  doc.setFontSize(10);
+  doc.text(`Total de itens: ${planning.items.length}`, 14, finalY + 15);
+  
+  // Save the PDF - use ATA number or default name
+  const filename = planning.ataNumber 
+    ? `ATA_${planning.ataNumber.replace(/-/g, "_")}.pdf` 
+    : "planejamento_rascunho.pdf";
+    
+  doc.save(filename);
 };

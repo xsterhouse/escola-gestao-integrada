@@ -1,3 +1,4 @@
+
 export interface Permission {
   id: string;
   name: string;
@@ -263,3 +264,39 @@ export interface FinancialSummary {
 // Enum types for financial module
 export type ResourceType = 'PNATE' | 'PNAE' | 'Recursos Próprios' | 'Outros';
 export type ExpenseCategory = 'Alimentação' | 'Transporte' | 'Material Didático' | 'Infraestrutura' | 'Serviços' | 'Outros';
+
+// Planning Module Types
+export interface PlanningItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  description: string;
+  planningId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  availableQuantity?: number; // For tracking transfers
+}
+
+export interface Planning {
+  id: string;
+  schoolId: string;
+  status: "draft" | "finalized";
+  ataNumber?: string;
+  finalizedAt?: Date;
+  finalizedBy?: string;
+  items: PlanningItem[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TransferRecord {
+  id: string;
+  fromSchoolId: string;
+  toSchoolId: string;
+  planningItemId: string;
+  quantity: number;
+  transferredAt: Date;
+  transferredBy: string;
+  createdAt: Date;
+}
