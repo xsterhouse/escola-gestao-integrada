@@ -15,36 +15,38 @@ import Settings from "./pages/Settings";
 import Products from "./pages/Products";
 import Inventory from "./pages/Inventory";
 import Financial from "./pages/Financial";
-import Contracts from "./pages/Contracts"; // Import the new Contracts page
+import Contracts from "./pages/Contracts"; // Import the Contracts page
 import NotFound from "./pages/NotFound";
 
 function App() {
   const queryClient = React.useMemo(() => new QueryClient(), []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/schools" element={<Schools />} />
-              <Route path="/users" element={<Users />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/inventory" element={<Inventory />} />
-              <Route path="/financial" element={<Financial />} />
-              <Route path="/contracts" element={<Contracts />} /> {/* Add the new route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </TooltipProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/schools" element={<Schools />} />
+                <Route path="/users" element={<Users />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/inventory" element={<Inventory />} />
+                <Route path="/financial" element={<Financial />} />
+                <Route path="/contracts" element={<Contracts />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </TooltipProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </React.StrictMode>
   );
 }
 
