@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -6,6 +5,7 @@ import {
   ReceivableAccount,
   FinancialSummary
 } from "@/lib/types";
+import { ActionCards } from "@/components/dashboard/ActionCards";
 
 interface FinancialDashboardProps {
   summary: FinancialSummary;
