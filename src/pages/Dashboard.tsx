@@ -1,9 +1,10 @@
-
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DashboardCards } from "@/components/dashboard/DashboardCards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ImportXmlModal } from "@/components/dashboard/ImportXmlModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardMetric, School } from "@/lib/types";
 import { 
@@ -18,8 +19,10 @@ import {
 
 const Dashboard = () => {
   const { user, currentSchool } = useAuth();
+  const navigate = useNavigate();
   const [lastAccess, setLastAccess] = useState("");
   const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   
   useEffect(() => {
     // Get the last access from localStorage or set current time
@@ -103,7 +106,10 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-white shadow-sm border-l-4 border-l-[#012340]">
+          <Card 
+            className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+            onClick={() => navigate('/contracts')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="bg-[#012340]/10 p-3 rounded-lg">
@@ -117,7 +123,10 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          <Card className="bg-white shadow-sm border-l-4 border-l-[#012340]">
+          <Card 
+            className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+            onClick={() => navigate('/products')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="bg-[#012340]/10 p-3 rounded-lg">
@@ -131,7 +140,10 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          <Card className="bg-white shadow-sm border-l-4 border-l-[#012340]">
+          <Card 
+            className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+            onClick={() => setIsImportModalOpen(true)}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="bg-[#012340]/10 p-3 rounded-lg">
@@ -145,7 +157,10 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          <Card className="bg-white shadow-sm border-l-4 border-l-[#012340]">
+          <Card 
+            className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+            onClick={() => navigate('/financial')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="bg-[#012340]/10 p-3 rounded-lg">
@@ -160,7 +175,7 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="border-t-4 border-t-[#012340] md:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-medium">Contratos Ativos</CardTitle>
@@ -268,6 +283,11 @@ const Dashboard = () => {
           </Card>
         </div>
       </div>
+
+      <ImportXmlModal 
+        open={isImportModalOpen} 
+        onOpenChange={setIsImportModalOpen} 
+      />
     </AppLayout>
   );
 };
