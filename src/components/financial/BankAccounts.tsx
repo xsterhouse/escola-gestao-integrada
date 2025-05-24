@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,15 +22,31 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
   const [formData, setFormData] = useState({
     bankName: "",
+    agencyNumber: "",
     accountNumber: "",
     accountType: "movimento" as "movimento" | "aplicacao",
     description: "",
     initialBalance: ""
   });
 
+  // Load bank accounts from localStorage on component mount
+  useEffect(() => {
+    const savedAccounts = localStorage.getItem('bankAccounts');
+    if (savedAccounts) {
+      const accounts = JSON.parse(savedAccounts);
+      setBankAccounts(accounts);
+    }
+  }, [setBankAccounts]);
+
+  // Save bank accounts to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('bankAccounts', JSON.stringify(bankAccounts));
+  }, [bankAccounts]);
+
   const resetForm = () => {
     setFormData({
       bankName: "",
+      agencyNumber: "",
       accountNumber: "",
       accountType: "movimento",
       description: "",
@@ -40,7 +56,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
   };
 
   const handleSave = () => {
-    if (!formData.bankName || !formData.accountNumber || !formData.description) {
+    if (!formData.bankName || !formData.agencyNumber || !formData.accountNumber || !formData.description) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -54,6 +70,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
           ? {
               ...account,
               bankName: formData.bankName,
+              agencyNumber: formData.agencyNumber,
               accountNumber: formData.accountNumber,
               accountType: formData.accountType,
               description: formData.description,
@@ -71,6 +88,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
         id: uuidv4(),
         schoolId: "current-school-id",
         bankName: formData.bankName,
+        agencyNumber: formData.agencyNumber,
         accountNumber: formData.accountNumber,
         accountType: formData.accountType,
         description: formData.description,
@@ -91,6 +109,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
   const handleEdit = (account: BankAccount) => {
     setFormData({
       bankName: account.bankName,
+      agencyNumber: account.agencyNumber || "",
       accountNumber: account.accountNumber,
       accountType: account.accountType,
       description: account.description,
@@ -142,14 +161,24 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
             </DialogHeader>
             
             <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="bankName">Banco *</Label>
+                <Input
+                  id="bankName"
+                  value={formData.bankName}
+                  onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                  placeholder="Nome do banco"
+                />
+              </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="bankName">Banco *</Label>
+                  <Label htmlFor="agencyNumber">Número da Agência *</Label>
                   <Input
-                    id="bankName"
-                    value={formData.bankName}
-                    onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                    placeholder="Nome do banco"
+                    id="agencyNumber"
+                    value={formData.agencyNumber}
+                    onChange={(e) => setFormData({ ...formData, agencyNumber: e.target.value })}
+                    placeholder="0000"
                   />
                 </div>
                 
@@ -228,6 +257,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
               <TableHeader>
                 <TableRow>
                   <TableHead>Banco</TableHead>
+                  <TableHead>Agência</TableHead>
                   <TableHead>Número da Conta</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Descrição</TableHead>
@@ -239,6 +269,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
                 {bankAccounts.map((account) => (
                   <TableRow key={account.id}>
                     <TableCell className="font-medium">{account.bankName}</TableCell>
+                    <TableCell>{account.agencyNumber}</TableCell>
                     <TableCell>{account.accountNumber}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,61 +18,9 @@ import {
 } from "@/lib/types";
 
 export default function Financial() {
-  // State for all financial data
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([
-    {
-      id: "ba1",
-      schoolId: "school1",
-      bankName: "Banco do Brasil",
-      accountNumber: "12345-6",
-      accountType: "movimento",
-      description: "Conta principal",  // Added description
-      initialBalance: 5000,
-      currentBalance: 6250,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: "ba2",
-      schoolId: "school1",
-      bankName: "Caixa Econômica",
-      accountNumber: "98765-4",
-      accountType: "aplicacao",
-      description: "Conta de investimentos",  // Added description
-      initialBalance: 10000,
-      currentBalance: 10500,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-  ]);
-  
-  const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([
-    {
-      id: "tr1",
-      schoolId: "school1",
-      bankAccountId: "ba1",
-      date: new Date(2023, 4, 10),
-      description: "Transferência Recebida",
-      value: 2500,
-      transactionType: "credito",
-      reconciliationStatus: "conciliado",
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: "tr2",
-      schoolId: "school1",
-      bankAccountId: "ba1",
-      date: new Date(2023, 4, 15),
-      description: "Pagamento Fornecedor",
-      value: 1250,
-      transactionType: "debito",
-      reconciliationStatus: "nao_conciliado",
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-  ]);
-  
+  // State for all financial data - starting with empty arrays, data will be loaded from localStorage
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
   const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
   const [receivableAccounts, setReceivableAccounts] = useState<ReceivableAccount[]>([]);
   
@@ -86,6 +35,37 @@ export default function Financial() {
     monthlyExpenses: 0,
     monthlyRevenues: 0
   });
+
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const savedBankTransactions = localStorage.getItem('bankTransactions');
+    if (savedBankTransactions) {
+      setBankTransactions(JSON.parse(savedBankTransactions));
+    }
+
+    const savedPaymentAccounts = localStorage.getItem('paymentAccounts');
+    if (savedPaymentAccounts) {
+      setPaymentAccounts(JSON.parse(savedPaymentAccounts));
+    }
+
+    const savedReceivableAccounts = localStorage.getItem('receivableAccounts');
+    if (savedReceivableAccounts) {
+      setReceivableAccounts(JSON.parse(savedReceivableAccounts));
+    }
+  }, []);
+
+  // Save data to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('bankTransactions', JSON.stringify(bankTransactions));
+  }, [bankTransactions]);
+
+  useEffect(() => {
+    localStorage.setItem('paymentAccounts', JSON.stringify(paymentAccounts));
+  }, [paymentAccounts]);
+
+  useEffect(() => {
+    localStorage.setItem('receivableAccounts', JSON.stringify(receivableAccounts));
+  }, [receivableAccounts]);
   
   // Calculate financial summary based on current data
   const calculateFinancialSummary = () => {
