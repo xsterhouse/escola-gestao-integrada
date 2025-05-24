@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +7,7 @@ import { PayableAccounts } from "@/components/financial/PayableAccounts";
 import { ReceivableAccounts } from "@/components/financial/ReceivableAccounts";
 import { FinancialDashboard } from "@/components/financial/FinancialDashboard";
 import { FinancialReports } from "@/components/financial/FinancialReports";
+import { BankAccounts } from "@/components/financial/BankAccounts";
 import { 
   BankAccount, 
   BankTransaction, 
@@ -176,8 +176,9 @@ export default function Financial() {
         />
         
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full max-w-4xl grid-cols-5">
+          <TabsList className="grid w-full max-w-5xl grid-cols-6">
             <TabsTrigger value="dashboard">Visão Geral</TabsTrigger>
+            <TabsTrigger value="bank-accounts">Contas Bancárias</TabsTrigger>
             <TabsTrigger value="reconciliation">Conciliação Bancária</TabsTrigger>
             <TabsTrigger value="payables">Contas a Pagar</TabsTrigger>
             <TabsTrigger value="receivables">Contas a Receber</TabsTrigger>
@@ -191,6 +192,13 @@ export default function Financial() {
               receivables={receivableAccounts}
               onAddPayment={handleAddPayment}
               onAddReceivable={handleAddReceivable}
+            />
+          </TabsContent>
+
+          <TabsContent value="bank-accounts" className="mt-4">
+            <BankAccounts 
+              bankAccounts={bankAccounts}
+              setBankAccounts={setBankAccounts}
             />
           </TabsContent>
 
