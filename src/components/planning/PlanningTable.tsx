@@ -21,6 +21,11 @@ export function PlanningTable({ items, onRemoveItem, isFinalized, currentPlan }:
     }
   };
 
+  const handleTransferComplete = () => {
+    // Refresh the planning data after transfer
+    window.location.reload();
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -66,9 +71,11 @@ export function PlanningTable({ items, onRemoveItem, isFinalized, currentPlan }:
                     <TableCell className="text-right">
                       {isFinalized ? (
                         <TransferButton 
+                          contractId={currentPlan?.id || ""}
                           itemId={item.id}
-                          planningId={currentPlan?.id || ""}
-                          quantity={item.availableQuantity ?? item.quantity}
+                          availableQuantity={item.availableQuantity ?? item.quantity}
+                          itemName={item.name}
+                          onTransferComplete={handleTransferComplete}
                         />
                       ) : (
                         <Button
