@@ -1,24 +1,259 @@
-
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Eye, Plus, Delete, Save, RotateCcw, Download, FileText, BarChart3, ArrowLeftRight } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const Planning = () => {
-  const [activeTab, setActiveTab] = useState("vigencia");
+  const { currentSchool } = useAuth();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("nova-ata");
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isNewATAModalOpen, setIsNewATAModalOpen] = useState(false);
+  const [selectedProcess, setSelectedProcess] = useState<any>(null);
+  const [ataItems, setAtaItems] = useState<any[]>([]);
+  const [newItem, setNewItem] = useState({
+    numeroItem: "",
+    descricaoProduto: "",
+    unidade: "",
+    quantidade: "",
+    valorUnitario: "",
+    valorTotal: ""
+  });
+
+  // Get schools and purchasing centers from localStorage (connected to settings)
+  const getSchoolsFromSettings = () => {
+    try {
+      const schools = JSON.parse(localStorage.getItem("schools") || "[]");
+      return schools;
+    } catch {
+      return [];
+    }
+  };
+
+  const getPurchasingCentersFromSettings = () => {
+    try {
+      const centers = JSON.parse(localStorage.getItem("purchasingCenters") || "[]");
+      return centers;
+    } catch {
+      return [];
+    }
+  };
 
   const tabs = [
+    { id: "nova-ata", label: "Nova ATA" },
     { id: "vigencia", label: "Vigência" },
     { id: "relatorios", label: "Relatórios" },
-    { id: "transferencia", label: "Transferência de Saldos" },
-    { id: "nova-ata", label: "Nova ATA" }
+    { id: "transferencia", label: "Transferência de Saldos" }
   ];
+
+  const handleViewDetails = (process: any) => {
+    setSelectedProcess(process);
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleAddItem = () => {
+    if (!newItem.numeroItem || !newItem.descricaoProduto || !newItem.quantidade || !newItem.valorUnitario) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const valorTotal = parseFloat(newItem.quantidade) * parseFloat(newItem.valorUnitario);
+    const item = {
+      ...newItem,
+      valorTotal: valorTotal.toFixed(2),
+      id: Date.now()
+    };
+
+    setAtaItems([...ataItems, item]);
+    setNewItem({
+      numeroItem: "",
+      descricaoProduto: "",
+      unidade: "",
+      quantidade: "",
+      valorUnitario: "",
+      valorTotal: ""
+    });
+
+    toast({
+      title: "Item adicionado",
+      description: "Item foi adicionado à ATA com sucesso"
+    });
+  };
+
+  const handleSaveATA = () => {
+    if (ataItems.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Adicione pelo menos um item à ATA",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Save ATA to localStorage
+    const atas = JSON.parse(localStorage.getItem("atas") || "[]");
+    const newATA = {
+      id: Date.now(),
+      schoolId: currentSchool?.id,
+      items: ataItems,
+      createdAt: new Date(),
+      status: "ativa"
+    };
+    
+    localStorage.setItem("atas", JSON.stringify([...atas, newATA]));
+    setAtaItems([]);
+    setIsNewATAModalOpen(false);
+
+    toast({
+      title: "ATA salva",
+      description: "ATA foi salva com sucesso"
+    });
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
+      case "nova-ata":
+        return (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold mb-4">Registrar Nova ATA</h2>
+              <Dialog open={isNewATAModalOpen} onOpenChange={setIsNewATAModalOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Incluir Nova ATA
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl">
+                  <DialogHeader>
+                    <DialogTitle>Nova ATA de Registro de Preços</DialogTitle>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Escola</label>
+                        <select className="w-full border rounded-md px-3 py-2">
+                          <option>Selecione a escola</option>
+                          {getSchoolsFromSettings().map((school: any) => (
+                            <option key={school.id} value={school.id}>{school.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Central de Compras</label>
+                        <select className="w-full border rounded-md px-3 py-2">
+                          <option>Selecione a central</option>
+                          {getPurchasingCentersFromSettings().map((center: any) => (
+                            <option key={center.id} value={center.id}>{center.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="border rounded-lg p-4">
+                      <h3 className="font-medium mb-3">Adicionar Item</h3>
+                      <div className="grid grid-cols-6 gap-2 mb-4">
+                        <Input
+                          placeholder="Nº Item"
+                          value={newItem.numeroItem}
+                          onChange={(e) => setNewItem({...newItem, numeroItem: e.target.value})}
+                        />
+                        <Input
+                          placeholder="Descrição do Produto"
+                          value={newItem.descricaoProduto}
+                          onChange={(e) => setNewItem({...newItem, descricaoProduto: e.target.value})}
+                        />
+                        <select 
+                          className="border rounded-md px-3 py-2"
+                          value={newItem.unidade}
+                          onChange={(e) => setNewItem({...newItem, unidade: e.target.value})}
+                        >
+                          <option value="">Unid</option>
+                          <option value="Kg">Kg</option>
+                          <option value="Litro">Litro</option>
+                          <option value="Unidade">Unidade</option>
+                          <option value="Pacote">Pacote</option>
+                        </select>
+                        <Input
+                          type="number"
+                          placeholder="Quant"
+                          value={newItem.quantidade}
+                          onChange={(e) => setNewItem({...newItem, quantidade: e.target.value})}
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Vl Unit"
+                          value={newItem.valorUnitario}
+                          onChange={(e) => setNewItem({...newItem, valorUnitario: e.target.value})}
+                        />
+                        <Button onClick={handleAddItem} size="sm">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {ataItems.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="font-medium">Itens Adicionados:</h4>
+                          {ataItems.map((item) => (
+                            <div key={item.id} className="p-3 bg-gray-50 rounded-md flex justify-between">
+                              <div>
+                                <p className="font-medium">{item.numeroItem} - {item.descricaoProduto}</p>
+                                <p className="text-sm text-gray-600">
+                                  {item.quantidade} {item.unidade} x R$ {item.valorUnitario} = R$ {item.valorTotal}
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setAtaItems(ataItems.filter(i => i.id !== item.id))}
+                              >
+                                <Delete className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          
+                          <div className="flex justify-between items-center pt-4 border-t">
+                            <div>
+                              <p className="font-bold">
+                                Total: R$ {ataItems.reduce((sum, item) => sum + parseFloat(item.valorTotal), 0).toFixed(2)}
+                              </p>
+                            </div>
+                            <Button onClick={handleSaveATA} className="bg-green-600 hover:bg-green-700">
+                              <Save className="h-4 w-4 mr-2" />
+                              Salvar ATA
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-gray-600">
+                  Clique no botão "Incluir Nova ATA" para registrar uma nova ATA de Registro de Preços.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
       case "vigencia":
         return (
           <div className="space-y-4">
@@ -39,7 +274,20 @@ const Planning = () => {
                     <p className="text-sm"><span className="text-gray-600">Itens:</span> 8 produtos</p>
                   </div>
                   <div className="mt-3 flex justify-end">
-                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-blue-600 hover:text-blue-800"
+                      onClick={() => handleViewDetails({
+                        processo: "2025.0037",
+                        fornecedor: "NutriAlimentos LTDA",
+                        vigenciaInicio: "01/02/2025",
+                        vigenciaFim: "31/12/2025",
+                        itens: 8,
+                        status: "Ativa",
+                        valorTotal: "R$ 125.000,00"
+                      })}
+                    >
                       <Eye className="h-4 w-4 mr-1" />
                       Ver detalhes
                     </Button>
@@ -61,7 +309,20 @@ const Planning = () => {
                     <p className="text-sm"><span className="text-gray-600">Itens:</span> 12 produtos</p>
                   </div>
                   <div className="mt-3 flex justify-end">
-                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-blue-600 hover:text-blue-800"
+                      onClick={() => handleViewDetails({
+                        processo: "2025.0042",
+                        fornecedor: "Cereais Brasil S.A.",
+                        vigenciaInicio: "15/01/2025",
+                        vigenciaFim: "15/01/2026",
+                        itens: 12,
+                        status: "Ativa",
+                        valorTotal: "R$ 180.000,00"
+                      })}
+                    >
                       <Eye className="h-4 w-4 mr-1" />
                       Ver detalhes
                     </Button>
@@ -83,13 +344,129 @@ const Planning = () => {
                     <p className="text-sm"><span className="text-gray-600">Itens:</span> 15 produtos</p>
                   </div>
                   <div className="mt-3 flex justify-end">
-                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-blue-600 hover:text-blue-800"
+                      onClick={() => handleViewDetails({
+                        processo: "2025.0039",
+                        fornecedor: "Frutas & Cia Distribuidora",
+                        vigenciaInicio: "10/01/2025",
+                        vigenciaFim: "10/02/2025",
+                        itens: 15,
+                        status: "Expirando",
+                        valorTotal: "R$ 95.000,00"
+                      })}
+                    >
                       <Eye className="h-4 w-4 mr-1" />
                       Ver detalhes
                     </Button>
                   </div>
                 </CardContent>
               </Card>
+            </div>
+
+            <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Detalhes do Processo</DialogTitle>
+                </DialogHeader>
+                {selectedProcess && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="font-medium">Processo:</label>
+                        <p>{selectedProcess.processo}</p>
+                      </div>
+                      <div>
+                        <label className="font-medium">Fornecedor:</label>
+                        <p>{selectedProcess.fornecedor}</p>
+                      </div>
+                      <div>
+                        <label className="font-medium">Vigência:</label>
+                        <p>{selectedProcess.vigenciaInicio} - {selectedProcess.vigenciaFim}</p>
+                      </div>
+                      <div>
+                        <label className="font-medium">Status:</label>
+                        <p>{selectedProcess.status}</p>
+                      </div>
+                      <div>
+                        <label className="font-medium">Quantidade de Itens:</label>
+                        <p>{selectedProcess.itens}</p>
+                      </div>
+                      <div>
+                        <label className="font-medium">Valor Total:</label>
+                        <p>{selectedProcess.valorTotal}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+          </div>
+        );
+
+      case "transferencia":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold mb-4">Transferência de Saldos</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Escola de Origem</label>
+                  <select className="w-full border border-input rounded-md px-3 py-2">
+                    <option>Selecione a escola de origem</option>
+                    {getSchoolsFromSettings().map((school: any) => (
+                      <option key={school.id} value={school.id}>{school.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Escola de Destino</label>
+                  <select className="w-full border border-input rounded-md px-3 py-2">
+                    <option>Selecione a escola de destino</option>
+                    {getSchoolsFromSettings().map((school: any) => (
+                      <option key={school.id} value={school.id}>{school.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Central de Compras</label>
+                  <select className="w-full border border-input rounded-md px-3 py-2">
+                    <option>Selecione a central</option>
+                    {getPurchasingCentersFromSettings().map((center: any) => (
+                      <option key={center.id} value={center.id}>{center.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Justificativa</label>
+                  <Textarea 
+                    className="h-36"
+                    placeholder="Explique o motivo da transferência"
+                  />
+                </div>
+                
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-4">
+                    <h3 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Informações sobre a transferência
+                    </h3>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• As transferências só são permitidas entre escolas da mesma Central de Compras.</li>
+                      <li>• O saldo será automaticamente atualizado nas duas escolas após a confirmação.</li>
+                      <li>• Todas as transferências ficam registradas para fins de auditoria.</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         );
@@ -193,259 +570,6 @@ const Planning = () => {
                 </div>
               </CardContent>
             </Card>
-          </div>
-        );
-
-      case "transferencia":
-        return (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold mb-4">Transferência de Saldos</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Escola de Origem</label>
-                  <select className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring">
-                    <option>Selecione a escola de origem</option>
-                    <option>Escola Municipal Aurora</option>
-                    <option>Escola Municipal Primavera</option>
-                    <option>Escola Municipal Arco-Íris</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Escola de Destino</label>
-                  <select className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring">
-                    <option>Selecione a escola de destino</option>
-                    <option>Escola Municipal Aurora</option>
-                    <option>Escola Municipal Primavera</option>
-                    <option>Escola Municipal Arco-Íris</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fornecedor</label>
-                  <select className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring">
-                    <option>Selecione o fornecedor</option>
-                    <option>NutriAlimentos LTDA</option>
-                    <option>Cereais Brasil S.A.</option>
-                    <option>Frutas & Cia Distribuidora</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Produto</label>
-                  <select className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring">
-                    <option>Selecione o produto</option>
-                    <option>Leite em pó, 400g</option>
-                    <option>Arroz branco, tipo 1</option>
-                    <option>Feijão carioca</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade a Transferir</label>
-                  <div className="flex items-center">
-                    <Input 
-                      type="number" 
-                      placeholder="Quantidade" 
-                      className="flex-1"
-                    />
-                    <span className="ml-2 text-gray-600 text-sm">de 350 disponíveis</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Justificativa</label>
-                  <Textarea 
-                    className="h-36"
-                    placeholder="Explique o motivo da transferência"
-                  />
-                </div>
-                
-                <Card className="bg-blue-50 border-blue-200">
-                  <CardContent className="p-4">
-                    <h3 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Informações sobre a transferência
-                    </h3>
-                    <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• As transferências só são permitidas entre escolas da mesma Central de Compras.</li>
-                      <li>• O saldo será automaticamente atualizado nas duas escolas após a confirmação.</li>
-                      <li>• Todas as transferências ficam registradas para fins de auditoria.</li>
-                    </ul>
-                  </CardContent>
-                </Card>
-                
-                <div className="flex justify-end gap-3 mt-6">
-                  <Button variant="outline">
-                    Cancelar
-                  </Button>
-                  <Button>
-                    <ArrowLeftRight className="h-4 w-4 mr-2" />
-                    Realizar Transferência
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case "nova-ata":
-        return (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold mb-4">Registrar Nova ATA</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Escola</label>
-                  <select className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring">
-                    <option>Selecione a escola</option>
-                    <option>Escola Municipal Aurora</option>
-                    <option>Escola Municipal Primavera</option>
-                    <option>Escola Municipal Arco-Íris</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fornecedor</label>
-                  <Input placeholder="Nome do fornecedor" />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Número do Processo</label>
-                  <Input placeholder="Ex: 2025.0037" />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Data da ATA</label>
-                    <Input type="date" />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Central de Compras</label>
-                    <select className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring">
-                      <option>Selecione a central</option>
-                      <option>Central Norte</option>
-                      <option>Central Sul</option>
-                      <option>Central Leste</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Vigência - Início</label>
-                    <Input type="date" />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Vigência - Fim</label>
-                    <Input type="date" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Produtos</label>
-                  <Card className="p-4">
-                    <div className="mb-4 grid grid-cols-5 gap-2">
-                      <div className="col-span-2">
-                        <Input placeholder="Nome do produto" />
-                      </div>
-                      <div>
-                        <select className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring">
-                          <option>Unidade</option>
-                          <option>Kg</option>
-                          <option>Litro</option>
-                          <option>Pacote</option>
-                        </select>
-                      </div>
-                      <div>
-                        <Input type="number" placeholder="Qtd." />
-                      </div>
-                      <div>
-                        <Input placeholder="R$ Unitário" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 mb-4">
-                      <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                        <div className="flex justify-between items-center">
-                          <div className="flex-1">
-                            <p className="font-medium">Leite em pó, 400g</p>
-                            <div className="flex gap-4 text-sm text-gray-600">
-                              <span>Unidade</span>
-                              <span>Qtd: 500</span>
-                              <span>R$ 7,50/un</span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold">R$ 3.750,00</p>
-                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
-                              <Delete className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                        <div className="flex justify-between items-center">
-                          <div className="flex-1">
-                            <p className="font-medium">Arroz branco, tipo 1</p>
-                            <div className="flex gap-4 text-sm text-gray-600">
-                              <span>Kg</span>
-                              <span>Qtd: 200</span>
-                              <span>R$ 5,30/kg</span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold">R$ 1.060,00</p>
-                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
-                              <Delete className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Button variant="outline" className="w-full border-dashed">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar outro produto
-                    </Button>
-                  </Card>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
-                  <Textarea 
-                    className="h-24"
-                    placeholder="Observações adicionais sobre a ATA"
-                  />
-                </div>
-
-                <div className="flex justify-between items-center mt-6">
-                  <div className="text-gray-700">
-                    <p className="font-semibold">Total da ATA:</p>
-                    <p className="text-xl font-bold text-blue-700">R$ 4.810,00</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <Button variant="outline">
-                      Cancelar
-                    </Button>
-                    <Button>
-                      <Save className="h-4 w-4 mr-2" />
-                      Salvar ATA
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         );
 
