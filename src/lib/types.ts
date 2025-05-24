@@ -181,6 +181,7 @@ export interface BankAccount {
   id: string;
   schoolId: string;
   bankName: string;
+  agencyNumber?: string; // Added agency number field
   accountNumber: string;
   accountType: 'movimento' | 'aplicacao';
   description: string;
