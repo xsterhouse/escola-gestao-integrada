@@ -8,13 +8,33 @@ import { ContractReportsSection } from "@/components/contracts/ContractReportsSe
 import { ContractValiditySection } from "@/components/contracts/ContractValiditySection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ContractData, ContractFilter } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Contracts() {
   const [contracts, setContracts] = useState<ContractData[]>([]);
   const [filter, setFilter] = useState<ContractFilter>({ status: 'todos' });
+  const { toast } = useToast();
 
   const handleExcelImport = (contractData: ContractData) => {
+    // Verificar se já existe um contrato com o mesmo número de processo
+    const existingContract = contracts.find(
+      contract => contract.numeroContrato === contractData.numeroContrato
+    );
+
+    if (existingContract) {
+      toast({
+        title: "Erro na Importação",
+        description: `Já existe um contrato com o número de processo ${contractData.numeroContrato}. Não é possível importar dados duplicados.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setContracts(prev => [...prev, contractData]);
+    toast({
+      title: "Contrato Importado",
+      description: `Contrato ${contractData.numeroContrato} importado com sucesso.`,
+    });
   };
 
   const handleUpdateContract = (updatedContract: ContractData) => {
