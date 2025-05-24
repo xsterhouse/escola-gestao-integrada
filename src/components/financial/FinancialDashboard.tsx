@@ -6,7 +6,6 @@ import {
   ReceivableAccount,
   FinancialSummary
 } from "@/lib/types";
-import { ActionCards } from "@/components/dashboard/ActionCards";
 import { TrendingUp, TrendingDown, Calendar, DollarSign } from "lucide-react";
 
 interface FinancialDashboardProps {
@@ -103,22 +102,6 @@ export function FinancialDashboard({
             <p className="text-xs text-green-600 mt-1">Total recebido</p>
           </CardContent>
         </Card>
-      </div>
-      
-      {/* Action Cards */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-2 rounded-lg">
-            <TrendingUp className="h-5 w-5 text-white" />
-          </div>
-          <h2 className="text-xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">
-            Ações Rápidas
-          </h2>
-        </div>
-        <ActionCards 
-          onAddPayment={onAddPayment}
-          onAddReceivable={onAddReceivable}
-        />
       </div>
     </div>
   );

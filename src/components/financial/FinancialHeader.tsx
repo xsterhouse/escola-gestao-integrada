@@ -24,49 +24,48 @@ export function FinancialHeader({
 
   return (
     <div className="space-y-6">
-      {/* Modern Header with Gradient Background */}
-      <Card className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 border-0 shadow-xl">
-        <CardContent className="p-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      {/* Modern Header with Custom Background Color */}
+      <Card className="bg-[#012340] border-0 shadow-xl">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="text-white">
               <div className="flex items-center gap-3 mb-2">
                 <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                  <TrendingUp className="h-6 w-6 text-white" />
+                  <TrendingUp className="h-5 w-5 text-white" />
                 </div>
-                <h1 className="text-4xl font-bold">Financeiro</h1>
+                <h1 className="text-2xl font-semibold">Financeiro</h1>
               </div>
-              <p className="text-blue-100 text-lg max-w-2xl">
-                Controle completo das finanças da escola com ferramentas avançadas de gestão, 
-                conciliação bancária e relatórios detalhados.
+              <p className="text-blue-100 text-sm max-w-2xl">
+                Controle completo das finanças da escola com ferramentas avançadas de gestão.
               </p>
             </div>
             
             <div className="flex flex-wrap gap-3">
               <Button 
                 variant="secondary" 
-                size="lg" 
+                size="default" 
                 className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm transition-all duration-300"
                 onClick={() => setIsImportStatementModalOpen(true)}
               >
-                <Upload className="mr-2 h-5 w-5" />
+                <Upload className="mr-2 h-4 w-4" />
                 Importar Extrato
               </Button>
               
               <Button 
-                size="lg" 
-                className="bg-white text-blue-700 hover:bg-blue-50 shadow-lg transition-all duration-300"
+                size="default" 
+                className="bg-white text-[#012340] hover:bg-blue-50 shadow-lg transition-all duration-300"
                 onClick={() => setIsNewTransactionModalOpen(true)}
               >
-                <PlusCircle className="mr-2 h-5 w-5" />
+                <PlusCircle className="mr-2 h-4 w-4" />
                 Novo Lançamento
               </Button>
               
               <Button 
-                size="lg" 
+                size="default" 
                 className="bg-green-500 text-white hover:bg-green-600 shadow-lg transition-all duration-300"
                 onClick={() => setIsGenerateReportModalOpen(true)}
               >
-                <FileText className="mr-2 h-5 w-5" />
+                <FileText className="mr-2 h-4 w-4" />
                 Relatórios
               </Button>
             </div>
