@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -227,7 +226,7 @@ export function PurchasingCenterTab() {
           onClick={() => handleOpenModal()}
         >
           <Plus className="h-4 w-4" />
-          Novo POLO
+          Nova Central de compras
         </Button>
       </CardHeader>
       <CardContent>
@@ -319,24 +318,24 @@ export function PurchasingCenterTab() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>
-                {isEditMode ? "Editar POLO" : "Novo POLO"}
+                {isEditMode ? "Editar Central de Compras" : "Nova Central de Compras"}
               </DialogTitle>
               <DialogDescription>
                 {isEditMode 
-                  ? "Atualize os dados do POLO de compras." 
-                  : "Cadastre um novo POLO de compras para grupo de escolas."}
+                  ? "Atualize os dados da Central de Compras." 
+                  : "Cadastre uma nova Central de Compras para grupo de escolas."}
               </DialogDescription>
             </DialogHeader>
             
             <form onSubmit={handleSaveCenter}>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nome do POLO *</Label>
+                  <Label htmlFor="name">Nome da Central de Compras *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => handleFormChange("name", e.target.value)}
-                    placeholder="Nome do POLO"
+                    placeholder="Nome da Central de Compras"
                     required
                   />
                 </div>
@@ -347,12 +346,12 @@ export function PurchasingCenterTab() {
                     id="description"
                     value={formData.description}
                     onChange={(e) => handleFormChange("description", e.target.value)}
-                    placeholder="Descrição do POLO"
+                    placeholder="Descrição da Central de Compras"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Escolas Participantes *</Label>
+                  <Label>Escola Central *</Label>
                   <div className="border rounded-md p-4 max-h-[200px] overflow-y-auto">
                     {schools.map((school) => (
                       <div key={school.id} className="flex items-center space-x-2 mb-2">
