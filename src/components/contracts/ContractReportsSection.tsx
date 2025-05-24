@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +19,24 @@ export function ContractReportsSection({ contracts }: ContractReportsSectionProp
       style: 'currency',
       currency: 'BRL'
     }).format(value);
+  };
+
+  const formatDate = (date: Date | string | null | undefined) => {
+    if (!date) return 'Data inválida';
+    
+    try {
+      const dateObj = date instanceof Date ? date : new Date(date);
+      
+      // Check if the date is valid
+      if (isNaN(dateObj.getTime())) {
+        return 'Data inválida';
+      }
+      
+      return new Intl.DateTimeFormat('pt-BR').format(dateObj);
+    } catch (error) {
+      console.error('Error formatting date:', error, 'Date value:', date);
+      return 'Data inválida';
+    }
   };
 
   const generateReport = (reportType: string) => {
@@ -80,10 +97,6 @@ export function ContractReportsSection({ contracts }: ContractReportsSectionProp
   const exportReport = () => {
     // Simular exportação
     console.log('Exportando relatório:', selectedReport, reportData);
-  };
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('pt-BR').format(new Date(date));
   };
 
   return (
