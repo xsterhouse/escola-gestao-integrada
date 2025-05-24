@@ -17,6 +17,7 @@ export interface School {
   tradingName?: string; // Nome Fantasia
   logo?: string; // Path to logo image
   director?: string; // Diretor(a)
+  purchasingCenterId?: string; // Central de Compras
   createdAt: Date;
   updatedAt: Date;
 }

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SchoolForm } from "@/components/settings/SchoolForm";
+import { ModernSchoolForm } from "@/components/settings/ModernSchoolForm";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { School } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -12,7 +12,8 @@ import {
   Trash2, 
   ShieldCheck, 
   Ban,
-  Plus
+  Plus,
+  Lock
 } from "lucide-react";
 
 export function SchoolTab() {
@@ -34,6 +35,7 @@ export function SchoolTab() {
       status: "active",
       director: "Carlos Eduardo Santos",
       logo: "https://via.placeholder.com/150?text=Logo+Escola",
+      purchasingCenterId: "central-01",
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -50,6 +52,7 @@ export function SchoolTab() {
       status: "suspended",
       director: "Ana Maria Lima",
       logo: "https://via.placeholder.com/150?text=Logo+Colegio",
+      purchasingCenterId: "central-02",
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -79,10 +82,6 @@ export function SchoolTab() {
           : s
       );
       setSchools(updatedSchools);
-      toast({ 
-        title: "Escola atualizada", 
-        description: "As informações da escola foram atualizadas com sucesso."
-      });
     } else {
       // Create new school
       const newSchool: School = {
@@ -93,10 +92,6 @@ export function SchoolTab() {
         updatedAt: new Date(),
       };
       setSchools([...schools, newSchool]);
-      toast({ 
-        title: "Escola adicionada", 
-        description: "A escola foi adicionada com sucesso ao sistema."
-      });
     }
     setIsModalOpen(false);
   };
@@ -125,10 +120,17 @@ export function SchoolTab() {
   };
 
   const handleViewSchool = (school: School) => {
-    // In a real app, this might open a detailed view page or modal
     toast({ 
       title: "Visualizar Escola", 
       description: `Detalhes da escola ${school.name}`
+    });
+  };
+
+  const handleBlockSchool = (id: string) => {
+    // Implementar lógica de bloqueio
+    toast({ 
+      title: "Escola bloqueada", 
+      description: "A escola foi bloqueada temporariamente."
     });
   };
 
@@ -216,6 +218,14 @@ export function SchoolTab() {
                   <Button 
                     size="sm" 
                     variant="ghost"
+                    onClick={() => handleBlockSchool(school.id)}
+                    title="Bloquear"
+                  >
+                    <Lock className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
                     onClick={() => handleDeleteSchool(school.id)}
                     title="Excluir"
                   >
@@ -249,7 +259,7 @@ export function SchoolTab() {
         </Table>
       </CardContent>
 
-      <SchoolForm 
+      <ModernSchoolForm 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveSchool}

@@ -4,9 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { User, School } from "@/lib/types";
-import { UserForm } from "@/components/users/UserForm";
+import { ModernUserForm } from "@/components/settings/ModernUserForm";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, Pencil, Trash2, Ban, ShieldCheck, Plus } from "lucide-react";
+import { Eye, Pencil, Trash2, Ban, ShieldCheck, Plus, Lock } from "lucide-react";
 
 export function UserTab() {
   const { toast } = useToast();
@@ -55,6 +55,7 @@ export function UserTab() {
       responsibleName: "Maria Oliveira",
       email: "contato@joaodasilva.edu.br",
       status: "active",
+      purchasingCenterId: "central-01",
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -65,6 +66,7 @@ export function UserTab() {
       responsibleName: "Carlos Santos",
       email: "contato@paulofreire.edu.br",
       status: "active",
+      purchasingCenterId: "central-02",
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -90,10 +92,6 @@ export function UserTab() {
           : u
       );
       setUsers(updatedUsers);
-      toast({ 
-        title: "Usuário atualizado", 
-        description: "As informações do usuário foram atualizadas com sucesso."
-      });
     } else {
       // Create new user
       const newUser: User = {
@@ -108,10 +106,6 @@ export function UserTab() {
         updatedAt: new Date()
       };
       setUsers([...users, newUser]);
-      toast({ 
-        title: "Usuário adicionado", 
-        description: "O usuário foi adicionado com sucesso ao sistema."
-      });
     }
     setIsModalOpen(false);
   };
@@ -146,6 +140,19 @@ export function UserTab() {
     });
   };
 
+  const handleBlockUser = (id: string) => {
+    toast({ 
+      title: "Usuário bloqueado", 
+      description: "O usuário foi bloqueado temporariamente."
+    });
+  };
+
+  const getSchoolName = (schoolId: string | null) => {
+    if (!schoolId) return "Todas as escolas";
+    const school = schools.find(s => s.id === schoolId);
+    return school ? school.name : "Escola não encontrada";
+  };
+
   return (
     <Card className="border shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -170,6 +177,7 @@ export function UserTab() {
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Perfil</TableHead>
+              <TableHead>Escola</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -180,6 +188,7 @@ export function UserTab() {
                 <TableCell className="font-medium">{user.name}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.role === "master" ? "Admin Master" : user.role === "admin" ? "Administrador" : "Usuário"}</TableCell>
+                <TableCell className="text-sm">{getSchoolName(user.schoolId)}</TableCell>
                 <TableCell>
                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                     user.status === "active" 
@@ -205,6 +214,14 @@ export function UserTab() {
                     title="Editar"
                   >
                     <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => handleBlockUser(user.id)}
+                    title="Bloquear"
+                  >
+                    <Lock className="h-4 w-4" />
                   </Button>
                   <Button 
                     size="sm" 
@@ -242,7 +259,7 @@ export function UserTab() {
         </Table>
 
         {isModalOpen && (
-          <UserForm 
+          <ModernUserForm 
             isOpen={isModalOpen} 
             onClose={() => setIsModalOpen(false)}
             onSave={handleSaveUser}
