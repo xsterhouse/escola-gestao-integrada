@@ -1,4 +1,3 @@
-
 export interface Permission {
   id: string;
   name: string;
@@ -299,4 +298,39 @@ export interface TransferRecord {
   transferredAt: Date;
   transferredBy: string;
   createdAt: Date;
+}
+
+// Contracts Module Types
+export interface InvoiceData {
+  id: string;
+  supplier: {
+    cnpj: string;
+    razaoSocial: string;
+    endereco: string;
+    telefone?: string;
+    email?: string;
+  };
+  dataEmissao: Date;
+  numeroDanfe: string;
+  valorTotal: number;
+  items: InvoiceItem[];
+}
+
+export interface InvoiceItem {
+  id: string;
+  descricao: string;
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+}
+
+export interface Contract {
+  id: string;
+  fornecedor: string;
+  itensContratados: string[];
+  quantidade: number;
+  valorContratado: number;
+  dataInicio: Date;
+  dataFim: Date;
+  status: 'ativo' | 'vencido' | 'liquidado';
 }
