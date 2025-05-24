@@ -14,8 +14,14 @@ const Login = () => {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        {/* Enhanced overlay with more prominent background color */}
-        <div className="absolute inset-0 bg-slate-800/30 backdrop-blur-[2px]"></div>
+        {/* Enhanced overlay with specified background color for better visibility */}
+        <div 
+          className="absolute inset-0 backdrop-blur-[2px]"
+          style={{
+            backgroundColor: '#012340',
+            opacity: 0.7
+          }}
+        ></div>
       </div>
       
       {/* Animated background elements */}
