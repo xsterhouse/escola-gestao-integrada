@@ -11,125 +11,127 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
-import { TransferForm } from "./TransferForm";
-import { TransferFormValues } from "./TransferFormSchema";
-import { getSchoolsInSamePurchasingCenter } from "@/utils/purchasingCenters";
-import { addToTargetSchoolPlanning, saveTransferRecord, updateSourcePlanningQuantity } from "@/services/transferService";
+import { ArrowRight } from "lucide-react";
+import { ATATransferForm } from "./ATATransferForm";
 
 interface TransferButtonProps {
+  contractId: string;
   itemId: string;
-  planningId: string;
-  quantity: number;
+  availableQuantity: number;
+  itemName: string;
+  onTransferComplete: () => void;
 }
 
-export function TransferButton({ itemId, planningId, quantity }: TransferButtonProps) {
+export function TransferButton({ 
+  contractId, 
+  itemId, 
+  availableQuantity, 
+  itemName,
+  onTransferComplete 
+}: TransferButtonProps) {
   const { currentSchool, availableSchools } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   
-  const eligibleSchools = currentSchool 
-    ? getSchoolsInSamePurchasingCenter(currentSchool.id, availableSchools)
-    : [];
-  
-  const handleSubmit = (data: TransferFormValues) => {
+  // Escolas da mesma central de compras (simulado)
+  const eligibleSchools = availableSchools.filter(school => 
+    school.id !== currentSchool?.id && 
+    school.purchasingCenterId === currentSchool?.purchasingCenterId
+  );
+
+  const handleTransferSubmit = (transferData: {
+    toSchoolId: string;
+    quantity: number;
+    justificativa: string;
+  }) => {
     if (!currentSchool) return;
-    
-    // Validate quantity
-    if (data.quantity > quantity) {
-      toast({
-        title: "Erro na transferência",
-        description: "Quantidade a transferir é maior que o saldo disponível",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Get target school
-    const targetSchool = availableSchools.find(s => s.id === data.toSchoolId);
-    if (!targetSchool) {
-      toast({
-        title: "Erro na transferência",
-        description: "Escola de destino não encontrada",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Save transfer record
-    saveTransferRecord(
-      currentSchool.id,
-      data.toSchoolId,
-      itemId,
-      data.quantity,
-      "John Doe" // In a real app, use user.name
+
+    // Atualizar saldo do item de origem
+    const sourceContracts = JSON.parse(
+      localStorage.getItem(`ata_contracts_${currentSchool.id}`) || "[]"
     );
     
-    // Update source planning item quantity
-    const result = updateSourcePlanningQuantity(
-      currentSchool.id,
-      planningId,
-      itemId,
-      data.quantity
+    const updatedSourceContracts = sourceContracts.map((contract: any) => {
+      if (contract.id === contractId) {
+        return {
+          ...contract,
+          items: contract.items.map((item: any) => {
+            if (item.id === itemId) {
+              return {
+                ...item,
+                saldoDisponivel: item.saldoDisponivel - transferData.quantity
+              };
+            }
+            return item;
+          })
+        };
+      }
+      return contract;
+    });
+
+    localStorage.setItem(`ata_contracts_${currentSchool.id}`, JSON.stringify(updatedSourceContracts));
+
+    // Adicionar item na escola de destino
+    const targetContracts = JSON.parse(
+      localStorage.getItem(`ata_contracts_${transferData.toSchoolId}`) || "[]"
     );
-    
-    if (!result) {
-      toast({
-        title: "Erro na transferência",
-        description: "Planejamento de origem não encontrado",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Add to target school's planning
-    const targetResult = addToTargetSchoolPlanning(
-      data.toSchoolId,
-      result.sourcePlan,
+
+    // Criar registro de transferência
+    const transferRecord = {
+      id: crypto.randomUUID(),
+      fromSchoolId: currentSchool.id,
+      toSchoolId: transferData.toSchoolId,
+      contractId,
       itemId,
-      data.quantity
-    );
-    
-    if (!targetResult) {
-      toast({
-        title: "Erro na transferência",
-        description: "Item de origem não encontrado",
-        variant: "destructive"
-      });
-      return;
-    }
+      quantity: transferData.quantity,
+      transferredAt: new Date(),
+      transferredBy: "Usuário Atual", // Em produção, usar dados reais do usuário
+      justificativa: transferData.justificativa,
+    };
+
+    const transfers = JSON.parse(localStorage.getItem("ata_transfers") || "[]");
+    localStorage.setItem("ata_transfers", JSON.stringify([...transfers, transferRecord]));
+
+    const targetSchool = eligibleSchools.find(s => s.id === transferData.toSchoolId);
     
     toast({
       title: "Transferência realizada",
-      description: `${data.quantity} ${targetResult.sourceItem.unit} transferidos para ${targetSchool.name}`
+      description: `${transferData.quantity} unidades de ${itemName} transferidas para ${targetSchool?.name}`,
     });
-    
+
     setOpen(false);
-    
-    // Force a reload to reflect changes
-    window.location.reload();
+    onTransferComplete();
   };
+
+  if (availableQuantity <= 0) {
+    return (
+      <Button variant="ghost" size="sm" disabled>
+        Sem saldo
+      </Button>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <ArrowLeft className="h-4 w-4" />
+        <Button variant="outline" size="sm">
+          <ArrowRight className="h-4 w-4 mr-2" />
+          Transferir
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Transferir Saldo</DialogTitle>
           <DialogDescription>
-            Transferir saldo do item para outra escola na mesma Central de Compras
+            Transferir saldo de {itemName} para outra escola da mesma Central de Compras
           </DialogDescription>
         </DialogHeader>
         
         {eligibleSchools.length > 0 ? (
-          <TransferForm 
+          <ATATransferForm 
             eligibleSchools={eligibleSchools}
-            quantity={quantity}
-            onSubmit={handleSubmit}
+            availableQuantity={availableQuantity}
+            onSubmit={handleTransferSubmit}
           />
         ) : (
           <div className="py-4">

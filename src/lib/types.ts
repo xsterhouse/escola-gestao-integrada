@@ -394,3 +394,42 @@ export interface ContractReport {
   dados: any[];
   geradoEm: Date;
 }
+
+export interface ATAItem {
+  id: string;
+  nome: string;
+  unidade: string;
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+  descricao: string;
+  saldoDisponivel: number;
+}
+
+export interface ATAContract {
+  id: string;
+  numeroProcesso: string;
+  fornecedor: string;
+  dataATA: Date;
+  dataInicioVigencia: Date;
+  dataFimVigencia: Date;
+  observacoes: string;
+  items: ATAItem[];
+  status: "ativo" | "vencido" | "cancelado";
+  schoolId: string;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ATATransferRecord {
+  id: string;
+  fromSchoolId: string;
+  toSchoolId: string;
+  contractId: string;
+  itemId: string;
+  quantity: number;
+  transferredAt: Date;
+  transferredBy: string;
+  justificativa: string;
+}
