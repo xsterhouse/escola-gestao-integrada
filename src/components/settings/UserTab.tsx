@@ -4,14 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { User, School } from "@/lib/types";
 import { ModernUserForm } from "@/components/settings/ModernUserForm";
+import { PasswordModal } from "@/components/settings/PasswordModal";
+import { UserDetailsModal } from "@/components/settings/UserDetailsModal";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, Pencil, Trash2, Ban, ShieldCheck, Plus, Lock } from "lucide-react";
+import { Eye, Pencil, Trash2, Ban, ShieldCheck, Plus, Lock, Key } from "lucide-react";
 
 export function UserTab() {
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([
     {
       id: "1",
@@ -133,10 +138,8 @@ export function UserTab() {
   };
 
   const handleViewUser = (user: User) => {
-    toast({ 
-      title: "Visualizar Usuário", 
-      description: `Detalhes do usuário ${user.name}`
-    });
+    setSelectedUser(user);
+    setIsDetailsModalOpen(true);
   };
 
   const handleBlockUser = (id: string) => {
@@ -144,6 +147,20 @@ export function UserTab() {
       title: "Usuário bloqueado", 
       description: "O usuário foi bloqueado temporariamente."
     });
+  };
+
+  const handleSetPassword = (user: User) => {
+    setSelectedUser(user);
+    setIsPasswordModalOpen(true);
+  };
+
+  const handleSavePassword = (password: string) => {
+    if (selectedUser) {
+      // In a real application, this would make an API call to set the password
+      console.log(`Setting password for user ${selectedUser.name}`);
+      setIsPasswordModalOpen(false);
+      setSelectedUser(null);
+    }
   };
 
   const getSchoolName = (schoolId: string | null) => {
@@ -217,6 +234,14 @@ export function UserTab() {
                   <Button 
                     size="sm" 
                     variant="ghost"
+                    onClick={() => handleSetPassword(user)}
+                    title="Definir Senha"
+                  >
+                    <Key className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
                     onClick={() => handleBlockUser(user.id)}
                     title="Bloquear"
                   >
@@ -263,6 +288,24 @@ export function UserTab() {
             onClose={() => setIsModalOpen(false)}
             onSave={handleSaveUser}
             initialData={currentUser || undefined}
+            schools={schools}
+          />
+        )}
+
+        {isPasswordModalOpen && selectedUser && (
+          <PasswordModal
+            isOpen={isPasswordModalOpen}
+            onClose={() => setIsPasswordModalOpen(false)}
+            onSave={handleSavePassword}
+            user={selectedUser}
+          />
+        )}
+
+        {isDetailsModalOpen && selectedUser && (
+          <UserDetailsModal
+            isOpen={isDetailsModalOpen}
+            onClose={() => setIsDetailsModalOpen(false)}
+            user={selectedUser}
             schools={schools}
           />
         )}
