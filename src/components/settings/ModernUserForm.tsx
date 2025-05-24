@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Dialog, 
@@ -56,6 +55,9 @@ export function ModernUserForm({
     { id: "6", name: "Contratos", description: "Gestão de contratos", create: false, read: false, update: false, delete: false },
     { id: "7", name: "Configurações", description: "Configurações do sistema", create: false, read: false, update: false, delete: false },
   ]);
+
+  // Filter schools to ensure no empty values
+  const validSchools = schools.filter(school => school.id && school.id.trim() !== "");
 
   const validatePassword = (password: string) => {
     let strength = 0;
@@ -236,8 +238,8 @@ export function ModernUserForm({
                     <SelectValue placeholder="Selecione a escola" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma escola específica</SelectItem>
-                    {schools.map((school) => (
+                    <SelectItem value="none">Nenhuma escola específica</SelectItem>
+                    {validSchools.map((school) => (
                       <SelectItem key={school.id} value={school.id}>
                         {school.name}
                       </SelectItem>

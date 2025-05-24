@@ -45,7 +45,7 @@ export function UserTab() {
     }
   ]);
   
-  // Add mock schools data - ensure all schools have valid IDs
+  // Add mock schools data - ensure all schools have valid IDs and proper status typing
   const [schools, setSchools] = useState<School[]>([
     {
       id: "1",
@@ -53,7 +53,7 @@ export function UserTab() {
       cnpj: "12.345.678/0001-90",
       responsibleName: "Maria Oliveira",
       email: "contato@joaodasilva.edu.br",
-      status: "active",
+      status: "active" as const,
       purchasingCenterId: "central-01",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -64,7 +64,7 @@ export function UserTab() {
       cnpj: "98.765.432/0001-10",
       responsibleName: "Carlos Santos",
       email: "contato@paulofreire.edu.br",
-      status: "active",
+      status: "active" as const,
       purchasingCenterId: "central-02",
       createdAt: new Date(),
       updatedAt: new Date(),
