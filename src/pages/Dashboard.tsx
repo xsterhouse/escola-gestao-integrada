@@ -22,17 +22,29 @@ const Dashboard = () => {
   const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
   
   useEffect(() => {
-    // Format current date for last access display
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString('pt-BR', {
-      weekday: 'long', 
-      day: '2-digit', 
-      month: 'long', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-    setLastAccess(formattedDate);
+    // Get the last access from localStorage or set current time
+    const storedLastAccess = localStorage.getItem('lastAccess');
+    const currentTime = new Date();
+    
+    if (storedLastAccess) {
+      // Format the stored last access time
+      const lastAccessDate = new Date(storedLastAccess);
+      const formattedLastAccess = lastAccessDate.toLocaleDateString('pt-BR', {
+        weekday: 'long', 
+        day: '2-digit', 
+        month: 'long', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      setLastAccess(formattedLastAccess);
+    } else {
+      // If no previous access, show "Primeiro acesso"
+      setLastAccess("Primeiro acesso ao sistema");
+    }
+    
+    // Store current time as the new last access for next visit
+    localStorage.setItem('lastAccess', currentTime.toISOString());
     
     // In a real app, these would come from an API call
     setMetrics([

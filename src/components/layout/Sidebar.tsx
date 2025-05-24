@@ -23,7 +23,6 @@ import {
   ShoppingCart, 
   Shield, 
   LogOut,
-  School,
   User,
   Clock
 } from "lucide-react";
@@ -185,17 +184,12 @@ export function Sidebar({ className }: SidebarProps) {
       </SheetTrigger>
       <SheetContent side="left" className="w-72 p-0" style={{ backgroundColor: '#012340' }}>
         <div className="flex flex-col h-full">
-          {/* Header with Logo and User */}
+          {/* Header */}
           <div className="px-6 py-6 border-b border-white/10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-white/10 p-2 rounded-lg">
-                <School className="h-6 w-6 text-white" />
-              </div>
-              <h2 className="text-xl font-bold text-white">SIGRE</h2>
-            </div>
+            <h2 className="text-xl font-bold text-white">SIGRE</h2>
             
             {/* User Profile */}
-            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg mt-4">
               <div className="bg-white/10 p-2 rounded-full">
                 <User className="h-5 w-5 text-white" />
               </div>
@@ -213,7 +207,7 @@ export function Sidebar({ className }: SidebarProps) {
                 <Clock className="h-4 w-4 text-blue-200" />
                 <span className="text-xs text-blue-200">Brasília, Brasil</span>
               </div>
-              <div className="text-2xl font-mono font-bold text-white">
+              <div className="text-lg font-mono font-bold text-white">
                 {getBrasiliaTime()}
               </div>
               <div className="text-xs text-blue-200 capitalize">
@@ -309,12 +303,7 @@ export function Sidebar({ className }: SidebarProps) {
         isCollapsed ? "justify-center px-4" : "justify-between px-6"
       )}>
         {!isCollapsed && (
-          <div className="flex items-center gap-3">
-            <div className="bg-white/10 p-2 rounded-lg">
-              <School className="h-6 w-6 text-white" />
-            </div>
-            <h2 className="text-xl font-bold text-white">SIGRE</h2>
-          </div>
+          <h2 className="text-xl font-bold text-white">SIGRE</h2>
         )}
         <Button
           variant="ghost"
@@ -350,7 +339,7 @@ export function Sidebar({ className }: SidebarProps) {
               <Clock className="h-5 w-5 text-blue-200" />
               <span className="text-sm text-blue-200">Brasília, Brasil</span>
             </div>
-            <div className="text-3xl font-mono font-bold text-white mb-2">
+            <div className="text-xl font-mono font-bold text-white mb-2">
               {getBrasiliaTime()}
             </div>
             <div className="text-sm text-blue-200 capitalize mb-4">
@@ -358,7 +347,7 @@ export function Sidebar({ className }: SidebarProps) {
             </div>
             <div className="pt-3 border-t border-white/10">
               <div className="text-xs text-blue-200 mb-1">Tempo de sessão</div>
-              <div className="text-lg font-mono text-white">{sessionTime}</div>
+              <div className="text-sm font-mono text-white">{sessionTime}</div>
             </div>
           </div>
         </div>
@@ -451,15 +440,21 @@ export function Sidebar({ className }: SidebarProps) {
             Sair
           </Button>
         ) : (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={logout}
-            title="Sair"
-            className="w-full text-blue-100 hover:text-white hover:bg-white/10"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={logout}
+                className="w-full text-blue-100 hover:text-white hover:bg-white/10"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              Sair
+            </TooltipContent>
+          </Tooltip>
         )}
       </div>
     </div>
