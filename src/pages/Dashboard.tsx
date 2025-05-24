@@ -1,28 +1,24 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { DashboardCards } from "@/components/dashboard/DashboardCards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportXmlModal } from "@/components/dashboard/ImportXmlModal";
 import { DanfeConsultModule } from "@/components/dashboard/DanfeConsultModule";
 import { useAuth } from "@/contexts/AuthContext";
-import { DashboardMetric, School } from "@/lib/types";
 import { 
   FileText, 
   Package, 
-  Receipt, 
   DollarSign,
-  Import,
-  BarChart3,
-  PieChart
+  Import
 } from "lucide-react";
 
 const Dashboard = () => {
   const { user, currentSchool } = useAuth();
   const navigate = useNavigate();
   const [lastAccess, setLastAccess] = useState("");
-  const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
+  const [activeContracts, setActiveContracts] = useState(0);
+  const [stockProducts, setStockProducts] = useState(0);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   
   useEffect(() => {
@@ -50,42 +46,29 @@ const Dashboard = () => {
     // Store current time as the new last access for next visit
     localStorage.setItem('lastAccess', currentTime.toISOString());
     
-    // In a real app, these would come from an API call
-    setMetrics([
-      {
-        id: "1",
-        title: "Contratos Ativos",
-        value: "32",
-        icon: "contracts",
-        color: "blue",
-        additionalInfo: "5 novos este mês"
-      },
-      {
-        id: "2",
-        title: "Produtos em Estoque",
-        value: "1.250",
-        icon: "stock",
-        color: "amber",
-        additionalInfo: "8% desde o último mês"
-      },
-      {
-        id: "3",
-        title: "Notas e Recibos",
-        value: "145",
-        icon: "receipt",
-        color: "orange",
-        additionalInfo: "65 processados"
-      },
-      {
-        id: "4",
-        title: "Financeiro",
-        value: "R$ 24.500",
-        icon: "finance",
-        color: "green",
-        additionalInfo: "12 pagamentos pendentes"
-      },
-    ]);
+    // Load real data from system
+    loadSystemData();
   }, [user]);
+
+  const loadSystemData = () => {
+    // In a real implementation, these would be API calls to fetch actual data
+    // For now, we'll get data from localStorage or start with 0
+    
+    // Get contracts data from localStorage
+    const contractsData = localStorage.getItem('contracts');
+    if (contractsData) {
+      const contracts = JSON.parse(contractsData);
+      const activeContractsCount = contracts.filter((contract: any) => contract.status === 'ativo').length;
+      setActiveContracts(activeContractsCount);
+    }
+    
+    // Get products data from localStorage
+    const productsData = localStorage.getItem('products');
+    if (productsData) {
+      const products = JSON.parse(productsData);
+      setStockProducts(products.length);
+    }
+  };
 
   return (
     <AppLayout>
@@ -183,14 +166,14 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">32</div>
+                <div className="text-3xl font-bold">{activeContracts}</div>
                 <div className="bg-[#012340]/10 p-2 rounded-lg">
                   <FileText className="h-5 w-5 text-[#012340]" />
                 </div>
               </div>
-              <div className="text-xs text-green-600 mt-2">
+              <div className="text-xs text-muted-foreground mt-2">
                 <span className="flex items-center">
-                  5 novos este mês
+                  Contratos cadastrados no sistema
                 </span>
               </div>
             </CardContent>
@@ -202,59 +185,21 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">1.250</div>
+                <div className="text-3xl font-bold">{stockProducts}</div>
                 <div className="bg-[#012340]/10 p-2 rounded-lg">
                   <Package className="h-5 w-5 text-[#012340]" />
                 </div>
               </div>
-              <div className="text-xs text-amber-600 mt-2">
+              <div className="text-xs text-muted-foreground mt-2">
                 <span className="flex items-center">
-                  8% desde o último mês
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-t-4 border-t-[#012340] md:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">Notas e Recibos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">145</div>
-                <div className="bg-[#012340]/10 p-2 rounded-lg">
-                  <Receipt className="h-5 w-5 text-[#012340]" />
-                </div>
-              </div>
-              <div className="text-xs text-orange-600 mt-2">
-                <span className="flex items-center">
-                  65 processados
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-t-4 border-t-[#012340] md:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">Financeiro</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">R$ 24.500</div>
-                <div className="bg-[#012340]/10 p-2 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-[#012340]" />
-                </div>
-              </div>
-              <div className="text-xs text-green-600 mt-2">
-                <span className="flex items-center">
-                  12 pagamentos pendentes
+                  Produtos cadastrados no sistema
                 </span>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Novo módulo DANFE */}
+        {/* Módulo DANFE */}
         <DanfeConsultModule />
       </div>
 
