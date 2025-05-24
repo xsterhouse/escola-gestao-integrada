@@ -14,8 +14,8 @@ const Login = () => {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        {/* Overlay with sidebar color tone */}
-        <div className="absolute inset-0 bg-slate-800/20 backdrop-blur-[1px]"></div>
+        {/* Enhanced overlay with more prominent background color */}
+        <div className="absolute inset-0 bg-slate-800/30 backdrop-blur-[2px]"></div>
       </div>
       
       {/* Animated background elements */}
@@ -51,11 +51,11 @@ const Login = () => {
       
       {/* Main content */}
       <div className="relative z-10 w-full max-w-md px-4">
-        <div className="bg-white/10 backdrop-blur-xl shadow-2xl rounded-3xl p-8 border border-white/20 hover:bg-white/15 hover:shadow-3xl transition-all duration-500 hover:scale-[1.02]">          
+        <div className="bg-white/15 backdrop-blur-xl shadow-2xl rounded-3xl p-8 border border-white/30 hover:bg-white/20 hover:shadow-3xl transition-all duration-500 hover:scale-[1.02] ring-1 ring-white/20">          
           <LoginForm />
         </div>
         
-        <div className="mt-6 text-center text-sm text-slate-600/80 backdrop-blur-sm bg-white/20 rounded-lg p-3">
+        <div className="mt-6 text-center text-sm text-slate-100/90 backdrop-blur-sm bg-white/25 rounded-lg p-3 border border-white/20">
           <p>&copy; {new Date().getFullYear()} SIGRE - Sistema Integrado de Gestão de Recursos Escolares</p>
         </div>
       </div>
