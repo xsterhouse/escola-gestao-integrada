@@ -2,37 +2,67 @@
 import React, { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ContractsHeader } from "@/components/contracts/ContractsHeader";
-import { XmlImportSection } from "@/components/contracts/XmlImportSection";
-import { ContractsTable } from "@/components/contracts/ContractsTable";
-import { ContractValidityCounter } from "@/components/contracts/ContractValidityCounter";
+import { ExcelImportSection } from "@/components/contracts/ExcelImportSection";
+import { ContractTrackingTable } from "@/components/contracts/ContractTrackingTable";
+import { XmlValidationSection } from "@/components/contracts/XmlValidationSection";
+import { ContractReportsSection } from "@/components/contracts/ContractReportsSection";
+import { ContractValiditySection } from "@/components/contracts/ContractValiditySection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { InvoiceData } from "@/lib/types";
+import { ContractData, ContractFilter } from "@/lib/types";
 
 export default function Contracts() {
-  const [invoices, setInvoices] = useState<InvoiceData[]>([]);
+  const [contracts, setContracts] = useState<ContractData[]>([]);
+  const [filter, setFilter] = useState<ContractFilter>({ status: 'todos' });
 
-  const handleXmlImport = (invoiceData: InvoiceData) => {
-    setInvoices(prev => [...prev, invoiceData]);
+  const handleExcelImport = (contractData: ContractData) => {
+    setContracts(prev => [...prev, contractData]);
   };
+
+  const filteredContracts = contracts.filter(contract => {
+    if (filter.fornecedor && !contract.fornecedor.razaoSocial.toLowerCase().includes(filter.fornecedor.toLowerCase())) {
+      return false;
+    }
+    if (filter.produto && !contract.items.some(item => item.produto.toLowerCase().includes(filter.produto!.toLowerCase()))) {
+      return false;
+    }
+    if (filter.status && filter.status !== 'todos' && contract.status !== filter.status) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <AppLayout requireAuth={true} requiredPermission="view_contracts">
       <div className="space-y-8">
         <ContractsHeader />
         
-        <Tabs defaultValue="import" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="import">Importação de XML</TabsTrigger>
-            <TabsTrigger value="validity">Vigência dos Contratos</TabsTrigger>
+        <Tabs defaultValue="tracking" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="tracking">Acompanhamento</TabsTrigger>
+            <TabsTrigger value="validation">Validação NF</TabsTrigger>
+            <TabsTrigger value="reports">Relatórios</TabsTrigger>
+            <TabsTrigger value="validity">Vigência</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="import" className="space-y-6">
-            <XmlImportSection onImport={handleXmlImport} />
-            <ContractsTable invoices={invoices} />
+          <TabsContent value="tracking" className="space-y-6">
+            <ExcelImportSection onImport={handleExcelImport} />
+            <ContractTrackingTable 
+              contracts={filteredContracts} 
+              filter={filter}
+              onFilterChange={setFilter}
+            />
+          </TabsContent>
+          
+          <TabsContent value="validation" className="space-y-6">
+            <XmlValidationSection contracts={contracts} />
+          </TabsContent>
+          
+          <TabsContent value="reports" className="space-y-6">
+            <ContractReportsSection contracts={contracts} />
           </TabsContent>
           
           <TabsContent value="validity" className="space-y-6">
-            <ContractValidityCounter />
+            <ContractValiditySection contracts={contracts} />
           </TabsContent>
         </Tabs>
       </div>

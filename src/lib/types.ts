@@ -1,4 +1,3 @@
-
 export interface Permission {
   id: string;
   name: string;
@@ -327,4 +326,71 @@ export interface Contract {
   dataInicio: Date;
   dataFim: Date;
   status: 'ativo' | 'vencido' | 'liquidado';
+}
+
+export interface ContractSupplier {
+  id: string;
+  cnpj: string;
+  razaoSocial: string;
+  endereco?: string;
+  telefone?: string;
+  email?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ContractItem {
+  id: string;
+  contractId: string;
+  produto: string;
+  quantidadeContratada: number;
+  precoUnitario: number;
+  valorTotalContrato: number;
+  quantidadePaga: number;
+  valorPago: number;
+  saldoQuantidade: number;
+  saldoValor: number;
+  notasFiscais: { [nfNumber: string]: number }; // NF number -> quantity paid
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ContractData {
+  id: string;
+  numeroContrato: string;
+  fornecedorId: string;
+  fornecedor: ContractSupplier;
+  dataInicio: Date;
+  dataFim: Date;
+  status: 'ativo' | 'encerrado' | 'vencido' | 'liquidado';
+  items: ContractItem[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ContractImportData {
+  numeroContrato: string;
+  fornecedor: string;
+  vigencia: string;
+  produtos: {
+    nome: string;
+    quantidade: number;
+    precoUnitario: number;
+    valorContrato: number;
+    notasFiscais?: { [nfNumber: string]: number };
+  }[];
+}
+
+export interface ContractFilter {
+  fornecedor?: string;
+  produto?: string;
+  status?: 'ativo' | 'encerrado' | 'vencido' | 'liquidado' | 'todos';
+  dataInicio?: Date;
+  dataFim?: Date;
+}
+
+export interface ContractReport {
+  tipo: 'abertos' | 'liquidados' | 'vencidos' | 'comparativo';
+  dados: any[];
+  geradoEm: Date;
 }
