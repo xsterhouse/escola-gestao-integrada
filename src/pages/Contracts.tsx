@@ -4,7 +4,6 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { ContractsHeader } from "@/components/contracts/ContractsHeader";
 import { ExcelImportSection } from "@/components/contracts/ExcelImportSection";
 import { ContractTrackingTable } from "@/components/contracts/ContractTrackingTable";
-import { XmlValidationSection } from "@/components/contracts/XmlValidationSection";
 import { ContractReportsSection } from "@/components/contracts/ContractReportsSection";
 import { ContractValiditySection } from "@/components/contracts/ContractValiditySection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +15,14 @@ export default function Contracts() {
 
   const handleExcelImport = (contractData: ContractData) => {
     setContracts(prev => [...prev, contractData]);
+  };
+
+  const handleUpdateContract = (updatedContract: ContractData) => {
+    setContracts(prev => 
+      prev.map(contract => 
+        contract.id === updatedContract.id ? updatedContract : contract
+      )
+    );
   };
 
   const filteredContracts = contracts.filter(contract => {
@@ -37,11 +44,10 @@ export default function Contracts() {
         <ContractsHeader />
         
         <Tabs defaultValue="tracking" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="tracking">Acompanhamento</TabsTrigger>
-            <TabsTrigger value="validation">Validação NF</TabsTrigger>
-            <TabsTrigger value="reports">Relatórios</TabsTrigger>
             <TabsTrigger value="validity">Vigência</TabsTrigger>
+            <TabsTrigger value="reports">Relatórios</TabsTrigger>
           </TabsList>
           
           <TabsContent value="tracking" className="space-y-6">
@@ -50,19 +56,19 @@ export default function Contracts() {
               contracts={filteredContracts} 
               filter={filter}
               onFilterChange={setFilter}
+              onUpdateContract={handleUpdateContract}
             />
           </TabsContent>
           
-          <TabsContent value="validation" className="space-y-6">
-            <XmlValidationSection contracts={contracts} />
+          <TabsContent value="validity" className="space-y-6">
+            <ContractValiditySection 
+              contracts={contracts} 
+              onUpdateContract={handleUpdateContract}
+            />
           </TabsContent>
           
           <TabsContent value="reports" className="space-y-6">
             <ContractReportsSection contracts={contracts} />
-          </TabsContent>
-          
-          <TabsContent value="validity" className="space-y-6">
-            <ContractValiditySection contracts={contracts} />
           </TabsContent>
         </Tabs>
       </div>
