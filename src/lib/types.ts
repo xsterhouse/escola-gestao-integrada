@@ -1,3 +1,4 @@
+
 export interface Permission {
   id: string;
   name: string;
@@ -102,6 +103,7 @@ export interface Supplier {
   email?: string;
 }
 
+// Unified InvoiceItem interface - using English property names as standard
 export interface InvoiceItem {
   id: string;
   productId?: string;
@@ -300,7 +302,7 @@ export interface TransferRecord {
   createdAt: Date;
 }
 
-// Contracts Module Types
+// Contracts Module Types - Using unified supplier and invoice item types
 export interface InvoiceData {
   id: string;
   supplier: {
@@ -313,15 +315,7 @@ export interface InvoiceData {
   dataEmissao: Date;
   numeroDanfe: string;
   valorTotal: number;
-  items: InvoiceItem[];
-}
-
-export interface InvoiceItem {
-  id: string;
-  descricao: string;
-  quantidade: number;
-  valorUnitario: number;
-  valorTotal: number;
+  items: InvoiceItem[]; // Now uses the unified InvoiceItem interface
 }
 
 export interface Contract {

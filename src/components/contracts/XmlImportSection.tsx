@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,24 +51,30 @@ export function XmlImportSection({ onImport }: XmlImportSectionProps) {
         items: [
           {
             id: "1",
-            descricao: "Caderno Universitário 200 folhas",
-            quantidade: 500,
-            valorUnitario: 12.50,
-            valorTotal: 6250.00
+            description: "Caderno Universitário 200 folhas",
+            quantity: 500,
+            unitPrice: 12.50,
+            totalPrice: 6250.00,
+            unitOfMeasure: "Un",
+            invoiceId: Date.now().toString()
           },
           {
             id: "2", 
-            descricao: "Caneta Esferográfica Azul",
-            quantidade: 1000,
-            valorUnitario: 2.50,
-            valorTotal: 2500.00
+            description: "Caneta Esferográfica Azul",
+            quantity: 1000,
+            unitPrice: 2.50,
+            totalPrice: 2500.00,
+            unitOfMeasure: "Un",
+            invoiceId: Date.now().toString()
           },
           {
             id: "3",
-            descricao: "Lápis HB Grafite",
-            quantidade: 2000,
-            valorUnitario: 1.00,
-            valorTotal: 2000.00
+            description: "Lápis HB Grafite",
+            quantity: 2000,
+            unitPrice: 1.00,
+            totalPrice: 2000.00,
+            unitOfMeasure: "Un",
+            invoiceId: Date.now().toString()
           }
         ]
       };

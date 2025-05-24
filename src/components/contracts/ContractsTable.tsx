@@ -69,10 +69,10 @@ export function ContractsTable({ invoices }: ContractsTableProps) {
                           </TableCell>
                         </>
                       )}
-                      <TableCell>{item.descricao}</TableCell>
-                      <TableCell>{item.quantidade}</TableCell>
-                      <TableCell>{formatCurrency(item.valorUnitario)}</TableCell>
-                      <TableCell className="font-medium">{formatCurrency(item.valorTotal)}</TableCell>
+                      <TableCell>{item.description}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
+                      <TableCell className="font-medium">{formatCurrency(item.totalPrice)}</TableCell>
                     </TableRow>
                   ))
                 ))}
