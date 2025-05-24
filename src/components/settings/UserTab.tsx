@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,7 @@ export function UserTab() {
     }
   ]);
   
-  // Add mock schools data
+  // Add mock schools data - ensure all schools have valid IDs
   const [schools, setSchools] = useState<School[]>([
     {
       id: "1",
@@ -70,7 +69,7 @@ export function UserTab() {
       createdAt: new Date(),
       updatedAt: new Date(),
     }
-  ]);
+  ].filter(school => school.id && school.id.trim() !== "")); // Filter out schools with empty IDs
 
   const handleOpenModal = (user?: User) => {
     if (user) {
