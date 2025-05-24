@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -38,39 +38,49 @@ export function PurchasingCenterTab() {
     }
   ]);
   
-  // Mock schools data
-  const [schools, setSchools] = useState<School[]>([
-    {
-      id: "1",
-      name: "Escola Municipal João Silva",
-      cnpj: "12.345.678/0001-90",
-      responsibleName: "Maria Oliveira",
-      email: "contato@joaodasilva.edu.br",
-      status: "active",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "2",
-      name: "Colégio Estadual Pedro Alves",
-      cnpj: "23.456.789/0001-12",
-      responsibleName: "João Pereira",
-      email: "secretaria@cepa.edu.br",
-      status: "active",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "3",
-      name: "Escola Municipal Maria José",
-      cnpj: "34.567.890/0001-23",
-      responsibleName: "Carlos Eduardo",
-      email: "contato@mariajose.edu.br",
-      status: "active",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-  ]);
+  // Get schools from the system (same data as Schools page)
+  const [schools, setSchools] = useState<School[]>([]);
+
+  // Load schools from the system when component mounts
+  useEffect(() => {
+    // Mock data that matches the Schools page data
+    const systemSchools: School[] = [
+      {
+        id: "1",
+        name: "Escola Municipal João da Silva",
+        cnpj: "12.345.678/0001-90",
+        responsibleName: "Maria Oliveira",
+        email: "contato@joaodasilva.edu.br",
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: "2",
+        name: "Colégio Estadual Paulo Freire",
+        cnpj: "98.765.432/0001-10",
+        responsibleName: "Carlos Santos",
+        email: "contato@paulofreire.edu.br",
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: "3",
+        name: "Escola Municipal Maria José",
+        cnpj: "34.567.890/0001-23",
+        responsibleName: "Carlos Eduardo",
+        email: "contato@mariajose.edu.br",
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    ];
+    
+    // Filter only active schools
+    const activeSchools = systemSchools.filter(school => school.status === "active");
+    setSchools(activeSchools);
+  }, []);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -130,7 +140,7 @@ export function PurchasingCenterTab() {
     if (!formData.name) {
       toast({
         title: "Campo obrigatório",
-        description: "O nome do POLO é obrigatório.",
+        description: "O nome da Central de Compras é obrigatório.",
         variant: "destructive"
       });
       return;
@@ -139,7 +149,7 @@ export function PurchasingCenterTab() {
     if (formData.schoolIds.length === 0) {
       toast({
         title: "Escolas não selecionadas",
-        description: "Selecione pelo menos uma escola para o POLO.",
+        description: "Selecione pelo menos uma escola para a Central de Compras.",
         variant: "destructive"
       });
       return;
@@ -160,8 +170,8 @@ export function PurchasingCenterTab() {
       );
       setPurchasingCenters(updatedCenters);
       toast({
-        title: "POLO atualizado",
-        description: "O POLO foi atualizado com sucesso."
+        title: "Central de Compras atualizada",
+        description: "A Central de Compras foi atualizada com sucesso."
       });
     } else {
       // Create new center
@@ -176,8 +186,8 @@ export function PurchasingCenterTab() {
       };
       setPurchasingCenters([...purchasingCenters, newCenter]);
       toast({
-        title: "POLO criado",
-        description: "O POLO foi criado com sucesso."
+        title: "Central de Compras criada",
+        description: "A Central de Compras foi criada com sucesso."
       });
     }
 
@@ -192,16 +202,16 @@ export function PurchasingCenterTab() {
     );
     setPurchasingCenters(updatedCenters);
     toast({
-      title: newStatus === "active" ? "POLO ativado" : "POLO desativado",
-      description: `O status do POLO foi alterado para ${newStatus === "active" ? "ativo" : "inativo"}.`
+      title: newStatus === "active" ? "Central de Compras ativada" : "Central de Compras desativada",
+      description: `O status da Central de Compras foi alterado para ${newStatus === "active" ? "ativo" : "inativo"}.`
     });
   };
 
   const handleDeleteCenter = (id: string) => {
     setPurchasingCenters(prev => prev.filter(center => center.id !== id));
     toast({
-      title: "POLO excluído",
-      description: "O POLO foi excluído com sucesso."
+      title: "Central de Compras excluída",
+      description: "A Central de Compras foi excluída com sucesso."
     });
   };
 
@@ -244,7 +254,7 @@ export function PurchasingCenterTab() {
             {purchasingCenters.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
-                  Nenhum POLO cadastrado.
+                  Nenhuma Central de Compras cadastrada.
                 </TableCell>
               </TableRow>
             ) : (
@@ -353,23 +363,34 @@ export function PurchasingCenterTab() {
                 <div className="space-y-2">
                   <Label>Escola Central *</Label>
                   <div className="border rounded-md p-4 max-h-[200px] overflow-y-auto">
-                    {schools.map((school) => (
-                      <div key={school.id} className="flex items-center space-x-2 mb-2">
-                        <Checkbox
-                          id={`school-${school.id}`}
-                          checked={formData.schoolIds.includes(school.id)}
-                          onCheckedChange={(checked) => 
-                            handleToggleSchool(school.id, checked === true)
-                          }
-                        />
-                        <Label 
-                          htmlFor={`school-${school.id}`}
-                          className="text-sm cursor-pointer"
-                        >
-                          {school.name}
-                        </Label>
+                    {schools.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-4">
+                        Nenhuma escola ativa cadastrada no sistema.
                       </div>
-                    ))}
+                    ) : (
+                      schools.map((school) => (
+                        <div key={school.id} className="flex items-center space-x-2 mb-2">
+                          <Checkbox
+                            id={`school-${school.id}`}
+                            checked={formData.schoolIds.includes(school.id)}
+                            onCheckedChange={(checked) => 
+                              handleToggleSchool(school.id, checked === true)
+                            }
+                          />
+                          <Label 
+                            htmlFor={`school-${school.id}`}
+                            className="text-sm cursor-pointer flex-1"
+                          >
+                            <div>
+                              <div className="font-medium">{school.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                CNPJ: {school.cnpj} | Responsável: {school.responsibleName}
+                              </div>
+                            </div>
+                          </Label>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
