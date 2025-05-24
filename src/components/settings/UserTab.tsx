@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,64 +18,27 @@ export function UserTab() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: "1",
-      name: "João Silva",
-      email: "joao.silva@escola.edu.br",
-      role: "admin",
-      schoolId: "1",
-      permissions: [
-        { id: "1", name: "dashboard", hasAccess: true },
-        { id: "2", name: "products", hasAccess: true },
-        { id: "3", name: "inventory", hasAccess: true }
-      ],
-      status: "active",
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: "2",
-      name: "Maria Oliveira",
-      email: "maria@escola.edu.br",
-      role: "user",
-      schoolId: "1",
-      permissions: [
-        { id: "1", name: "dashboard", hasAccess: true },
-        { id: "2", name: "products", hasAccess: false },
-        { id: "3", name: "inventory", hasAccess: true }
-      ],
-      status: "inactive",
-      createdAt: new Date(),
-      updatedAt: new Date()
+  const [users, setUsers] = useState<User[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
+
+  // Load users and schools from localStorage on component mount
+  useEffect(() => {
+    const savedUsers = localStorage.getItem('users');
+    const savedSchools = localStorage.getItem('schools');
+    
+    if (savedUsers) {
+      setUsers(JSON.parse(savedUsers));
     }
-  ]);
-  
-  // Add mock schools data - ensure all schools have valid IDs and proper status typing
-  const [schools, setSchools] = useState<School[]>([
-    {
-      id: "1",
-      name: "Escola Municipal João da Silva",
-      cnpj: "12.345.678/0001-90",
-      responsibleName: "Maria Oliveira",
-      email: "contato@joaodasilva.edu.br",
-      status: "active" as const,
-      purchasingCenterId: "central-01",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "2",
-      name: "Colégio Estadual Paulo Freire",
-      cnpj: "98.765.432/0001-10",
-      responsibleName: "Carlos Santos",
-      email: "contato@paulofreire.edu.br",
-      status: "active" as const,
-      purchasingCenterId: "central-02",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    
+    if (savedSchools) {
+      setSchools(JSON.parse(savedSchools));
     }
-  ].filter(school => school.id && school.id.trim() !== "")); // Filter out schools with empty IDs
+  }, []);
+
+  // Save users to localStorage whenever users state changes
+  useEffect(() => {
+    localStorage.setItem('users', JSON.stringify(users));
+  }, [users]);
 
   const handleOpenModal = (user?: User) => {
     if (user) {
@@ -99,7 +63,7 @@ export function UserTab() {
     } else {
       // Create new user
       const newUser: User = {
-        id: `${users.length + 1}`,
+        id: Date.now().toString(),
         name: userData.name || "",
         email: userData.email || "",
         role: userData.role || "user",
@@ -112,6 +76,13 @@ export function UserTab() {
       setUsers([...users, newUser]);
     }
     setIsModalOpen(false);
+    
+    toast({
+      title: isEditMode ? "Usuário atualizado" : "Usuário cadastrado",
+      description: isEditMode 
+        ? "O usuário foi atualizado com sucesso." 
+        : "O usuário foi cadastrado com sucesso.",
+    });
   };
 
   const handleToggleStatus = (id: string, newStatus: "active" | "inactive") => {
@@ -160,6 +131,10 @@ export function UserTab() {
       console.log(`Setting password for user ${selectedUser.name}`);
       setIsPasswordModalOpen(false);
       setSelectedUser(null);
+      toast({
+        title: "Senha definida",
+        description: "A senha do usuário foi definida com sucesso.",
+      });
     }
   };
 
@@ -179,7 +154,14 @@ export function UserTab() {
           </CardDescription>
         </div>
         <Button 
-          className="flex items-center gap-1" 
+          className="flex items-center gap-1"
+          style={{ backgroundColor: '#012340', color: 'white' }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = '#013a5c';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = '#012340';
+          }}
           onClick={() => handleOpenModal()}
         >
           <Plus className="h-4 w-4" />
@@ -199,86 +181,94 @@ export function UserTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.role === "master" ? "Admin Master" : user.role === "admin" ? "Administrador" : "Usuário"}</TableCell>
-                <TableCell className="text-sm">{getSchoolName(user.schoolId)}</TableCell>
-                <TableCell>
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    user.status === "active" 
-                      ? "bg-green-100 text-green-800" 
-                      : "bg-red-100 text-red-800"
-                  }`}>
-                    {user.status === "active" ? "Ativo" : "Inativo"}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right space-x-1">
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => handleViewUser(user)}
-                    title="Visualizar"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleOpenModal(user)}
-                    title="Editar"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleSetPassword(user)}
-                    title="Definir Senha"
-                  >
-                    <Key className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleBlockUser(user.id)}
-                    title="Bloquear"
-                  >
-                    <Lock className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleDeleteUser(user.id)}
-                    title="Excluir"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                  {user.status === "active" ? (
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => handleToggleStatus(user.id, "inactive")}
-                      className="text-red-600 hover:text-red-700"
-                      title="Desativar"
-                    >
-                      <Ban className="h-4 w-4" />
-                    </Button>
-                  ) : (
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => handleToggleStatus(user.id, "active")}
-                      className="text-green-600 hover:text-green-700"
-                      title="Ativar"
-                    >
-                      <ShieldCheck className="h-4 w-4" />
-                    </Button>
-                  )}
+            {users.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  Nenhum usuário cadastrado. Clique em "Novo Usuário" para começar.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.role === "master" ? "Admin Master" : user.role === "admin" ? "Administrador" : "Usuário"}</TableCell>
+                  <TableCell className="text-sm">{getSchoolName(user.schoolId)}</TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      user.status === "active" 
+                        ? "bg-green-100 text-green-800" 
+                        : "bg-red-100 text-red-800"
+                    }`}>
+                      {user.status === "active" ? "Ativo" : "Inativo"}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right space-x-1">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => handleViewUser(user)}
+                      title="Visualizar"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleOpenModal(user)}
+                      title="Editar"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleSetPassword(user)}
+                      title="Definir Senha"
+                    >
+                      <Key className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleBlockUser(user.id)}
+                      title="Bloquear"
+                    >
+                      <Lock className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleDeleteUser(user.id)}
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    {user.status === "active" ? (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleToggleStatus(user.id, "inactive")}
+                        className="text-red-600 hover:text-red-700"
+                        title="Desativar"
+                      >
+                        <Ban className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleToggleStatus(user.id, "active")}
+                        className="text-green-600 hover:text-green-700"
+                        title="Ativar"
+                      >
+                        <ShieldCheck className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
 

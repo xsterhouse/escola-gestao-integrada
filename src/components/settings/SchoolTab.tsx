@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ModernSchoolForm } from "@/components/settings/ModernSchoolForm";
@@ -21,42 +21,20 @@ export function SchoolTab() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentSchool, setCurrentSchool] = useState<School | null>(null);
-  const [schools, setSchools] = useState<School[]>([
-    {
-      id: "1",
-      name: "Escola Municipal João Silva",
-      tradingName: "Escola João Silva",
-      cnpj: "12.345.678/0001-90",
-      address: "Rua das Flores, 123",
-      cityState: "São Paulo/SP",
-      responsibleName: "Maria Oliveira",
-      phone: "(11) 91234-5678",
-      email: "contato@emjs.edu.br",
-      status: "active",
-      director: "Carlos Eduardo Santos",
-      logo: "https://via.placeholder.com/150?text=Logo+Escola",
-      purchasingCenterId: "central-01",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "2",
-      name: "Colégio Estadual Pedro Alves",
-      tradingName: "Colégio Pedro Alves",
-      cnpj: "23.456.789/0001-12",
-      address: "Av. Principal, 456",
-      cityState: "Rio de Janeiro/RJ",
-      responsibleName: "João Pereira",
-      phone: "(21) 98765-4321",
-      email: "secretaria@cepa.edu.br",
-      status: "suspended",
-      director: "Ana Maria Lima",
-      logo: "https://via.placeholder.com/150?text=Logo+Colegio",
-      purchasingCenterId: "central-02",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+  const [schools, setSchools] = useState<School[]>([]);
+
+  // Load schools from localStorage on component mount
+  useEffect(() => {
+    const savedSchools = localStorage.getItem('schools');
+    if (savedSchools) {
+      setSchools(JSON.parse(savedSchools));
     }
-  ]);
+  }, []);
+
+  // Save schools to localStorage whenever schools state changes
+  useEffect(() => {
+    localStorage.setItem('schools', JSON.stringify(schools));
+  }, [schools]);
 
   const handleOpenModal = (school?: School) => {
     if (school) {
@@ -85,7 +63,7 @@ export function SchoolTab() {
     } else {
       // Create new school
       const newSchool: School = {
-        id: `${schools.length + 1}`,
+        id: Date.now().toString(),
         ...schoolData,
         status: "active",
         createdAt: new Date(),
@@ -94,6 +72,13 @@ export function SchoolTab() {
       setSchools([...schools, newSchool]);
     }
     setIsModalOpen(false);
+    
+    toast({
+      title: isEditMode ? "Escola atualizada" : "Escola cadastrada",
+      description: isEditMode 
+        ? "A escola foi atualizada com sucesso." 
+        : "A escola foi cadastrada com sucesso.",
+    });
   };
 
   const handleToggleStatus = (id: string, newStatus: "active" | "suspended") => {
@@ -144,7 +129,14 @@ export function SchoolTab() {
           </CardDescription>
         </div>
         <Button 
-          className="flex items-center gap-1" 
+          className="flex items-center gap-1"
+          style={{ backgroundColor: '#012340', color: 'white' }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = '#013a5c';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = '#012340';
+          }}
           onClick={() => handleOpenModal()}
         >
           <Plus className="h-4 w-4" />
@@ -164,97 +156,105 @@ export function SchoolTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {schools.map((school) => (
-              <TableRow key={school.id}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    {school.logo && (
-                      <img 
-                        src={school.logo} 
-                        alt={`Logo ${school.name}`} 
-                        className="h-8 w-8 object-contain rounded"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    )}
-                    <div>
-                      <div>{school.name}</div>
-                      {school.tradingName && (
-                        <div className="text-xs text-gray-500">{school.tradingName}</div>
-                      )}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>{school.cnpj}</TableCell>
-                <TableCell>{school.director || "—"}</TableCell>
-                <TableCell>{school.responsibleName}</TableCell>
-                <TableCell>
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    school.status === "active" 
-                      ? "bg-green-100 text-green-800" 
-                      : "bg-red-100 text-red-800"
-                  }`}>
-                    {school.status === "active" ? "Ativa" : "Suspensa"}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right space-x-1">
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => handleViewSchool(school)}
-                    title="Visualizar"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleOpenModal(school)}
-                    title="Editar"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleBlockSchool(school.id)}
-                    title="Bloquear"
-                  >
-                    <Lock className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleDeleteSchool(school.id)}
-                    title="Excluir"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                  {school.status === "active" ? (
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => handleToggleStatus(school.id, "suspended")}
-                      className="text-red-600 hover:text-red-700"
-                      title="Suspender"
-                    >
-                      <Ban className="h-4 w-4" />
-                    </Button>
-                  ) : (
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => handleToggleStatus(school.id, "active")}
-                      className="text-green-600 hover:text-green-700"
-                      title="Ativar"
-                    >
-                      <ShieldCheck className="h-4 w-4" />
-                    </Button>
-                  )}
+            {schools.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  Nenhuma escola cadastrada. Clique em "Nova Escola" para começar.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              schools.map((school) => (
+                <TableRow key={school.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {school.logo && (
+                        <img 
+                          src={school.logo} 
+                          alt={`Logo ${school.name}`} 
+                          className="h-8 w-8 object-contain rounded"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      )}
+                      <div>
+                        <div>{school.name}</div>
+                        {school.tradingName && (
+                          <div className="text-xs text-gray-500">{school.tradingName}</div>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{school.cnpj}</TableCell>
+                  <TableCell>{school.director || "—"}</TableCell>
+                  <TableCell>{school.responsibleName}</TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      school.status === "active" 
+                        ? "bg-green-100 text-green-800" 
+                        : "bg-red-100 text-red-800"
+                    }`}>
+                      {school.status === "active" ? "Ativa" : "Suspensa"}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right space-x-1">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => handleViewSchool(school)}
+                      title="Visualizar"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleOpenModal(school)}
+                      title="Editar"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleBlockSchool(school.id)}
+                      title="Bloquear"
+                    >
+                      <Lock className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleDeleteSchool(school.id)}
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    {school.status === "active" ? (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleToggleStatus(school.id, "suspended")}
+                        className="text-red-600 hover:text-red-700"
+                        title="Suspender"
+                      >
+                        <Ban className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleToggleStatus(school.id, "active")}
+                        className="text-green-600 hover:text-green-700"
+                        title="Ativar"
+                      >
+                        <ShieldCheck className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </CardContent>

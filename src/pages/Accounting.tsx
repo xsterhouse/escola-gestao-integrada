@@ -205,7 +205,14 @@ const Accounting = () => {
             <div className="pt-6 border-t">
               <Button
                 onClick={handleSave}
-                className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                className="h-12 px-8 text-white text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                style={{ backgroundColor: '#012340' }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#013a5c';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#012340';
+                }}
               >
                 <BookOpen className="mr-2 h-5 w-5" />
                 Salvar Lançamento

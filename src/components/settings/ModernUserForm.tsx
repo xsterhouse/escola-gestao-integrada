@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { 
   Dialog, 
@@ -238,7 +239,7 @@ export function ModernUserForm({
                     <SelectValue placeholder="Selecione a escola" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Nenhuma escola específica</SelectItem>
+                    <SelectItem value="">Nenhuma escola específica</SelectItem>
                     {validSchools.map((school) => (
                       <SelectItem key={school.id} value={school.id}>
                         {school.name}
@@ -362,7 +363,21 @@ export function ModernUserForm({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              style={{ backgroundColor: '#012340', color: 'white' }}
+              onMouseOver={(e) => {
+                if (!isSubmitting) {
+                  e.currentTarget.style.backgroundColor = '#013a5c';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!isSubmitting) {
+                  e.currentTarget.style.backgroundColor = '#012340';
+                }
+              }}
+            >
               {isSubmitting ? "Salvando..." : initialData ? "Atualizar" : "Cadastrar"}
             </Button>
           </DialogFooter>
