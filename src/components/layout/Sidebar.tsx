@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,7 +23,9 @@ import {
   ShoppingCart, 
   Shield, 
   LogOut,
-  School
+  School,
+  User,
+  Clock
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -33,8 +36,59 @@ type SidebarProps = {
 export function Sidebar({ className }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [sessionStart] = useState(new Date());
+  const [sessionTime, setSessionTime] = useState("00:00:00");
   const { user, currentSchool, logout } = useAuth();
   const location = useLocation();
+  
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      setCurrentTime(now);
+      
+      // Calculate session time
+      const timeDiff = now.getTime() - sessionStart.getTime();
+      const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+      
+      setSessionTime(
+        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+      );
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [sessionStart]);
+
+  // Get greeting based on time
+  const getGreeting = () => {
+    const hour = currentTime.getHours();
+    if (hour < 12) return "Bom dia";
+    if (hour < 18) return "Boa tarde";
+    return "Boa noite";
+  };
+
+  // Format time for Brasília timezone
+  const getBrasiliaTime = () => {
+    return currentTime.toLocaleTimeString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  // Get date for Brasília timezone
+  const getBrasiliaDate = () => {
+    return currentTime.toLocaleDateString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long'
+    });
+  };
   
   // Define the system modules with the new order
   const modules = [
@@ -129,31 +183,63 @@ export function Sidebar({ className }: SidebarProps) {
           <span className="sr-only">Toggle Menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-0 bg-[#012340]">
+      <SheetContent side="left" className="w-72 p-0" style={{ backgroundColor: '#012340' }}>
         <div className="flex flex-col h-full">
-          <div className="px-6 py-4 border-b border-[#01356b]">
-            <h2 className="text-lg font-semibold text-white">SIGRE</h2>
-            {currentSchool && (
-              <div className="flex items-center gap-2 mt-2 text-sm text-blue-300">
-                <School className="h-4 w-4" />
-                <p className="truncate">{currentSchool.name}</p>
+          {/* Header with Logo and User */}
+          <div className="px-6 py-6 border-b border-white/10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-white/10 p-2 rounded-lg">
+                <School className="h-6 w-6 text-white" />
               </div>
-            )}
+              <h2 className="text-xl font-bold text-white">SIGRE</h2>
+            </div>
+            
+            {/* User Profile */}
+            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+              <div className="bg-white/10 p-2 rounded-full">
+                <User className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{getGreeting()}, {user?.name?.split(' ')[0]}</p>
+                <p className="text-xs text-blue-200 truncate">{user?.email}</p>
+              </div>
+            </div>
           </div>
+
+          {/* Digital Clock */}
+          <div className="px-6 py-4 border-b border-white/10">
+            <div className="bg-white/5 p-4 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="h-4 w-4 text-blue-200" />
+                <span className="text-xs text-blue-200">Brasília, Brasil</span>
+              </div>
+              <div className="text-2xl font-mono font-bold text-white">
+                {getBrasiliaTime()}
+              </div>
+              <div className="text-xs text-blue-200 capitalize">
+                {getBrasiliaDate()}
+              </div>
+              <div className="mt-3 pt-3 border-t border-white/10">
+                <div className="text-xs text-blue-200">Tempo de sessão</div>
+                <div className="text-sm font-mono text-white">{sessionTime}</div>
+              </div>
+            </div>
+          </div>
+
           <ScrollArea className="flex-1 p-6">
             <div className="space-y-8">
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium text-blue-300">Módulos</h3>
-                <nav className="space-y-4"> {/* Increased spacing between items */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-blue-200 uppercase tracking-wider">Módulos</h3>
+                <nav className="space-y-3">
                   {allowedModules.map((module) => (
                     <Link
                       key={module.id}
                       to={module.path}
                       className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
+                        "flex items-center gap-3 rounded-lg px-4 py-3 text-sm transition-all duration-200",
                         isActive(module.path)
-                          ? "bg-[#01356b] text-white font-medium"
-                          : "text-blue-100 hover:bg-[#01356b] hover:text-white"
+                          ? "bg-white/15 text-white font-medium shadow-lg"
+                          : "text-blue-100 hover:bg-white/10 hover:text-white"
                       )}
                       onClick={() => setIsOpen(false)}
                     >
@@ -164,18 +250,18 @@ export function Sidebar({ className }: SidebarProps) {
                 </nav>
               </div>
               {user?.role === "master" && allowedAdminRoutes.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-blue-300">Administração</h3>
-                  <nav className="space-y-4"> {/* Increased spacing between items */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-blue-200 uppercase tracking-wider">Administração</h3>
+                  <nav className="space-y-3">
                     {allowedAdminRoutes.map((route) => (
                       <Link
                         key={route.id}
                         to={route.path}
                         className={cn(
-                          "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
+                          "flex items-center gap-3 rounded-lg px-4 py-3 text-sm transition-all duration-200",
                           isActive(route.path)
-                            ? "bg-[#01356b] text-white font-medium"
-                            : "text-blue-100 hover:bg-[#01356b] hover:text-white"
+                            ? "bg-white/15 text-white font-medium shadow-lg"
+                            : "text-blue-100 hover:bg-white/10 hover:text-white"
                         )}
                         onClick={() => setIsOpen(false)}
                       >
@@ -188,25 +274,19 @@ export function Sidebar({ className }: SidebarProps) {
               )}
             </div>
           </ScrollArea>
-          <div className="px-6 py-4 border-t border-[#01356b]">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-                <p className="text-xs text-blue-300 truncate">{user?.email}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  logout();
-                  setIsOpen(false);
-                }}
-                className="text-blue-100 hover:text-white hover:bg-[#01356b]"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="sr-only">Sair</span>
-              </Button>
-            </div>
+          
+          <div className="px-6 py-4 border-t border-white/10">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                logout();
+                setIsOpen(false);
+              }}
+              className="w-full justify-start text-blue-100 hover:text-white hover:bg-white/10"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sair
+            </Button>
           </div>
         </div>
       </SheetContent>
@@ -217,56 +297,93 @@ export function Sidebar({ className }: SidebarProps) {
   const DesktopSidebar = (
     <div
       className={cn(
-        "hidden md:flex flex-col h-full bg-[#012340] border-r border-[#01356b]",
-        isCollapsed ? "w-16" : "w-64",
+        "hidden md:flex flex-col h-full border-r border-white/10",
+        isCollapsed ? "w-20" : "w-80",
         className
       )}
+      style={{ backgroundColor: '#012340' }}
     >
+      {/* Header */}
       <div className={cn(
-        "flex h-14 items-center px-4 bg-[#01183a] border-b border-[#01356b]",
-        isCollapsed ? "justify-center" : "justify-between"
+        "flex h-16 items-center border-b border-white/10",
+        isCollapsed ? "justify-center px-4" : "justify-between px-6"
       )}>
-        {!isCollapsed && <h2 className="text-lg font-semibold text-white">SIGRE</h2>}
+        {!isCollapsed && (
+          <div className="flex items-center gap-3">
+            <div className="bg-white/10 p-2 rounded-lg">
+              <School className="h-6 w-6 text-white" />
+            </div>
+            <h2 className="text-xl font-bold text-white">SIGRE</h2>
+          </div>
+        )}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
           title={isCollapsed ? "Expandir" : "Recolher"}
-          className="h-9 w-9 text-white hover:bg-[#01356b]"
+          className="h-9 w-9 text-white hover:bg-white/10"
         >
           {isCollapsed ? <ChevronDown className="h-5 w-5 rotate-90" /> : <ChevronDown className="h-5 w-5 -rotate-90" />}
         </Button>
       </div>
+
+      {/* User Profile Section */}
+      {!isCollapsed && (
+        <div className="px-6 py-6 border-b border-white/10">
+          <div className="flex items-center gap-3 p-4 bg-white/5 rounded-lg">
+            <div className="bg-white/10 p-3 rounded-full">
+              <User className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-lg font-medium text-white">{getGreeting()}, {user?.name?.split(' ')[0]}</p>
+              <p className="text-sm text-blue-200 truncate">{user?.email}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Digital Clock Section */}
+      {!isCollapsed && (
+        <div className="px-6 py-4 border-b border-white/10">
+          <div className="bg-white/5 p-4 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="h-5 w-5 text-blue-200" />
+              <span className="text-sm text-blue-200">Brasília, Brasil</span>
+            </div>
+            <div className="text-3xl font-mono font-bold text-white mb-2">
+              {getBrasiliaTime()}
+            </div>
+            <div className="text-sm text-blue-200 capitalize mb-4">
+              {getBrasiliaDate()}
+            </div>
+            <div className="pt-3 border-t border-white/10">
+              <div className="text-xs text-blue-200 mb-1">Tempo de sessão</div>
+              <div className="text-lg font-mono text-white">{sessionTime}</div>
+            </div>
+          </div>
+        </div>
+      )}
       
-      <ScrollArea className="flex-1 py-4">
-        <div className="space-y-8 px-3">
+      <ScrollArea className="flex-1 py-6">
+        <div className="space-y-8 px-6">
           <TooltipProvider delayDuration={0}>
-            {currentSchool && !isCollapsed && (
-              <div className="px-3 py-2 mb-4 flex items-center gap-2 rounded-md bg-[#01356b]/50">
-                <School className="h-5 w-5 text-blue-300" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{currentSchool.name}</p>
-                </div>
-              </div>
-            )}
-            
-            <div className="space-y-2">
+            <div className="space-y-4">
               {!isCollapsed && (
-                <h3 className="px-4 text-xs font-medium text-blue-300 uppercase tracking-wider">
+                <h3 className="text-sm font-medium text-blue-200 uppercase tracking-wider">
                   Módulos
                 </h3>
               )}
-              <nav className="space-y-4"> {/* Increased spacing between items */}
+              <nav className="space-y-3">
                 {allowedModules.map((module) => (
                   <Tooltip key={module.id} delayDuration={0}>
                     <TooltipTrigger asChild>
                       <Link
                         to={module.path}
                         className={cn(
-                          "flex items-center rounded-md px-3 py-2.5 text-sm transition-colors",
+                          "flex items-center rounded-lg px-4 py-3 text-sm transition-all duration-200",
                           isActive(module.path)
-                            ? "bg-[#01356b] text-white font-medium"
-                            : "text-blue-100 hover:bg-[#01356b] hover:text-white",
+                            ? "bg-white/15 text-white font-medium shadow-lg"
+                            : "text-blue-100 hover:bg-white/10 hover:text-white",
                           isCollapsed ? "justify-center" : "gap-3"
                         )}
                       >
@@ -285,23 +402,23 @@ export function Sidebar({ className }: SidebarProps) {
             </div>
             
             {user?.role === "master" && allowedAdminRoutes.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {!isCollapsed && (
-                  <h3 className="px-4 text-xs font-medium text-blue-300 uppercase tracking-wider mt-6">
+                  <h3 className="text-sm font-medium text-blue-200 uppercase tracking-wider">
                     Administração
                   </h3>
                 )}
-                <nav className="space-y-4"> {/* Increased spacing between items */}
+                <nav className="space-y-3">
                   {allowedAdminRoutes.map((route) => (
                     <Tooltip key={route.id} delayDuration={0}>
                       <TooltipTrigger asChild>
                         <Link
                           to={route.path}
                           className={cn(
-                            "flex items-center rounded-md px-3 py-2.5 text-sm transition-colors",
+                            "flex items-center rounded-lg px-4 py-3 text-sm transition-all duration-200",
                             isActive(route.path)
-                              ? "bg-[#01356b] text-white font-medium"
-                              : "text-blue-100 hover:bg-[#01356b] hover:text-white",
+                              ? "bg-white/15 text-white font-medium shadow-lg"
+                              : "text-blue-100 hover:bg-white/10 hover:text-white",
                             isCollapsed ? "justify-center" : "gap-3"
                           )}
                         >
@@ -323,35 +440,27 @@ export function Sidebar({ className }: SidebarProps) {
         </div>
       </ScrollArea>
       
-      <div className={cn(
-        "border-t border-[#01356b] p-4", 
-        isCollapsed && "flex flex-col items-center"
-      )}>
-        {currentSchool && !isCollapsed && (
-          <p className="text-xs text-blue-300 truncate mb-2">
-            {currentSchool.name}
-          </p>
-        )}
-        <div className={cn(
-          "flex items-center gap-2",
-          isCollapsed && "flex-col"
-        )}>
-          {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-              <p className="text-xs text-blue-300 truncate">{user?.email}</p>
-            </div>
-          )}
+      <div className="border-t border-white/10 p-6">
+        {!isCollapsed ? (
           <Button
             variant="ghost"
-            size={isCollapsed ? "icon" : "sm"}
+            onClick={logout}
+            className="w-full justify-start text-blue-100 hover:text-white hover:bg-white/10"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Sair
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={logout}
             title="Sair"
-            className="text-blue-100 hover:text-white hover:bg-[#01356b]"
+            className="w-full text-blue-100 hover:text-white hover:bg-white/10"
           >
-            {isCollapsed ? <LogOut className="h-4 w-4" /> : "Sair"}
+            <LogOut className="h-4 w-4" />
           </Button>
-        </div>
+        )}
       </div>
     </div>
   );

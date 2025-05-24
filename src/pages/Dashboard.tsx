@@ -13,16 +13,13 @@ import {
   DollarSign,
   BarChart3,
   PieChart,
-  School as SchoolIcon,
   Import
 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Dashboard = () => {
-  const { user, currentSchool, setCurrentSchool } = useAuth();
+  const { user, currentSchool } = useAuth();
   const [lastAccess, setLastAccess] = useState("");
   const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
-  const [availableSchools, setAvailableSchools] = useState<School[]>([]);
   
   useEffect(() => {
     // Format current date for last access display
@@ -72,40 +69,7 @@ const Dashboard = () => {
         additionalInfo: "12 pagamentos pendentes"
       },
     ]);
-
-    // Mock data for schools (in a real app, this would be fetched from an API)
-    if (user?.role === "master") {
-      setAvailableSchools([
-        {
-          id: "1",
-          name: "Escola Municipal João da Silva",
-          cnpj: "12.345.678/0001-90",
-          responsibleName: "Maria Oliveira",
-          email: "contato@joaodasilva.edu.br",
-          status: "active",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          id: "2",
-          name: "Colégio Estadual Paulo Freire",
-          cnpj: "98.765.432/0001-10",
-          responsibleName: "Carlos Santos",
-          email: "contato@paulofreire.edu.br",
-          status: "active",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ]);
-    }
   }, [user]);
-
-  const handleSchoolChange = (schoolId: string) => {
-    const school = availableSchools.find(s => s.id === schoolId);
-    if (school) {
-      setCurrentSchool(school);
-    }
-  };
 
   return (
     <AppLayout>
@@ -113,30 +77,13 @@ const Dashboard = () => {
         <div className="bg-white p-6 rounded-lg shadow flex flex-col md:flex-row justify-between items-start md:items-center">
           <div>
             <h1 className="text-2xl font-bold tracking-tight mb-1">
-              Bom dia, {user?.name?.split(' ')[0]}
+              Bem-vindo ao SIGRE
             </h1>
             <p className="text-muted-foreground">
-              Bem-vindo ao SIGRE - Sistema Integrado de Gestão de Recursos Escolares
+              Sistema Integrado de Gestão de Recursos Escolares
             </p>
           </div>
           <div className="flex flex-col gap-2 mt-4 md:mt-0">
-            {user?.role === "master" && (
-              <Select onValueChange={handleSchoolChange} value={currentSchool?.id}>
-                <SelectTrigger className="w-[280px]">
-                  <SelectValue placeholder="Selecione uma escola" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableSchools.map(school => (
-                    <SelectItem key={school.id} value={school.id}>
-                      <div className="flex items-center gap-2">
-                        <SchoolIcon className="h-4 w-4" />
-                        <span>{school.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
             <div className="text-sm text-muted-foreground">
               Último acesso: {lastAccess}
             </div>
