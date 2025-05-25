@@ -78,6 +78,26 @@ export function ReceivableAccounts({
       currency: 'BRL'
     }).format(value);
   };
+
+  const exportData = () => {
+    const dataToExport = filteredAccounts.map(account => ({
+      Descrição: account.description,
+      Origem: account.origin,
+      'Tipo de Recurso': account.resourceType,
+      'Data Prevista': format(new Date(account.expectedDate), 'dd/MM/yyyy'),
+      Valor: formatCurrency(account.value),
+      Status: account.status === 'recebido' ? 'Recebido' : 'Pendente',
+      'Data de Recebimento': account.receivedDate ? format(new Date(account.receivedDate), 'dd/MM/yyyy') : '-'
+    }));
+
+    try {
+      exportToCsv(dataToExport, 'contas-a-receber');
+      toast.success("Dados exportados com sucesso!");
+    } catch (error) {
+      console.error('Erro ao exportar dados:', error);
+      toast.error("Erro ao exportar dados.");
+    }
+  };
   
   const handleAddReceivable = () => {
     // Check for installments
