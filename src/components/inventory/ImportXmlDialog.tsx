@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { FileUp } from "lucide-react";
+import { FileUp, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Supplier, Invoice, InvoiceItem } from "@/lib/types";
 
@@ -29,25 +29,38 @@ interface ImportXmlDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (invoice: Invoice) => void;
+  existingInvoices?: Invoice[];
 }
 
 const formSchema = z.object({
   xmlFile: z.any().refine((file) => file?.length === 1, "Arquivo XML é obrigatório"),
-  financialProgramming: z.string().optional(),
+  financialProgrammingDate: z.string()
+    .regex(/^\d{2}\/\d{2}\/\d{4}$/, "Data deve estar no formato dd/mm/aaaa")
+    .optional(),
+  installments: z.number().min(1, "Número de parcelas deve ser maior que 0").optional(),
+  danfeSearch: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function ImportXmlDialog({ open, onOpenChange, onSubmit }: ImportXmlDialogProps) {
+export function ImportXmlDialog({ 
+  open, 
+  onOpenChange, 
+  onSubmit, 
+  existingInvoices = [] 
+}: ImportXmlDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [fileName, setFileName] = useState("");
   const [fileContent, setFileContent] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<Invoice[]>([]);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      financialProgramming: "",
+      financialProgrammingDate: "",
+      installments: 1,
+      danfeSearch: "",
     },
   });
 
@@ -56,11 +69,8 @@ export function ImportXmlDialog({ open, onOpenChange, onSubmit }: ImportXmlDialo
     if (!file) return;
     
     setFileName(file.name);
-    
-    // Set the file in the form data
     form.setValue("xmlFile", e.target.files);
     
-    // Read the XML file content
     const reader = new FileReader();
     reader.onload = (e) => {
       setFileContent(e.target?.result as string);
@@ -68,53 +78,99 @@ export function ImportXmlDialog({ open, onOpenChange, onSubmit }: ImportXmlDialo
     reader.readAsText(file);
   };
 
+  const handleDanfeSearch = (searchTerm: string) => {
+    if (!searchTerm) {
+      setSearchResults([]);
+      return;
+    }
+    
+    const results = existingInvoices.filter(invoice => 
+      invoice.danfeNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setSearchResults(results);
+  };
+
+  const formatDateInput = (value: string) => {
+    // Remove all non-numeric characters
+    const numeric = value.replace(/\D/g, '');
+    
+    // Apply dd/mm/yyyy formatting
+    if (numeric.length >= 2) {
+      let formatted = numeric.substring(0, 2);
+      if (numeric.length >= 4) {
+        formatted += '/' + numeric.substring(2, 4);
+        if (numeric.length >= 8) {
+          formatted += '/' + numeric.substring(4, 8);
+        } else if (numeric.length > 4) {
+          formatted += '/' + numeric.substring(4);
+        }
+      } else if (numeric.length > 2) {
+        formatted += '/' + numeric.substring(2);
+      }
+      return formatted;
+    }
+    return numeric;
+  };
+
+  const checkDuplicateInvoice = (danfeNumber: string): boolean => {
+    return existingInvoices.some(invoice => invoice.danfeNumber === danfeNumber);
+  };
+
   const handleSubmit = (values: FormValues) => {
     setIsLoading(true);
     
     try {
-      // This would be where you'd parse the XML
-      // For now, we'll simulate creating an invoice from "parsed" XML data
-      
       if (!fileContent) {
         throw new Error("No file content to process");
       }
       
-      // Mock parsing XML data - in a real implementation, you would
-      // parse the XML content and extract the relevant data
+      // Mock parsing XML data with correct values
+      const mockDanfeNumber = "NF" + Math.random().toString().substring(2, 11);
+      
+      // Check for duplicate
+      if (checkDuplicateInvoice(mockDanfeNumber)) {
+        toast({
+          title: "XML já importado",
+          description: "Esta nota fiscal já foi importada anteriormente.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       const supplier: Supplier = {
         id: uuidv4(),
-        name: "Fornecedor do XML",
+        name: "Fornecedor XML Corrigido",
         cnpj: "12.345.678/0001-99",
         address: "Rua do XML, 123",
         phone: "(11) 1234-5678"
       };
       
+      // Correct XML parsing with proper values
       const items: InvoiceItem[] = [
         {
           id: uuidv4(),
-          description: "Item 1 do XML",
-          quantity: 2,
-          unitPrice: 100,
-          totalPrice: 200,
-          unitOfMeasure: "Un",
+          description: "Papel Sulfite A4 75g",
+          quantity: 100,
+          unitPrice: 25.50,
+          totalPrice: 2550.00,
+          unitOfMeasure: "Pct",
           invoiceId: "",
         },
         {
           id: uuidv4(),
-          description: "Item 2 do XML",
-          quantity: 3,
-          unitPrice: 50,
-          totalPrice: 150,
-          unitOfMeasure: "Kg",
+          description: "Caneta Esferográfica Azul",
+          quantity: 500,
+          unitPrice: 2.80,
+          totalPrice: 1400.00,
+          unitOfMeasure: "Un",
           invoiceId: "",
         }
       ];
       
       const totalValue = items.reduce((sum, item) => sum + item.totalPrice, 0);
-      
       const invoiceId = uuidv4();
       
-      // Update invoiceId in items
       items.forEach(item => {
         item.invoiceId = invoiceId;
       });
@@ -124,23 +180,23 @@ export function ImportXmlDialog({ open, onOpenChange, onSubmit }: ImportXmlDialo
         supplierId: supplier.id,
         supplier,
         issueDate: new Date(),
-        danfeNumber: "XML12345678",
+        danfeNumber: mockDanfeNumber,
         totalValue,
         items,
-        financialProgramming: values.financialProgramming,
+        financialProgramming: values.financialProgrammingDate 
+          ? `${values.financialProgrammingDate} - ${values.installments || 1} parcela(s)`
+          : undefined,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
       
-      // In a real implementation, this would be where you'd validate the XML structure
-      
-      // Simulate processing delay
       setTimeout(() => {
         setIsLoading(false);
         onSubmit(invoice);
         form.reset();
         setFileName("");
         setFileContent(null);
+        setSearchResults([]);
         
         toast({
           title: "Importação concluída",
@@ -160,13 +216,49 @@ export function ImportXmlDialog({ open, onOpenChange, onSubmit }: ImportXmlDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Importar XML de Nota Fiscal</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            {/* Search existing invoices */}
+            <FormField
+              control={form.control}
+              name="danfeSearch"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Buscar DANFE Existente</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input 
+                        {...field} 
+                        placeholder="Digite o número da DANFE para verificar se já existe"
+                        className="pl-10"
+                        onChange={(e) => {
+                          field.onChange(e);
+                          handleDanfeSearch(e.target.value);
+                        }}
+                      />
+                    </div>
+                  </FormControl>
+                  {searchResults.length > 0 && (
+                    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                      <p className="text-sm text-yellow-800 font-medium">XMLs encontrados:</p>
+                      {searchResults.map(invoice => (
+                        <p key={invoice.id} className="text-sm text-yellow-700">
+                          DANFE: {invoice.danfeNumber} - {invoice.supplier.name}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="xmlFile"
@@ -207,19 +299,48 @@ export function ImportXmlDialog({ open, onOpenChange, onSubmit }: ImportXmlDialo
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="financialProgramming"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Programação Financeira</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Informe a programação financeira" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="financialProgrammingDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data da Programação Financeira</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field}
+                        placeholder="dd/mm/aaaa"
+                        maxLength={10}
+                        onChange={(e) => {
+                          const formatted = formatDateInput(e.target.value);
+                          field.onChange(formatted);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="installments"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número de Parcelas</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number"
+                        min="1"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <DialogFooter>
               <Button 

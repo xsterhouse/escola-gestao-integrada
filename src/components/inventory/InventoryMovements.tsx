@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -10,15 +9,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, FileDown, Minus, Eye, Plus, AlertTriangle } from "lucide-react";
+import { Search, FileDown, Minus, Eye, Plus, AlertTriangle, Trash2, Edit } from "lucide-react";
 import { useState } from "react";
 import { Invoice, InventoryMovement } from "@/lib/types";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { ViewMovementDialog } from "./ViewMovementDialog";
 import { AddManualMovementDialog } from "./AddManualMovementDialog";
+import { ProductAutocomplete } from "./ProductAutocomplete";
 import { 
   generateInventoryPDF,
   generateInventoryMovementsPDF, 
@@ -33,6 +31,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMovement, setSelectedMovement] = useState<InventoryMovement | null>(null);
   const [isAddManualMovementOpen, setIsAddManualMovementOpen] = useState(false);
+  const [editingMovement, setEditingMovement] = useState<string | null>(null);
   
   // Create movements from invoices
   const entriesFromInvoices: InventoryMovement[] = invoices.flatMap(invoice => 
@@ -52,12 +51,12 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
     }))
   );
   
-  // Mock some outgoing inventory movements
+  // Mock some outgoing inventory movements with editable flag
   const mockOutgoingMovements: InventoryMovement[] = [
     {
       id: "out-1",
       type: 'saida',
-      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
       productDescription: "Caneta Esferográfica Azul",
       quantity: 10,
       unitOfMeasure: "Un",
@@ -71,7 +70,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
     {
       id: "out-2",
       type: 'saida',
-      date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+      date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
       productDescription: "Papel Sulfite A4",
       quantity: 3,
       unitOfMeasure: "Pct",
@@ -81,19 +80,6 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       source: 'system',
       createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
       updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    },
-    {
-      id: "manual-1",
-      type: 'entrada',
-      date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-      productDescription: "Arroz Tipo 1",
-      quantity: 50,
-      unitOfMeasure: "Kg",
-      unitPrice: 5.50,
-      totalCost: 275,
-      source: 'manual',
-      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
     }
   ];
   
@@ -113,15 +99,64 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
     setSelectedMovement(movement);
   };
   
-  const handleMovementOut = (movementId: string) => {
-    // Simulate creating an outgoing movement
+  const handleDeleteMovement = (movementId: string) => {
+    const movement = allMovements.find(m => m.id === movementId);
+    if (movement?.type === 'saida') {
+      setAllMovements(allMovements.filter(m => m.id !== movementId));
+      toast({
+        title: "Movimento excluído",
+        description: "O lançamento de saída foi excluído com sucesso.",
+      });
+    } else {
+      toast({
+        title: "Não é possível excluir",
+        description: "Apenas movimentos de saída podem ser excluídos.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleEditMovement = (movementId: string) => {
+    setEditingMovement(movementId);
+    // In a real implementation, this would open an edit dialog
     toast({
-      title: "Baixa registrada",
-      description: "A baixa do produto foi registrada com sucesso.",
+      title: "Funcionalidade em desenvolvimento",
+      description: "A edição de movimentos será implementada em breve.",
     });
   };
   
   const handleAddManualMovement = (movement: Omit<InventoryMovement, "id" | "createdAt" | "updatedAt">) => {
+    // Validate that the product exists in inventory and cost matches
+    const productExists = entriesFromInvoices.some(entry => 
+      entry.productDescription === movement.productDescription &&
+      entry.unitOfMeasure === movement.unitOfMeasure
+    );
+    
+    if (!productExists && movement.type === 'saida') {
+      toast({
+        title: "Produto não encontrado",
+        description: "Não é possível dar baixa em produto que não existe no estoque.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Check if cost matches for outgoing movements
+    if (movement.type === 'saida') {
+      const originalEntry = entriesFromInvoices.find(entry => 
+        entry.productDescription === movement.productDescription
+      );
+      
+      if (originalEntry && Math.abs(originalEntry.unitPrice - movement.unitPrice) > 0.01) {
+        toast({
+          title: "Valor incorreto",
+          description: "O valor deve ser igual ao custo original do produto.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
     const newMovement: InventoryMovement = {
       ...movement,
       id: `manual-${Date.now()}`,
@@ -133,16 +168,14 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
     setAllMovements([...allMovements, newMovement]);
     
     toast({
-      title: "Movimentação manual registrada",
-      description: "O item foi adicionado manualmente ao inventário.",
-      variant: "default",
+      title: "Movimentação registrada",
+      description: "O movimento foi registrado com sucesso.",
     });
     
     setIsAddManualMovementOpen(false);
   };
   
   const handleExportCsv = () => {
-    // Export to CSV
     exportToCsv(filteredMovements, 'movimentacoes-estoque', [
       { header: 'Tipo', key: 'type' },
       { header: 'Data', key: 'date' },
@@ -156,7 +189,6 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
   };
   
   const handleExportPdf = () => {
-    // Export to PDF
     generateInventoryMovementsPDF(filteredMovements);
   };
 
@@ -261,14 +293,23 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {movement.type === 'entrada' && (
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => handleMovementOut(movement.id)}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
+                        {movement.type === 'saida' && (
+                          <>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => handleEditMovement(movement.id)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => handleDeleteMovement(movement.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>
@@ -292,6 +333,8 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
         open={isAddManualMovementOpen}
         onOpenChange={setIsAddManualMovementOpen}
         onSubmit={handleAddManualMovement}
+        invoices={invoices}
+        ProductAutocomplete={ProductAutocomplete}
       />
     </Card>
   );

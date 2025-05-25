@@ -15,13 +15,11 @@ export default function Inventory() {
   const [isAddInvoiceOpen, setIsAddInvoiceOpen] = useState(false);
   const [isImportXmlOpen, setIsImportXmlOpen] = useState(false);
   
-  // Function to add a new invoice
   const handleAddInvoice = (invoice: Invoice) => {
     setInvoices([...invoices, invoice]);
     setIsAddInvoiceOpen(false);
   };
 
-  // Function to handle XML import
   const handleXmlImport = (invoice: Invoice) => {
     setInvoices([...invoices, invoice]);
     setIsImportXmlOpen(false);
@@ -66,6 +64,7 @@ export default function Inventory() {
         open={isImportXmlOpen}
         onOpenChange={setIsImportXmlOpen}
         onSubmit={handleXmlImport}
+        existingInvoices={invoices}
       />
     </AppLayout>
   );
