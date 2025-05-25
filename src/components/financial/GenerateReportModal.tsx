@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, FileDown, FileText, X } from "lucide-react";
@@ -146,7 +147,7 @@ export function GenerateReportModal({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os bancos</SelectItem>
-                {bankAccounts.map(account => (
+                {bankAccounts.filter(account => account.id && account.id.trim() !== '').map(account => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.bankName} - {account.accountNumber}
                   </SelectItem>

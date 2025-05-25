@@ -122,7 +122,7 @@ export function NewTransactionModal({
                   <SelectValue placeholder="Selecione uma conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  {bankAccounts.map(account => (
+                  {bankAccounts.filter(account => account.id && account.id.trim() !== '').map(account => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.bankName} - {account.accountNumber}
                     </SelectItem>
