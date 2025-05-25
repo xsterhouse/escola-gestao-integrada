@@ -1,17 +1,45 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ATAForm } from "./ATAForm";
 import { ATAContractsList } from "./ATAContractsList";
 import { ATAContract, ATAItem } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useLocalStorage, useAutoSave } from "@/hooks/useLocalStorage";
 import { v4 as uuidv4 } from "uuid";
 
 export function ATARegistrationTab() {
   const { currentSchool, user } = useAuth();
   const { toast } = useToast();
+  
+  // Usar hook de localStorage para ATAs
+  const {
+    data: storedContracts,
+    loading: isLoading,
+    save: saveContract,
+    update: updateContract,
+    refresh: refreshContracts
+  } = useLocalStorage<ATAContract>('ata_contracts');
+
   const [contracts, setContracts] = useState<ATAContract[]>([]);
+
+  // Carregar contratos do localStorage
+  useEffect(() => {
+    if (!isLoading && storedContracts.length > 0) {
+      const loadedContracts = storedContracts.map(item => ({
+        ...item.data,
+        dataATA: new Date(item.data.dataATA),
+        dataInicioVigencia: new Date(item.data.dataInicioVigencia),
+        dataFimVigencia: new Date(item.data.dataFimVigencia),
+        createdAt: new Date(item.data.createdAt),
+        updatedAt: new Date(item.data.updatedAt)
+      }));
+      
+      setContracts(loadedContracts);
+      console.log(`📋 ${loadedContracts.length} contratos ATA carregados do localStorage`);
+    }
+  }, [storedContracts, isLoading]);
 
   const handleAddContract = (contractData: Omit<ATAContract, "id" | "schoolId" | "createdBy" | "createdAt" | "updatedAt">) => {
     if (!currentSchool || !user) return;
@@ -39,17 +67,41 @@ export function ATARegistrationTab() {
       updatedAt: new Date(),
     };
 
-    setContracts(prev => [...prev, newContract]);
-
     // Salvar no localStorage
-    const schoolContracts = JSON.parse(localStorage.getItem(`ata_contracts_${currentSchool.id}`) || "[]");
-    localStorage.setItem(`ata_contracts_${currentSchool.id}`, JSON.stringify([...schoolContracts, newContract]));
+    const savedId = saveContract(newContract);
+    if (savedId) {
+      setContracts(prev => [...prev, newContract]);
 
-    toast({
-      title: "ATA registrada com sucesso",
-      description: `ATA ${contractData.numeroProcesso} do fornecedor ${contractData.fornecedor} foi registrada.`,
-    });
+      toast({
+        title: "ATA registrada com sucesso",
+        description: `ATA ${contractData.numeroProcesso} do fornecedor ${contractData.fornecedor} foi registrada.`,
+      });
+
+      console.log(`📄 Nova ATA registrada: ${contractData.numeroProcesso} - ID: ${savedId}`);
+    }
   };
+
+  const handleUpdateContract = (updatedContract: ATAContract) => {
+    // Atualizar no localStorage
+    updateContract(updatedContract.id, updatedContract);
+    
+    // Atualizar estado local
+    setContracts(prev => 
+      prev.map(contract => 
+        contract.id === updatedContract.id ? updatedContract : contract
+      )
+    );
+
+    console.log(`📝 ATA atualizada: ${updatedContract.numeroProcesso}`);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -64,13 +116,7 @@ export function ATARegistrationTab() {
 
       <ATAContractsList 
         contracts={contracts}
-        onUpdateContract={(updatedContract) => {
-          setContracts(prev => 
-            prev.map(contract => 
-              contract.id === updatedContract.id ? updatedContract : contract
-            )
-          );
-        }}
+        onUpdateContract={handleUpdateContract}
       />
     </div>
   );

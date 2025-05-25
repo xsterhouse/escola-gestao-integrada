@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useAutoSave, useDraftRecovery } from "@/hooks/useLocalStorage";
+import { useToast } from "@/hooks/use-toast";
 import {
   Form,
   FormControl,
@@ -32,15 +34,48 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 export function PlanningForm({ addItem, disabled = false }: PlanningFormProps) {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState<FormData>({
+    name: "",
+    quantity: 0,
+    unit: "",
+    description: "",
+  });
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      quantity: 0,
-      unit: "",
-      description: "",
-    },
+    defaultValues: formData,
   });
+
+  // Auto-save para o formulário
+  useAutoSave('planning_form', formData, { interval: 3000 });
+
+  // Recuperação de draft
+  const { draft, clearDraft, hasDraft } = useDraftRecovery<FormData>('planning_form');
+
+  // Monitorar mudanças no formulário para auto-save
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      setFormData(value as FormData);
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+  // Carregar draft se disponível
+  useEffect(() => {
+    if (hasDraft && draft?.data) {
+      const draftData = draft.data;
+      form.reset(draftData);
+      setFormData(draftData);
+      
+      toast({
+        title: "Rascunho recuperado",
+        description: "Dados de um formulário anterior foram recuperados.",
+      });
+      
+      console.log("📄 Draft do formulário recuperado");
+    }
+  }, [hasDraft, draft, form, toast]);
 
   const onSubmit = (data: FormData) => {
     addItem({
@@ -50,16 +85,58 @@ export function PlanningForm({ addItem, disabled = false }: PlanningFormProps) {
       description: data.description || "",
     });
     
-    // Reset form
+    // Reset form e limpar draft
     form.reset();
+    setFormData({
+      name: "",
+      quantity: 0,
+      unit: "",
+      description: "",
+    });
+    clearDraft();
+    
+    console.log("📝 Item adicionado e draft limpo");
+  };
+
+  const handleClearDraft = () => {
+    clearDraft();
+    form.reset();
+    setFormData({
+      name: "",
+      quantity: 0,
+      unit: "",
+      description: "",
+    });
+    
+    toast({
+      title: "Rascunho limpo",
+      description: "O rascunho do formulário foi removido.",
+    });
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Adicionar Item ao Planejamento</CardTitle>
+        <CardTitle className="flex items-center justify-between">
+          Adicionar Item ao Planejamento
+          {hasDraft && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearDraft}
+              className="text-xs text-muted-foreground"
+            >
+              Limpar rascunho
+            </Button>
+          )}
+        </CardTitle>
         <CardDescription>
           Preencha os dados do item a ser adicionado
+          {hasDraft && (
+            <span className="block text-xs text-amber-600 mt-1">
+              💾 Rascunho salvo automaticamente
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>

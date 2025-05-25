@@ -1,8 +1,10 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
 import { useAuth } from "@/contexts/AuthContext";
 import { Planning, PlanningItem } from "@/lib/types";
+import { useLocalStorage, useAutoSave } from "@/hooks/useLocalStorage";
 import { PlanningHeader } from "./PlanningHeader";
 import { PlanningForm } from "./PlanningForm";
 import { PlanningActions } from "./PlanningActions";
@@ -11,13 +13,49 @@ import { PlanningTable } from "./PlanningTable";
 const PlanningPage = () => {
   const { currentSchool, user } = useAuth();
   const { toast } = useToast();
+  
+  // Usar hook de localStorage
+  const {
+    data: storedPlans,
+    loading: isLoading,
+    save: savePlan,
+    update: updatePlan,
+    refresh: refreshPlans
+  } = useLocalStorage<Planning>('planning');
+
   const [plans, setPlans] = useState<Planning[]>([]);
   const [currentPlan, setCurrentPlan] = useState<Planning | null>(null);
   const [items, setItems] = useState<PlanningItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Define createNewPlan function before using it in useEffect
+  // Auto-save para o plano atual
+  useAutoSave('planning_current', currentPlan, { interval: 10000 });
+
+  // Carregar dados do localStorage
+  useEffect(() => {
+    if (!isLoading && storedPlans.length > 0) {
+      const loadedPlans = storedPlans.map(item => ({
+        ...item.data,
+        createdAt: new Date(item.data.createdAt),
+        updatedAt: new Date(item.data.updatedAt),
+        finalizedAt: item.data.finalizedAt ? new Date(item.data.finalizedAt) : undefined
+      }));
+      
+      setPlans(loadedPlans);
+      
+      // Encontrar plano em draft ou criar novo
+      const draftPlan = loadedPlans.find(p => p.status === "draft");
+      if (draftPlan) {
+        setCurrentPlan(draftPlan);
+        setItems(draftPlan.items || []);
+      } else {
+        createNewPlan();
+      }
+    } else if (!isLoading && storedPlans.length === 0) {
+      createNewPlan();
+    }
+  }, [storedPlans, isLoading]);
+
   const createNewPlan = useCallback(() => {
     if (!currentSchool || !user) return;
     
@@ -30,68 +68,16 @@ const PlanningPage = () => {
       updatedAt: new Date()
     };
     
-    setCurrentPlan(newPlan);
-    setItems([]);
-    setPlans(prevPlans => [...prevPlans, newPlan]);
-    
-    // Save to localStorage
-    try {
-      localStorage.setItem(`plans_${currentSchool.id}`, JSON.stringify([...plans, newPlan]));
-    } catch (error) {
-      console.error("Error saving new plan to storage:", error);
-    }
-  }, [currentSchool, user, plans]);
-
-  // Load plans for current school
-  useEffect(() => {
-    if (!currentSchool || !currentSchool.id) {
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      // In a real app, this would be an API call
-      // For now, we'll use mock data from localStorage
-      const storedPlans = localStorage.getItem(`plans_${currentSchool.id}`);
-      let parsedPlans: Planning[] = [];
+    // Salvar no localStorage
+    const savedId = savePlan(newPlan);
+    if (savedId) {
+      setCurrentPlan(newPlan);
+      setItems([]);
+      setPlans(prev => [...prev, newPlan]);
       
-      if (storedPlans) {
-        parsedPlans = JSON.parse(storedPlans);
-        setPlans(parsedPlans);
-        
-        // Find draft plan or create a new one
-        const draftPlan = parsedPlans.find(p => p.status === "draft");
-        if (draftPlan) {
-          setCurrentPlan(draftPlan);
-          setItems(draftPlan.items || []);
-        } else {
-          createNewPlan();
-        }
-      } else {
-        createNewPlan();
-      }
-    } catch (error) {
-      console.error("Error loading plans:", error);
-      createNewPlan();
-    } finally {
-      setIsLoading(false);
+      console.log(`📋 Novo planejamento criado: ${savedId}`);
     }
-  }, [currentSchool?.id, createNewPlan]); // Added dependency to prevent infinite loop
-
-  const savePlansToStorage = (updatedPlans: Planning[]) => {
-    if (currentSchool) {
-      try {
-        localStorage.setItem(`plans_${currentSchool.id}`, JSON.stringify(updatedPlans));
-      } catch (error) {
-        console.error("Error saving plans to storage:", error);
-        toast({
-          title: "Erro ao salvar",
-          description: "Não foi possível salvar as alterações",
-          variant: "destructive"
-        });
-      }
-    }
-  };
+  }, [currentSchool, user, savePlan]);
 
   const addItem = (newItem: Omit<PlanningItem, "id" | "planningId" | "createdAt" | "updatedAt" | "availableQuantity">) => {
     if (!currentPlan) return;
@@ -108,7 +94,7 @@ const PlanningPage = () => {
     const updatedItems = [...items, item];
     setItems(updatedItems);
     
-    // Update current plan
+    // Atualizar plano atual
     const updatedPlan = {
       ...currentPlan,
       items: updatedItems,
@@ -116,19 +102,20 @@ const PlanningPage = () => {
     };
     setCurrentPlan(updatedPlan);
     
-    // Update plans list
-    const updatedPlans = plans.map(p => 
-      p.id === currentPlan.id ? updatedPlan : p
-    );
-    setPlans(updatedPlans);
+    // Atualizar no localStorage
+    updatePlan(currentPlan.id, updatedPlan);
     
-    // Save to localStorage
-    savePlansToStorage(updatedPlans);
+    // Atualizar lista local
+    setPlans(prev => 
+      prev.map(p => p.id === currentPlan.id ? updatedPlan : p)
+    );
     
     toast({
       title: "Item adicionado",
       description: `${newItem.name} foi adicionado ao planejamento.`
     });
+    
+    console.log(`➕ Item adicionado ao planejamento: ${item.name}`);
   };
 
   const removeItem = (itemId: string) => {
@@ -137,7 +124,7 @@ const PlanningPage = () => {
     const updatedItems = items.filter(item => item.id !== itemId);
     setItems(updatedItems);
     
-    // Update current plan
+    // Atualizar plano atual
     const updatedPlan = {
       ...currentPlan,
       items: updatedItems,
@@ -145,19 +132,20 @@ const PlanningPage = () => {
     };
     setCurrentPlan(updatedPlan);
     
-    // Update plans list
-    const updatedPlans = plans.map(p => 
-      p.id === currentPlan.id ? updatedPlan : p
-    );
-    setPlans(updatedPlans);
+    // Atualizar no localStorage
+    updatePlan(currentPlan.id, updatedPlan);
     
-    // Save to localStorage
-    savePlansToStorage(updatedPlans);
+    // Atualizar lista local
+    setPlans(prev => 
+      prev.map(p => p.id === currentPlan.id ? updatedPlan : p)
+    );
     
     toast({
       title: "Item removido",
       description: "O item foi removido do planejamento."
     });
+    
+    console.log(`➖ Item removido do planejamento: ${itemId}`);
   };
 
   const finalizePlanning = () => {
@@ -172,10 +160,8 @@ const PlanningPage = () => {
       return;
     }
 
-    // Generate ATA number: ATA-YYYY-XXXX
+    // Gerar número da ATA
     const year = new Date().getFullYear();
-    
-    // Find the highest ATA number for this school
     const schoolPlans = plans.filter(p => 
       p.schoolId === currentSchool.id && p.ataNumber && p.ataNumber.startsWith(`ATA-${year}`)
     );
@@ -193,10 +179,9 @@ const PlanningPage = () => {
       }
     });
     
-    // Generate new sequential number
     const newNumber = `ATA-${year}-${(lastNumber + 1).toString().padStart(4, '0')}`;
     
-    // Update plan status
+    // Finalizar plano
     const finalizedPlan: Planning = {
       ...currentPlan,
       status: "finalized",
@@ -206,31 +191,30 @@ const PlanningPage = () => {
       updatedAt: new Date()
     };
     
-    // Update plans list
-    const updatedPlans = plans.map(p => 
-      p.id === currentPlan.id ? finalizedPlan : p
-    );
-    setPlans(updatedPlans);
-    setCurrentPlan(finalizedPlan);
+    // Atualizar no localStorage
+    updatePlan(currentPlan.id, finalizedPlan);
     
-    // Save to localStorage
-    savePlansToStorage(updatedPlans);
+    // Atualizar estados
+    setCurrentPlan(finalizedPlan);
+    setPlans(prev => 
+      prev.map(p => p.id === currentPlan.id ? finalizedPlan : p)
+    );
     
     toast({
       title: "Planejamento finalizado",
       description: `ATA de Registro de Preço ${newNumber} gerada com sucesso.`
     });
+    
+    console.log(`✅ Planejamento finalizado: ${newNumber}`);
   };
 
   const filteredPlans = plans.filter(plan => {
     if (!searchTerm) return true;
     
-    // Search by ATA number if plan is finalized
     if (plan.status === "finalized" && plan.ataNumber) {
       return plan.ataNumber.toLowerCase().includes(searchTerm.toLowerCase());
     }
     
-    // Search by date
     const date = plan.finalizedAt || plan.createdAt;
     return new Date(date).toLocaleDateString().includes(searchTerm);
   });
@@ -240,6 +224,7 @@ const PlanningPage = () => {
     if (selected) {
       setCurrentPlan(selected);
       setItems(selected.items || []);
+      console.log(`📋 Planejamento selecionado: ${planId}`);
     }
   };
 
