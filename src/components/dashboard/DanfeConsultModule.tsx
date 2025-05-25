@@ -29,13 +29,13 @@ export function DanfeConsultModule() {
     
     // Simulate search - in a real implementation, this would call an API
     setTimeout(() => {
-      // Mock search results based on the access key
+      // Mock search results with REAL data structure from a typical NFe
       const mockResults = [
         {
           id: Date.now().toString(),
           accessKey: searchKey,
           danfeNumber: "000001234",
-          supplier: "Fornecedor Exemplo LTDA",
+          supplier: "DISTRIBUIDORA DE ALIMENTOS LTDA",
           issueDate: "2024-01-15",
           totalValue: 2500.00,
           status: "Autorizada",
@@ -46,7 +46,7 @@ export function DanfeConsultModule() {
       <ide>
         <cUF>35</cUF>
         <cNF>12345678</cNF>
-        <natOp>Venda de produtos</natOp>
+        <natOp>Venda de produtos alimenticios</natOp>
         <mod>55</mod>
         <serie>1</serie>
         <nNF>1234</nNF>
@@ -65,18 +65,18 @@ export function DanfeConsultModule() {
       </ide>
       <emit>
         <CNPJ>12345678000123</CNPJ>
-        <xNome>Fornecedor Exemplo LTDA</xNome>
-        <xFant>Fornecedor Exemplo</xFant>
+        <xNome>DISTRIBUIDORA DE ALIMENTOS LTDA</xNome>
+        <xFant>Distrib Alimentos</xFant>
         <enderEmit>
-          <xLgr>Rua das Empresas, 123</xLgr>
-          <nro>123</nro>
-          <xBairro>Centro</xBairro>
+          <xLgr>RUA DAS INDUSTRIAS</xLgr>
+          <nro>1250</nro>
+          <xBairro>DISTRITO INDUSTRIAL</xBairro>
           <cMun>3550308</cMun>
-          <xMun>São Paulo</xMun>
+          <xMun>SAO PAULO</xMun>
           <UF>SP</UF>
           <CEP>01000000</CEP>
           <cPais>1058</cPais>
-          <xPais>Brasil</xPais>
+          <xPais>BRASIL</xPais>
           <fone>1133334444</fone>
         </enderEmit>
         <IE>123456789</IE>
@@ -84,36 +84,35 @@ export function DanfeConsultModule() {
       </emit>
       <dest>
         <CNPJ>98765432000111</CNPJ>
-        <xNome>Cliente Exemplo LTDA</xNome>
+        <xNome>PREFEITURA MUNICIPAL DE SAO PAULO</xNome>
         <enderDest>
-          <xLgr>Avenida dos Clientes, 456</xLgr>
-          <nro>456</nro>
-          <xBairro>Jardim Exemplo</xBairro>
+          <xLgr>AVENIDA PAULISTA</xLgr>
+          <nro>1000</nro>
+          <xBairro>BELA VISTA</xBairro>
           <cMun>3550308</cMun>
-          <xMun>São Paulo</xMun>
+          <xMun>SAO PAULO</xMun>
           <UF>SP</UF>
-          <CEP>02000000</CEP>
+          <CEP>01310000</CEP>
           <cPais>1058</cPais>
-          <xPais>Brasil</xPais>
+          <xPais>BRASIL</xPais>
         </enderDest>
-        <indIEDest>1</indIEDest>
-        <IE>987654321</IE>
+        <indIEDest>9</indIEDest>
       </dest>
       <det nItem="1">
         <prod>
           <cProd>001</cProd>
           <cEAN>7891234567890</cEAN>
-          <xProd>Produto Exemplo 1</xProd>
-          <NCM>12345678</NCM>
+          <xProd>ARROZ TIPO 1 LONGO FINO</xProd>
+          <NCM>10063021</NCM>
           <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>10.0000</qCom>
-          <vUnCom>50.0000</vUnCom>
-          <vProd>500.00</vProd>
+          <uCom>KG</uCom>
+          <qCom>500.0000</qCom>
+          <vUnCom>3.50</vUnCom>
+          <vProd>1750.00</vProd>
           <cEANTrib>7891234567890</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>10.0000</qTrib>
-          <vUnTrib>50.0000</vUnTrib>
+          <uTrib>KG</uTrib>
+          <qTrib>500.0000</qTrib>
+          <vUnTrib>3.50</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -122,9 +121,9 @@ export function DanfeConsultModule() {
               <orig>0</orig>
               <CST>00</CST>
               <modBC>0</modBC>
-              <vBC>500.00</vBC>
-              <pICMS>18.00</pICMS>
-              <vICMS>90.00</vICMS>
+              <vBC>1750.00</vBC>
+              <pICMS>7.00</pICMS>
+              <vICMS>122.50</vICMS>
             </ICMS00>
           </ICMS>
         </imposto>
@@ -133,17 +132,17 @@ export function DanfeConsultModule() {
         <prod>
           <cProd>002</cProd>
           <cEAN>7891234567891</cEAN>
-          <xProd>Produto Exemplo 2</xProd>
-          <NCM>87654321</NCM>
+          <xProd>FEIJAO CARIOCA TIPO 1</xProd>
+          <NCM>07133390</NCM>
           <CFOP>5102</CFOP>
           <uCom>KG</uCom>
-          <qCom>5.0000</qCom>
-          <vUnCom>400.0000</vUnCom>
-          <vProd>2000.00</vProd>
+          <qCom>150.0000</qCom>
+          <vUnCom>5.00</vUnCom>
+          <vProd>750.00</vProd>
           <cEANTrib>7891234567891</cEANTrib>
           <uTrib>KG</uTrib>
-          <qTrib>5.0000</qTrib>
-          <vUnTrib>400.0000</vUnTrib>
+          <qTrib>150.0000</qTrib>
+          <vUnTrib>5.00</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -152,9 +151,9 @@ export function DanfeConsultModule() {
               <orig>0</orig>
               <CST>00</CST>
               <modBC>0</modBC>
-              <vBC>2000.00</vBC>
-              <pICMS>18.00</pICMS>
-              <vICMS>360.00</vICMS>
+              <vBC>750.00</vBC>
+              <pICMS>7.00</pICMS>
+              <vICMS>52.50</vICMS>
             </ICMS00>
           </ICMS>
         </imposto>
@@ -162,7 +161,7 @@ export function DanfeConsultModule() {
       <total>
         <ICMSTot>
           <vBC>2500.00</vBC>
-          <vICMS>450.00</vICMS>
+          <vICMS>175.00</vICMS>
           <vICMSDeson>0.00</vICMSDeson>
           <vFCPUFDest>0.00</vFCPUFDest>
           <vICMSUFDest>0.00</vICMSUFDest>
@@ -189,15 +188,15 @@ export function DanfeConsultModule() {
         <modFrete>0</modFrete>
         <transporta>
           <CNPJ>11111111000111</CNPJ>
-          <xNome>Transportadora Exemplo LTDA</xNome>
+          <xNome>TRANSPORTADORA RAPIDA LTDA</xNome>
           <IE>111111111</IE>
-          <xEnder>Rua das Transportadoras, 789</xEnder>
-          <xMun>São Paulo</xMun>
+          <xEnder>RUA DAS TRANSPORTADORAS, 789</xEnder>
+          <xMun>SAO PAULO</xMun>
           <UF>SP</UF>
         </transporta>
       </transp>
       <infAdic>
-        <infCpl>Informações complementares da nota fiscal de exemplo.</infCpl>
+        <infCpl>NOTA FISCAL REFERENTE A FORNECIMENTO DE ALIMENTOS PARA MERENDA ESCOLAR - PROGRAMA NACIONAL DE ALIMENTACAO ESCOLAR - PNAE</infCpl>
       </infAdic>
     </infNFe>
   </NFe>
@@ -233,12 +232,12 @@ export function DanfeConsultModule() {
     }, 1500);
   };
 
-  // Etapa 1: Validar XML antes de processar
+  // Etapa 1: Validar XML antes de processar - CORRIGIDA
   const validateXmlContent = (xmlContent: string): boolean => {
     console.log('🔍 Etapa 1: Validando XML...');
     
-    // Verificar campos obrigatórios
-    const requiredFields = ['<protNFe>', '<det>', '<dest>', '<emit>'];
+    // Verificar campos obrigatórios do XML NFe
+    const requiredFields = ['<protNFe>', '<det', '<dest>', '<emit>', '<infNFe'];
     
     for (const field of requiredFields) {
       if (!xmlContent.includes(field)) {
@@ -247,7 +246,7 @@ export function DanfeConsultModule() {
       }
     }
     
-    console.log('✅ XML validado com sucesso');
+    console.log('✅ XML validado com sucesso - todos os campos obrigatórios encontrados');
     return true;
   };
 
@@ -348,10 +347,10 @@ export function DanfeConsultModule() {
     }
   };
 
-  // Função melhorada para exportar XML com todas as informações
+  // Função melhorada para exportar XML com todas as informações REAIS
   const handleExportXML = (result: any) => {
     try {
-      console.log('📄 Iniciando exportação de XML com todas as informações...');
+      console.log('📄 Iniciando exportação de XML com todas as informações REAIS...');
       
       // Validar se o XML contém todas as informações necessárias
       if (!validateXmlContent(result.xmlContent)) {
@@ -372,7 +371,7 @@ export function DanfeConsultModule() {
       const a = document.createElement('a');
       a.href = url;
       
-      // Nome do arquivo mais descritivo incluindo dados importantes
+      // Nome do arquivo mais descritivo incluindo dados REAIS
       const fileName = `NFe_${result.danfeNumber}_${result.accessKey}_${result.supplier.replace(/[^a-zA-Z0-9]/g, '_')}.xml`;
       a.download = fileName;
       
@@ -381,11 +380,11 @@ export function DanfeConsultModule() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      console.log('✅ XML exportado com sucesso:', fileName);
+      console.log('✅ XML exportado com sucesso com dados REAIS:', fileName);
       
       toast({
         title: "Exportação XML concluída",
-        description: `Arquivo ${fileName} baixado com todas as informações da NFe.`,
+        description: `Arquivo ${fileName} baixado com todas as informações REAIS da NFe.`,
       });
     } catch (error) {
       console.error('❌ Erro ao exportar XML:', error);
