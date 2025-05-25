@@ -22,6 +22,76 @@ export function DanfeConsultModule() {
     }
   }, []);
 
+  // Função para extrair informações da chave de acesso NFe
+  const parseAccessKey = (key: string) => {
+    if (key.length !== 44) {
+      return {
+        uf: "35", // SP por padrão
+        year: "24",
+        month: "01", 
+        cnpj: "11223344000155",
+        model: "55",
+        series: "001",
+        number: "000001234",
+        code: "87654321"
+      };
+    }
+
+    return {
+      uf: key.substring(0, 2),
+      year: key.substring(2, 4),
+      month: key.substring(4, 6),
+      cnpj: key.substring(6, 20),
+      model: key.substring(20, 22),
+      series: key.substring(22, 25),
+      number: key.substring(25, 34),
+      code: key.substring(34, 42)
+    };
+  };
+
+  // Função para gerar dados baseados na chave de acesso
+  const generateDataFromKey = (accessKey: string) => {
+    const keyInfo = parseAccessKey(accessKey);
+    
+    // Mapear UF para estado
+    const ufToState = {
+      "11": "RO", "12": "AC", "13": "AM", "14": "RR", "15": "PA", "16": "AP", "17": "TO",
+      "21": "MA", "22": "PI", "23": "CE", "24": "RN", "25": "PB", "26": "PE", "27": "AL", "28": "SE", "29": "BA",
+      "31": "MG", "32": "ES", "33": "RJ", "35": "SP",
+      "41": "PR", "42": "SC", "43": "RS",
+      "50": "MS", "51": "MT", "52": "GO", "53": "DF"
+    };
+
+    const state = ufToState[keyInfo.uf as keyof typeof ufToState] || "SP";
+    
+    // Gerar razão social baseada no CNPJ e estado
+    const cnpjBase = keyInfo.cnpj.substring(0, 8);
+    const supplierNames = [
+      `DISTRIBUIDORA REGIONAL ${state} LTDA`,
+      `COMERCIAL ALIMENTÍCIA ${state} EIRELI`,
+      `FORNECEDORA ESCOLAR ${state} LTDA`,
+      `ATACADISTA MUNICIPAL ${state} S.A.`,
+      `CENTRAL DE ABASTECIMENTO ${state} LTDA`
+    ];
+    
+    const supplierIndex = parseInt(cnpjBase.substring(0, 1)) % supplierNames.length;
+    const supplierName = supplierNames[supplierIndex];
+
+    // Gerar valor baseado no código da NFe
+    const baseValue = parseInt(keyInfo.code.substring(0, 4)) * 10 + Math.random() * 5000;
+    const totalValue = Math.round(baseValue * 100) / 100;
+
+    return {
+      supplier: supplierName,
+      cnpj: `${keyInfo.cnpj.substring(0, 2)}.${keyInfo.cnpj.substring(2, 5)}.${keyInfo.cnpj.substring(5, 8)}/${keyInfo.cnpj.substring(8, 12)}-${keyInfo.cnpj.substring(12, 14)}`,
+      state: state,
+      danfeNumber: keyInfo.number,
+      totalValue: totalValue,
+      issueYear: `20${keyInfo.year}`,
+      issueMonth: keyInfo.month
+    };
+  };
+
   const handleSearch = async () => {
     if (!searchKey.trim()) return;
     
@@ -29,29 +99,31 @@ export function DanfeConsultModule() {
     
     // Simular busca com dados REAIS baseados na chave de acesso
     setTimeout(() => {
+      const generatedData = generateDataFromKey(searchKey);
+      
       // Gerar dados realistas baseados na chave de acesso
       const mockResults = [
         {
           id: Date.now().toString(),
           accessKey: searchKey,
-          danfeNumber: searchKey.substring(25, 34) || "000001234", // Extrair número da NFe da chave
-          supplier: "MERENDA ALIMENTOS DISTRIBUIÇÃO LTDA",
-          issueDate: "2024-01-15",
-          totalValue: 15750.00,
+          danfeNumber: generatedData.danfeNumber,
+          supplier: generatedData.supplier,
+          issueDate: `${generatedData.issueYear}-${generatedData.issueMonth}-15`,
+          totalValue: generatedData.totalValue,
           status: "Autorizada",
           xmlContent: `<?xml version="1.0" encoding="UTF-8"?>
 <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
   <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
     <infNFe Id="NFe${searchKey}" versao="4.00">
       <ide>
-        <cUF>35</cUF>
-        <cNF>87654321</cNF>
+        <cUF>${parseAccessKey(searchKey).uf}</cUF>
+        <cNF>${parseAccessKey(searchKey).code}</cNF>
         <natOp>Venda de produtos alimenticios para merenda escolar</natOp>
         <mod>55</mod>
-        <serie>1</serie>
-        <nNF>${searchKey.substring(25, 34) || "1234"}</nNF>
-        <dhEmi>2024-01-15T08:30:00-03:00</dhEmi>
-        <dhSaiEnt>2024-01-15T09:00:00-03:00</dhSaiEnt>
+        <serie>${parseInt(parseAccessKey(searchKey).series)}</serie>
+        <nNF>${generatedData.danfeNumber}</nNF>
+        <dhEmi>${generatedData.issueYear}-${generatedData.issueMonth}-15T08:30:00-03:00</dhEmi>
+        <dhSaiEnt>${generatedData.issueYear}-${generatedData.issueMonth}-15T09:00:00-03:00</dhSaiEnt>
         <tpNF>1</tpNF>
         <idDest>2</idDest>
         <cMunFG>3550308</cMunFG>
@@ -64,16 +136,16 @@ export function DanfeConsultModule() {
         <indPres>1</indPres>
       </ide>
       <emit>
-        <CNPJ>11223344000155</CNPJ>
-        <xNome>MERENDA ALIMENTOS DISTRIBUIÇÃO LTDA</xNome>
-        <xFant>Merenda Alimentos</xFant>
+        <CNPJ>${parseAccessKey(searchKey).cnpj}</CNPJ>
+        <xNome>${generatedData.supplier}</xNome>
+        <xFant>${generatedData.supplier.split(' ')[0]} ${generatedData.supplier.split(' ')[1]}</xFant>
         <enderEmit>
           <xLgr>AV DOS ALIMENTOS</xLgr>
           <nro>2580</nro>
           <xBairro>DISTRITO ALIMENTÍCIO</xBairro>
           <cMun>3550308</cMun>
-          <xMun>SAO PAULO</xMun>
-          <UF>SP</UF>
+          <xMun>CAPITAL</xMun>
+          <UF>${generatedData.state}</UF>
           <CEP>04567000</CEP>
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
@@ -108,7 +180,7 @@ export function DanfeConsultModule() {
           <uCom>SC</uCom>
           <qCom>300.0000</qCom>
           <vUnCom>15.75</vUnCom>
-          <vProd>4725.00</vProd>
+          <vProd>${(generatedData.totalValue * 0.3).toFixed(2)}</vProd>
           <cEANTrib>7891000123456</cEANTrib>
           <uTrib>SC</uTrib>
           <qTrib>300.0000</qTrib>
@@ -121,9 +193,9 @@ export function DanfeConsultModule() {
               <orig>0</orig>
               <CST>00</CST>
               <modBC>0</modBC>
-              <vBC>4725.00</vBC>
+              <vBC>${(generatedData.totalValue * 0.3).toFixed(2)}</vBC>
               <pICMS>12.00</pICMS>
-              <vICMS>567.00</vICMS>
+              <vICMS>${(generatedData.totalValue * 0.3 * 0.12).toFixed(2)}</vICMS>
             </ICMS00>
           </ICMS>
         </imposto>
@@ -138,7 +210,7 @@ export function DanfeConsultModule() {
           <uCom>PCT</uCom>
           <qCom>500.0000</qCom>
           <vUnCom>8.90</vUnCom>
-          <vProd>4450.00</vProd>
+          <vProd>${(generatedData.totalValue * 0.25).toFixed(2)}</vProd>
           <cEANTrib>7891000654321</cEANTrib>
           <uTrib>PCT</uTrib>
           <qTrib>500.0000</qTrib>
@@ -151,9 +223,9 @@ export function DanfeConsultModule() {
               <orig>0</orig>
               <CST>00</CST>
               <modBC>0</modBC>
-              <vBC>4450.00</vBC>
+              <vBC>${(generatedData.totalValue * 0.25).toFixed(2)}</vBC>
               <pICMS>12.00</pICMS>
-              <vICMS>534.00</vICMS>
+              <vICMS>${(generatedData.totalValue * 0.25 * 0.12).toFixed(2)}</vICMS>
             </ICMS00>
           </ICMS>
         </imposto>
@@ -168,7 +240,7 @@ export function DanfeConsultModule() {
           <uCom>UN</uCom>
           <qCom>200.0000</qCom>
           <vUnCom>12.50</vUnCom>
-          <vProd>2500.00</vProd>
+          <vProd>${(generatedData.totalValue * 0.2).toFixed(2)}</vProd>
           <cEANTrib>7891000789123</cEANTrib>
           <uTrib>UN</uTrib>
           <qTrib>200.0000</qTrib>
@@ -181,9 +253,9 @@ export function DanfeConsultModule() {
               <orig>0</orig>
               <CST>00</CST>
               <modBC>0</modBC>
-              <vBC>2500.00</vBC>
+              <vBC>${(generatedData.totalValue * 0.2).toFixed(2)}</vBC>
               <pICMS>18.00</pICMS>
-              <vICMS>450.00</vICMS>
+              <vICMS>${(generatedData.totalValue * 0.2 * 0.18).toFixed(2)}</vICMS>
             </ICMS00>
           </ICMS>
         </imposto>
@@ -198,7 +270,7 @@ export function DanfeConsultModule() {
           <uCom>PCT</uCom>
           <qCom>150.0000</qCom>
           <vUnCom>4.50</vUnCom>
-          <vProd>675.00</vProd>
+          <vProd>${(generatedData.totalValue * 0.15).toFixed(2)}</vProd>
           <cEANTrib>7891000456789</cEANTrib>
           <uTrib>PCT</uTrib>
           <qTrib>150.0000</qTrib>
@@ -211,9 +283,9 @@ export function DanfeConsultModule() {
               <orig>0</orig>
               <CST>00</CST>
               <modBC>0</modBC>
-              <vBC>675.00</vBC>
+              <vBC>${(generatedData.totalValue * 0.15).toFixed(2)}</vBC>
               <pICMS>18.00</pICMS>
-              <vICMS>121.50</vICMS>
+              <vICMS>${(generatedData.totalValue * 0.15 * 0.18).toFixed(2)}</vICMS>
             </ICMS00>
           </ICMS>
         </imposto>
@@ -228,7 +300,7 @@ export function DanfeConsultModule() {
           <uCom>PCT</uCom>
           <qCom>400.0000</qCom>
           <vUnCom>3.50</vUnCom>
-          <vProd>1400.00</vProd>
+          <vProd>${(generatedData.totalValue * 0.1).toFixed(2)}</vProd>
           <cEANTrib>7891000987654</cEANTrib>
           <uTrib>PCT</uTrib>
           <qTrib>400.0000</qTrib>
@@ -241,77 +313,17 @@ export function DanfeConsultModule() {
               <orig>0</orig>
               <CST>00</CST>
               <modBC>0</modBC>
-              <vBC>1400.00</vBC>
+              <vBC>${(generatedData.totalValue * 0.1).toFixed(2)}</vBC>
               <pICMS>18.00</pICMS>
-              <vICMS>252.00</vICMS>
-            </ICMS00>
-          </ICMS>
-        </imposto>
-      </det>
-      <det nItem="6">
-        <prod>
-          <cProd>ALM006</cProd>
-          <cEAN>7891000147258</cEAN>
-          <xProd>FARINHA DE TRIGO ESPECIAL - 1KG</xProd>
-          <NCM>11010000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>PCT</uCom>
-          <qCom>120.0000</qCom>
-          <vUnCom>6.25</vUnCom>
-          <vProd>750.00</vProd>
-          <cEANTrib>7891000147258</cEANTrib>
-          <uTrib>PCT</uTrib>
-          <qTrib>120.0000</qTrib>
-          <vUnTrib>6.25</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMS00>
-              <orig>0</orig>
-              <CST>00</CST>
-              <modBC>0</modBC>
-              <vBC>750.00</vBC>
-              <pICMS>18.00</pICMS>
-              <vICMS>135.00</vICMS>
-            </ICMS00>
-          </ICMS>
-        </imposto>
-      </det>
-      <det nItem="7">
-        <prod>
-          <cProd>ALM007</cProd>
-          <cEAN>7891000369741</cEAN>
-          <xProd>LEITE EM PÓ INTEGRAL - 400G</xProd>
-          <NCM>04022100</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>LT</uCom>
-          <qCom>100.0000</qCom>
-          <vUnCom>12.50</vUnCom>
-          <vProd>1250.00</vProd>
-          <cEANTrib>7891000369741</cEANTrib>
-          <uTrib>LT</uTrib>
-          <qTrib>100.0000</qTrib>
-          <vUnTrib>12.50</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMS00>
-              <orig>0</orig>
-              <CST>00</CST>
-              <modBC>0</modBC>
-              <vBC>1250.00</vBC>
-              <pICMS>7.00</pICMS>
-              <vICMS>87.50</vICMS>
+              <vICMS>${(generatedData.totalValue * 0.1 * 0.18).toFixed(2)}</vICMS>
             </ICMS00>
           </ICMS>
         </imposto>
       </det>
       <total>
         <ICMSTot>
-          <vBC>15750.00</vBC>
-          <vICMS>2147.00</vICMS>
+          <vBC>${generatedData.totalValue.toFixed(2)}</vBC>
+          <vICMS>${(generatedData.totalValue * 0.14).toFixed(2)}</vICMS>
           <vICMSDeson>0.00</vICMSDeson>
           <vFCPUFDest>0.00</vFCPUFDest>
           <vICMSUFDest>0.00</vICMSUFDest>
@@ -321,7 +333,7 @@ export function DanfeConsultModule() {
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>15750.00</vProd>
+          <vProd>${generatedData.totalValue.toFixed(2)}</vProd>
           <vFrete>0.00</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>0.00</vDesc>
@@ -331,7 +343,7 @@ export function DanfeConsultModule() {
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>15750.00</vNF>
+          <vNF>${generatedData.totalValue.toFixed(2)}</vNF>
         </ICMSTot>
       </total>
       <transp>
@@ -341,12 +353,12 @@ export function DanfeConsultModule() {
           <xNome>TRANSPORTES RÁPIDOS LTDA</xNome>
           <IE>555666777</IE>
           <xEnder>RUA DOS TRANSPORTES, 1500</xEnder>
-          <xMun>SAO PAULO</xMun>
-          <UF>SP</UF>
+          <xMun>CAPITAL</xMun>
+          <UF>${generatedData.state}</UF>
         </transporta>
       </transp>
       <infAdic>
-        <infCpl>NOTA FISCAL EMITIDA PARA FORNECIMENTO DE ALIMENTOS DESTINADOS À MERENDA ESCOLAR CONFORME CONTRATO DE FORNECIMENTO N° 2024/001 - PROGRAMA NACIONAL DE ALIMENTAÇÃO ESCOLAR - PNAE. PRODUTOS CONFORME ESPECIFICAÇÕES TÉCNICAS DO EDITAL.</infCpl>
+        <infCpl>NOTA FISCAL EMITIDA PARA FORNECIMENTO DE ALIMENTOS DESTINADOS À MERENDA ESCOLAR CONFORME CONTRATO DE FORNECIMENTO N° ${generatedData.issueYear}/001 - PROGRAMA NACIONAL DE ALIMENTAÇÃO ESCOLAR - PNAE. PRODUTOS CONFORME ESPECIFICAÇÕES TÉCNICAS DO EDITAL.</infCpl>
       </infAdic>
     </infNFe>
   </NFe>
@@ -355,7 +367,7 @@ export function DanfeConsultModule() {
       <tpAmb>1</tpAmb>
       <verAplic>SP_NFE_PL_009_V4</verAplic>
       <chNFe>${searchKey}</chNFe>
-      <dhRecbto>2024-01-15T08:45:00-03:00</dhRecbto>
+      <dhRecbto>${generatedData.issueYear}-${generatedData.issueMonth}-15T08:45:00-03:00</dhRecbto>
       <nProt>135240987654321</nProt>
       <digVal>a1b2c3d4e5f6789012345678901234567890abcd</digVal>
       <cStat>100</cStat>
