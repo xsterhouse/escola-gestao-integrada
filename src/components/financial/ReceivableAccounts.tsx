@@ -91,7 +91,7 @@ export function ReceivableAccounts({
     }));
 
     try {
-      exportToCsv(dataToExport, 'contas-a-receber');
+      exportToCsv(dataToExport, 'contas-a-receber', 'Contas a Receber');
       toast.success("Dados exportados com sucesso!");
     } catch (error) {
       console.error('Erro ao exportar dados:', error);
