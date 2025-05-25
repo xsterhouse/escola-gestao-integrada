@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -236,250 +235,34 @@ export function DanfeConsultModule() {
 
   const generatePdfFromXml = async (xmlContent: string): Promise<string> => {
     try {
-      console.log('Iniciando geração de PDF do XML...');
+      console.log('Iniciando geração de PDF do XML com nova API...');
       
-      try {
-        const response = await fetch('https://ws.meudanfe.com/api/v1/get/nfe/xmltodanfepdf/API', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'text/plain',
-          },
-          body: xmlContent
-        });
+      const response = await fetch('https://ws.meudanfe.com/api/v1/get/nfe/xmltodanfepdf/API', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+        body: xmlContent
+      });
 
-        if (response.ok) {
-          let pdfBase64 = await response.text();
-          
-          if (pdfBase64.startsWith('"') && pdfBase64.endsWith('"')) {
-            pdfBase64 = pdfBase64.slice(1, -1);
-          }
-          
-          console.log('PDF gerado com sucesso via API externa');
-          return pdfBase64;
-        } else {
-          throw new Error('API externa falhou, usando método alternativo');
-        }
-      } catch (apiError) {
-        console.log('API externa falhou, gerando PDF local com dados reais do XML:', apiError);
+      if (response.status === 200) {
+        let pdfBase64 = await response.text();
         
-        const { jsPDF } = await import('jspdf');
-        const doc = new jsPDF();
-        
-        // Parse do XML para extrair informações reais
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
-        
-        // Função para extrair texto de elementos XML
-        const getXmlValue = (selector: string): string => {
-          const element = xmlDoc.querySelector(selector);
-          return element?.textContent || 'N/A';
-        };
-
-        // Extrair dados completos do XML
-        const nfeData = {
-          // Dados da nota
-          numero: getXmlValue('nNF'),
-          serie: getXmlValue('serie'),
-          dataEmissao: getXmlValue('dhEmi'),
-          chaveAcesso: getXmlValue('chNFe') || searchKey,
-          protocolo: getXmlValue('nProt'),
-          
-          // Dados do emitente
-          emitenteCnpj: getXmlValue('emit CNPJ'),
-          emitenteNome: getXmlValue('emit xNome'),
-          emitenteFant: getXmlValue('emit xFant'),
-          emitenteEndereco: getXmlValue('emit enderEmit xLgr'),
-          emitenteNumero: getXmlValue('emit enderEmit nro'),
-          emitenteBairro: getXmlValue('emit enderEmit xBairro'),
-          emitenteCidade: getXmlValue('emit enderEmit xMun'),
-          emitenteUf: getXmlValue('emit enderEmit UF'),
-          emitenteCep: getXmlValue('emit enderEmit CEP'),
-          emitenteIe: getXmlValue('emit IE'),
-          
-          // Dados do destinatário
-          destCnpj: getXmlValue('dest CNPJ'),
-          destNome: getXmlValue('dest xNome'),
-          destEndereco: getXmlValue('dest enderDest xLgr'),
-          destNumero: getXmlValue('dest enderDest nro'),
-          destBairro: getXmlValue('dest enderDest xBairro'),
-          destCidade: getXmlValue('dest enderDest xMun'),
-          destUf: getXmlValue('dest enderDest UF'),
-          destCep: getXmlValue('dest enderDest CEP'),
-          destIe: getXmlValue('dest IE'),
-          
-          // Valores totais
-          valorProdutos: getXmlValue('vProd'),
-          valorIcms: getXmlValue('vICMS'),
-          valorTotal: getXmlValue('vNF'),
-          
-          // Informações adicionais
-          infComplementares: getXmlValue('infCpl'),
-          naturezaOperacao: getXmlValue('natOp')
-        };
-
-        // Configurar o PDF
-        let yPos = 20;
-        
-        // Cabeçalho
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.text('DOCUMENTO AUXILIAR DA NOTA FISCAL ELETRÔNICA', 105, yPos, { align: 'center' });
-        yPos += 10;
-        
-        doc.setFontSize(12);
-        doc.text('DANFE', 105, yPos, { align: 'center' });
-        yPos += 15;
-        
-        // Dados da NFe
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.text('DADOS DA NOTA FISCAL:', 10, yPos);
-        yPos += 8;
-        
-        doc.setFont("helvetica", "normal");
-        doc.text(`Número: ${nfeData.numero}`, 10, yPos);
-        doc.text(`Série: ${nfeData.serie}`, 70, yPos);
-        doc.text(`Data: ${new Date(nfeData.dataEmissao).toLocaleString('pt-BR')}`, 120, yPos);
-        yPos += 6;
-        
-        doc.text(`Natureza da Operação: ${nfeData.naturezaOperacao}`, 10, yPos);
-        yPos += 6;
-        
-        doc.text(`Protocolo: ${nfeData.protocolo}`, 10, yPos);
-        yPos += 15;
-        
-        // Dados do Emitente
-        doc.setFont("helvetica", "bold");
-        doc.text('EMITENTE:', 10, yPos);
-        yPos += 8;
-        
-        doc.setFont("helvetica", "normal");
-        doc.text(`Nome: ${nfeData.emitenteNome}`, 10, yPos);
-        yPos += 6;
-        doc.text(`Nome Fantasia: ${nfeData.emitenteFant}`, 10, yPos);
-        yPos += 6;
-        doc.text(`CNPJ: ${nfeData.emitenteCnpj}`, 10, yPos);
-        doc.text(`IE: ${nfeData.emitenteIe}`, 120, yPos);
-        yPos += 6;
-        doc.text(`Endereço: ${nfeData.emitenteEndereco}, ${nfeData.emitenteNumero}`, 10, yPos);
-        yPos += 6;
-        doc.text(`${nfeData.emitenteBairro} - ${nfeData.emitenteCidade}/${nfeData.emitenteUf} - CEP: ${nfeData.emitenteCep}`, 10, yPos);
-        yPos += 15;
-        
-        // Dados do Destinatário
-        doc.setFont("helvetica", "bold");
-        doc.text('DESTINATÁRIO:', 10, yPos);
-        yPos += 8;
-        
-        doc.setFont("helvetica", "normal");
-        doc.text(`Nome: ${nfeData.destNome}`, 10, yPos);
-        yPos += 6;
-        doc.text(`CNPJ: ${nfeData.destCnpj}`, 10, yPos);
-        doc.text(`IE: ${nfeData.destIe}`, 120, yPos);
-        yPos += 6;
-        doc.text(`Endereço: ${nfeData.destEndereco}, ${nfeData.destNumero}`, 10, yPos);
-        yPos += 6;
-        doc.text(`${nfeData.destBairro} - ${nfeData.destCidade}/${nfeData.destUf} - CEP: ${nfeData.destCep}`, 10, yPos);
-        yPos += 15;
-        
-        // Produtos
-        doc.setFont("helvetica", "bold");
-        doc.text('PRODUTOS/SERVIÇOS:', 10, yPos);
-        yPos += 8;
-        
-        // Cabeçalho da tabela de produtos
-        doc.setFontSize(8);
-        doc.text('Cód.', 10, yPos);
-        doc.text('Descrição', 30, yPos);
-        doc.text('Qtde', 120, yPos);
-        doc.text('Unid', 140, yPos);
-        doc.text('Vl. Unit', 160, yPos);
-        doc.text('Vl. Total', 180, yPos);
-        yPos += 4;
-        
-        // Linha separadora
-        doc.line(10, yPos, 200, yPos);
-        yPos += 4;
-        
-        // Produtos do XML
-        const produtos = xmlDoc.querySelectorAll('det');
-        produtos.forEach((produto, index) => {
-          const codigo = produto.querySelector('cProd')?.textContent || '';
-          const descricao = produto.querySelector('xProd')?.textContent || '';
-          const quantidade = produto.querySelector('qCom')?.textContent || '';
-          const unidade = produto.querySelector('uCom')?.textContent || '';
-          const valorUnit = produto.querySelector('vUnCom')?.textContent || '';
-          const valorTotal = produto.querySelector('vProd')?.textContent || '';
-          
-          doc.setFont("helvetica", "normal");
-          doc.text(codigo, 10, yPos);
-          // Truncar descrição se for muito longa
-          const descTruncada = descricao.length > 40 ? descricao.substring(0, 37) + '...' : descricao;
-          doc.text(descTruncada, 30, yPos);
-          doc.text(quantidade, 120, yPos);
-          doc.text(unidade, 140, yPos);
-          doc.text(`R$ ${parseFloat(valorUnit).toFixed(2)}`, 160, yPos);
-          doc.text(`R$ ${parseFloat(valorTotal).toFixed(2)}`, 180, yPos);
-          yPos += 5;
-          
-          // Quebra de página se necessário
-          if (yPos > 270) {
-            doc.addPage();
-            yPos = 20;
-          }
-        });
-        
-        yPos += 10;
-        
-        // Totais
-        doc.setFont("helvetica", "bold");
-        doc.text('VALORES TOTAIS:', 10, yPos);
-        yPos += 8;
-        
-        doc.setFont("helvetica", "normal");
-        doc.text(`Valor dos Produtos: R$ ${parseFloat(nfeData.valorProdutos).toFixed(2)}`, 10, yPos);
-        yPos += 6;
-        doc.text(`Valor do ICMS: R$ ${parseFloat(nfeData.valorIcms).toFixed(2)}`, 10, yPos);
-        yPos += 6;
-        doc.setFont("helvetica", "bold");
-        doc.text(`VALOR TOTAL DA NOTA: R$ ${parseFloat(nfeData.valorTotal).toFixed(2)}`, 10, yPos);
-        yPos += 15;
-        
-        // Informações complementares
-        if (nfeData.infComplementares && nfeData.infComplementares !== 'N/A') {
-          doc.setFont("helvetica", "bold");
-          doc.text('INFORMAÇÕES COMPLEMENTARES:', 10, yPos);
-          yPos += 8;
-          doc.setFont("helvetica", "normal");
-          doc.text(nfeData.infComplementares, 10, yPos, { maxWidth: 180 });
-          yPos += 15;
+        // Remove aspas duplas se estiverem presentes na resposta
+        if (pdfBase64.startsWith('"') && pdfBase64.endsWith('"')) {
+          pdfBase64 = pdfBase64.slice(1, -1);
         }
         
-        // Chave de acesso
-        doc.setFont("helvetica", "bold");
-        doc.text('CHAVE DE ACESSO:', 10, yPos);
-        yPos += 6;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-        doc.text(nfeData.chaveAcesso, 10, yPos);
-        
-        // Converter para base64
-        const pdfBlob = doc.output('blob');
-        const reader = new FileReader();
-        
-        return new Promise((resolve, reject) => {
-          reader.onload = () => {
-            const base64 = (reader.result as string).split(',')[1];
-            console.log('PDF gerado localmente com dados reais do XML');
-            resolve(base64);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(pdfBlob);
-        });
+        console.log('PDF gerado com sucesso via API');
+        return pdfBase64;
+      } else if (response.status === 500) {
+        throw new Error('Falha ao gerar PDF do DANFE! Confira o seu XML');
+      } else {
+        throw new Error(`Erro na API: Status ${response.status}`);
       }
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
-      throw new Error('Falha ao gerar PDF do DANFE. Verifique o XML fornecido.');
+      throw new Error(error instanceof Error ? error.message : 'Erro desconhecido ao gerar PDF');
     }
   };
 
@@ -490,7 +273,7 @@ export function DanfeConsultModule() {
         description: "Aguarde enquanto o PDF do DANFE está sendo gerado...",
       });
 
-      // Gera o PDF
+      // Gera o PDF usando a nova API
       const pdfBase64 = await generatePdfFromXml(result.xmlContent);
       
       // Converte base64 para blob
