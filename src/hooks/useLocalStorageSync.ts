@@ -48,7 +48,7 @@ export function useLocalStorageSync<T>(key: string, initialValue: T[]) {
       loadData();
       initializedRef.current = true;
     }
-  }, [loadData]);
+  }, []); // Remove loadData dependency to prevent circular dependency
 
   // Escutar mudanças no localStorage de outras abas/componentes
   useEffect(() => {
