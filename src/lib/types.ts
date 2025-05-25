@@ -1,4 +1,3 @@
-
 export interface Permission {
   id: string;
   name: string;
@@ -223,6 +222,12 @@ export interface PaymentAccount {
   documentUrl?: string;
   invoiceId?: string;
   notes?: string;
+  bankAccountId?: string; // Added for tracking which bank account was used for payment
+  installmentInfo?: {
+    total: number;
+    current: number;
+    originalId?: string;
+  }; // Added for installment tracking
   createdAt: Date;
   updatedAt: Date;
 }

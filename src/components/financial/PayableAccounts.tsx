@@ -1,10 +1,9 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PaymentAccount } from "@/lib/types";
+import { PaymentAccount, Invoice } from "@/lib/types";
 import {
   Table,
   TableBody,
@@ -32,29 +31,50 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Filter, Plus, FilePlus, Trash2, Edit2, Download, Upload, CheckCircle, Search } from "lucide-react";
+import { Filter, Plus, FilePlus, Trash2, Edit2, Download, Upload, CheckCircle, Search, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportToCsv, generatePDF } from "@/lib/pdf-utils";
+import { ResourceCategoriesConfig } from "./ResourceCategoriesConfig";
+import { ExpenseTypesConfig } from "./ExpenseTypesConfig";
+import { ImportInvoiceFromXmlDialog } from "./ImportInvoiceFromXmlDialog";
+import { PaymentRegistrationDialog } from "./PaymentRegistrationDialog";
+import { InstallmentConfigDialog } from "./InstallmentConfigDialog";
+import { toast } from "sonner";
 
 interface PayableAccountsProps {
   paymentAccounts: PaymentAccount[];
   setPaymentAccounts: React.Dispatch<React.SetStateAction<PaymentAccount[]>>;
   calculateFinancialSummary: () => void;
+  bankAccounts?: any[];
+  onNavigateToBankReconciliation?: () => void;
 }
 
 export function PayableAccounts({
   paymentAccounts,
   setPaymentAccounts,
   calculateFinancialSummary,
+  bankAccounts = [],
+  onNavigateToBankReconciliation,
 }: PayableAccountsProps) {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const [isPaymentConfirmOpen, setIsPaymentConfirmOpen] = useState(false);
   const [isImportInvoiceOpen, setIsImportInvoiceOpen] = useState(false);
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [isInstallmentConfigOpen, setIsInstallmentConfigOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<PaymentAccount | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [configTab, setConfigTab] = useState("categories");
+  
+  // Configurações locais (normalmente viriam de uma API ou contexto)
+  const [resourceCategories, setResourceCategories] = useState<string[]>([
+    "PNAE", "PNATE", "Recursos Próprios", "Outros"
+  ]);
+  const [expenseTypes, setExpenseTypes] = useState<string[]>([
+    "Alimentação", "Material Didático", "Transporte", "Infraestrutura", "Serviços", "Água", "Energia", "Internet", "Outros"
+  ]);
   
   // Form states for new payment
   const [formData, setFormData] = useState({
@@ -66,7 +86,18 @@ export function PayableAccounts({
     resourceCategory: "",
     status: "a_pagar" as const,
     notes: "",
+    installments: 1,
   });
+
+  // Load saved invoices from localStorage to check for XML imports
+  const [savedInvoices, setSavedInvoices] = useState<Invoice[]>([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('invoices');
+    if (saved) {
+      setSavedInvoices(JSON.parse(saved));
+    }
+  }, []);
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -76,9 +107,15 @@ export function PayableAccounts({
   };
   
   const handleAddPayment = () => {
+    // Check for installments
+    if (formData.installments > 1) {
+      setIsInstallmentConfigOpen(true);
+      return;
+    }
+
     const newPayment: PaymentAccount = {
       id: `payment-${Date.now()}`,
-      schoolId: "current-school", // This would come from context in real implementation
+      schoolId: "current-school",
       description: formData.description,
       supplier: formData.supplier,
       dueDate: formData.dueDate,
@@ -95,29 +132,116 @@ export function PayableAccounts({
     resetForm();
     calculateFinancialSummary();
   };
+
+  const handleCreateInstallments = (installmentData: any) => {
+    const baseValue = parseFloat(formData.value);
+    const installmentValue = baseValue / formData.installments;
+    const newPayments: PaymentAccount[] = [];
+
+    for (let i = 0; i < formData.installments; i++) {
+      const dueDate = new Date(formData.dueDate);
+      dueDate.setMonth(dueDate.getMonth() + i);
+
+      const payment: PaymentAccount = {
+        id: `payment-${Date.now()}-${i}`,
+        schoolId: "current-school",
+        description: `${formData.description} (${i + 1}/${formData.installments})`,
+        supplier: formData.supplier,
+        dueDate,
+        value: installmentValue,
+        expenseType: formData.expenseType,
+        resourceCategory: formData.resourceCategory,
+        status: 'a_pagar',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      newPayments.push(payment);
+    }
+    
+    setPaymentAccounts([...paymentAccounts, ...newPayments]);
+    setIsAddPaymentOpen(false);
+    setIsInstallmentConfigOpen(false);
+    resetForm();
+    calculateFinancialSummary();
+    toast.success(`${formData.installments} parcelas criadas com sucesso!`);
+  };
   
-  const handlePaymentConfirm = () => {
+  const handlePaymentConfirm = (paymentData: any) => {
     if (selectedAccount) {
       const updatedAccounts = paymentAccounts.map(account => 
         account.id === selectedAccount.id 
-          ? { ...account, status: 'pago' as const, paymentDate: new Date(), updatedAt: new Date() }
+          ? { 
+              ...account, 
+              status: 'pago' as const, 
+              paymentDate: new Date(), 
+              updatedAt: new Date(),
+              bankAccountId: paymentData.bankAccountId
+            }
           : account
       );
       setPaymentAccounts(updatedAccounts);
       setIsPaymentConfirmOpen(false);
       setSelectedAccount(null);
       calculateFinancialSummary();
+      
+      // Navigate to bank reconciliation if callback is provided
+      if (onNavigateToBankReconciliation) {
+        onNavigateToBankReconciliation();
+      }
+      
+      toast.success("Pagamento registrado com sucesso!");
     }
   };
   
-  const handleDeletePayment = (id: string) => {
-    setPaymentAccounts(paymentAccounts.filter(account => account.id !== id));
+  const handleDeletePayment = (account: PaymentAccount) => {
+    if (account.status === 'pago') {
+      // If paid, just remove payment and return to pending
+      const updatedAccounts = paymentAccounts.map(acc => 
+        acc.id === account.id 
+          ? { 
+              ...acc, 
+              status: 'a_pagar' as const, 
+              paymentDate: undefined, 
+              bankAccountId: undefined,
+              updatedAt: new Date()
+            }
+          : acc
+      );
+      setPaymentAccounts(updatedAccounts);
+      toast.success("Pagamento removido. Conta retornada para pendente.");
+    } else {
+      // If pending, delete completely
+      setPaymentAccounts(paymentAccounts.filter(acc => acc.id !== account.id));
+      toast.success("Conta excluída com sucesso.");
+    }
     calculateFinancialSummary();
   };
   
   const openPaymentConfirm = (account: PaymentAccount) => {
     setSelectedAccount(account);
     setIsPaymentConfirmOpen(true);
+  };
+
+  const handleImportFromXml = (invoice: Invoice) => {
+    // Create payment account from imported invoice
+    const newPayment: PaymentAccount = {
+      id: `payment-xml-${Date.now()}`,
+      schoolId: "current-school",
+      description: `NF ${invoice.danfeNumber} - ${invoice.supplier.name}`,
+      supplier: invoice.supplier.name,
+      dueDate: new Date(invoice.issueDate.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days from issue
+      value: invoice.totalValue,
+      expenseType: "Outros", // Default, can be changed later
+      resourceCategory: "Recursos Próprios", // Default, can be changed later
+      status: 'a_pagar',
+      invoiceId: invoice.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    setPaymentAccounts([...paymentAccounts, newPayment]);
+    calculateFinancialSummary();
+    toast.success("Conta a pagar criada a partir do XML importado!");
   };
   
   const resetForm = () => {
@@ -130,6 +254,7 @@ export function PayableAccounts({
       resourceCategory: "",
       status: "a_pagar",
       notes: "",
+      installments: 1,
     });
   };
   
@@ -308,13 +433,17 @@ export function PayableAccounts({
         </div>
         
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsConfigOpen(true)}>
+            <Settings className="mr-2 h-4 w-4" />
+            Configurações
+          </Button>
           <Button variant="outline" onClick={exportData}>
             <Download className="mr-2 h-4 w-4" />
             Exportar
           </Button>
           <Button variant="outline" onClick={() => setIsImportInvoiceOpen(true)}>
             <FilePlus className="mr-2 h-4 w-4" />
-            Importar NF
+            Importar XML
           </Button>
           <Button onClick={() => setIsAddPaymentOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -391,8 +520,8 @@ export function PayableAccounts({
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          onClick={() => handleDeletePayment(account.id)}
-                          title="Excluir"
+                          onClick={() => handleDeletePayment(account)}
+                          title={account.status === 'pago' ? 'Remover Pagamento' : 'Excluir'}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -472,6 +601,19 @@ export function PayableAccounts({
                 />
               </div>
               <div>
+                <Label htmlFor="installments">Parcelas</Label>
+                <Input 
+                  id="installments" 
+                  type="number"
+                  min="1"
+                  value={formData.installments}
+                  onChange={(e) => setFormData({...formData, installments: parseInt(e.target.value) || 1})}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
                 <Label htmlFor="expenseType">Tipo de Despesa</Label>
                 <Select 
                   value={formData.expenseType} 
@@ -481,36 +623,28 @@ export function PayableAccounts({
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Alimentação">Alimentação</SelectItem>
-                    <SelectItem value="Material Didático">Material Didático</SelectItem>
-                    <SelectItem value="Transporte">Transporte</SelectItem>
-                    <SelectItem value="Infraestrutura">Infraestrutura</SelectItem>
-                    <SelectItem value="Serviços">Serviços</SelectItem>
-                    <SelectItem value="Água">Água</SelectItem>
-                    <SelectItem value="Energia">Energia</SelectItem>
-                    <SelectItem value="Internet">Internet</SelectItem>
-                    <SelectItem value="Outros">Outros</SelectItem>
+                    {expenseTypes.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="resourceCategory">Categoria de Recurso</Label>
-              <Select 
-                value={formData.resourceCategory} 
-                onValueChange={(value) => setFormData({...formData, resourceCategory: value})}
-              >
-                <SelectTrigger id="resourceCategory">
-                  <SelectValue placeholder="Selecione a categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PNAE">PNAE</SelectItem>
-                  <SelectItem value="PNATE">PNATE</SelectItem>
-                  <SelectItem value="Recursos Próprios">Recursos Próprios</SelectItem>
-                  <SelectItem value="Outros">Outros</SelectItem>
-                </SelectContent>
-              </Select>
+              <div>
+                <Label htmlFor="resourceCategory">Categoria de Recurso</Label>
+                <Select 
+                  value={formData.resourceCategory} 
+                  onValueChange={(value) => setFormData({...formData, resourceCategory: value})}
+                >
+                  <SelectTrigger id="resourceCategory">
+                    <SelectValue placeholder="Selecione a categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {resourceCategories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div>
@@ -543,93 +677,64 @@ export function PayableAccounts({
         </DialogContent>
       </Dialog>
       
-      {/* Payment Confirmation Dialog */}
-      <Dialog open={isPaymentConfirmOpen} onOpenChange={setIsPaymentConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Pagamento</DialogTitle>
-            <DialogDescription>
-              Confirme os detalhes para registrar o pagamento.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedAccount && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Descrição</Label>
-                  <Input value={selectedAccount.description} readOnly />
-                </div>
-                <div>
-                  <Label>Fornecedor</Label>
-                  <Input value={selectedAccount.supplier} readOnly />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Vencimento</Label>
-                  <Input value={format(new Date(selectedAccount.dueDate), 'dd/MM/yyyy')} readOnly />
-                </div>
-                <div>
-                  <Label>Valor</Label>
-                  <Input value={formatCurrency(selectedAccount.value)} readOnly />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1">
-                <div>
-                  <Label>Data de Pagamento</Label>
-                  <Input value={format(new Date(), 'dd/MM/yyyy')} readOnly />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="attachment">Anexar Comprovante (opcional)</Label>
-                <Input id="attachment" type="file" />
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPaymentConfirmOpen(false)}>Cancelar</Button>
-            <Button onClick={handlePaymentConfirm}>Confirmar Pagamento</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Payment Registration Dialog */}
+      <PaymentRegistrationDialog
+        isOpen={isPaymentConfirmOpen}
+        onClose={() => setIsPaymentConfirmOpen(false)}
+        account={selectedAccount}
+        bankAccounts={bankAccounts}
+        onConfirm={handlePaymentConfirm}
+      />
+
+      {/* Installment Configuration Dialog */}
+      <InstallmentConfigDialog
+        isOpen={isInstallmentConfigOpen}
+        onClose={() => setIsInstallmentConfigOpen(false)}
+        formData={formData}
+        onConfirm={handleCreateInstallments}
+      />
       
       {/* Import Invoice Dialog */}
-      <Dialog open={isImportInvoiceOpen} onOpenChange={setIsImportInvoiceOpen}>
-        <DialogContent>
+      <ImportInvoiceFromXmlDialog
+        isOpen={isImportInvoiceOpen}
+        onClose={() => setIsImportInvoiceOpen(false)}
+        savedInvoices={savedInvoices}
+        onImport={handleImportFromXml}
+      />
+      
+      {/* Configuration Dialog */}
+      <Dialog open={isConfigOpen} onOpenChange={setIsConfigOpen}>
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Importar Nota Fiscal</DialogTitle>
+            <DialogTitle>Configurações - Contas a Pagar</DialogTitle>
             <DialogDescription>
-              Importe uma nota fiscal para criar automaticamente uma conta a pagar.
+              Configure as categorias de recursos e tipos de despesas.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-300 px-6 py-10">
-              <div className="text-center">
-                <Upload className="mx-auto h-12 w-12 text-gray-300" />
-                <div className="mt-4 flex text-sm leading-6 text-gray-600">
-                  <label
-                    htmlFor="invoice-upload"
-                    className="relative cursor-pointer rounded-md bg-white font-semibold text-primary"
-                  >
-                    <span>Fazer upload de arquivo</span>
-                    <input id="invoice-upload" name="invoice-upload" type="file" className="sr-only" />
-                  </label>
-                  <p className="pl-1">ou arraste e solte</p>
-                </div>
-                <p className="text-xs text-gray-500">XML, PDF até 10MB</p>
-              </div>
-            </div>
-          </div>
+          <Tabs value={configTab} onValueChange={setConfigTab}>
+            <TabsList>
+              <TabsTrigger value="categories">Categorias de Recursos</TabsTrigger>
+              <TabsTrigger value="expenses">Tipos de Despesas</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="categories">
+              <ResourceCategoriesConfig
+                categories={resourceCategories}
+                onCategoriesChange={setResourceCategories}
+              />
+            </TabsContent>
+            
+            <TabsContent value="expenses">
+              <ExpenseTypesConfig
+                expenseTypes={expenseTypes}
+                onExpenseTypesChange={setExpenseTypes}
+              />
+            </TabsContent>
+          </Tabs>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsImportInvoiceOpen(false)}>Cancelar</Button>
-            <Button>Importar</Button>
+            <Button onClick={() => setIsConfigOpen(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

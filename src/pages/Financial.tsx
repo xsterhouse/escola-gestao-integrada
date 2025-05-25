@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -143,6 +142,11 @@ export default function Financial() {
   const handleAddReceivable = (receivable: ReceivableAccount) => {
     setReceivableAccounts([...receivableAccounts, receivable]);
   };
+
+  // Function to navigate to bank reconciliation tab
+  const handleNavigateToBankReconciliation = () => {
+    setActiveTab("reconciliation");
+  };
   
   return (
     <AppLayout requireAuth={true} requiredPermission="financial">
@@ -195,6 +199,8 @@ export default function Financial() {
               paymentAccounts={paymentAccounts}
               setPaymentAccounts={setPaymentAccounts}
               calculateFinancialSummary={calculateFinancialSummary}
+              bankAccounts={bankAccounts}
+              onNavigateToBankReconciliation={handleNavigateToBankReconciliation}
             />
           </TabsContent>
 
