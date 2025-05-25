@@ -208,7 +208,7 @@ export function Sidebar({ className }: SidebarProps) {
           <ScrollArea className="flex-1 p-6">
             <div className="space-y-8">
               <div className="space-y-4">
-                <h3 className="text-sm font-medium text-blue-200 uppercase tracking-wider">Módulos</h3>
+                <h3 className="text-xs font-medium text-blue-200 uppercase tracking-wider">Módulos</h3>
                 <nav className="space-y-3">
                   {allowedModules.map((module) => (
                     <Link
@@ -230,7 +230,7 @@ export function Sidebar({ className }: SidebarProps) {
               </div>
               {user?.role === "master" && allowedAdminRoutes.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-blue-200 uppercase tracking-wider">Administração</h3>
+                  <h3 className="text-xs font-medium text-blue-200 uppercase tracking-wider">Administração</h3>
                   <nav className="space-y-3">
                     {allowedAdminRoutes.map((route) => (
                       <Link
@@ -255,49 +255,51 @@ export function Sidebar({ className }: SidebarProps) {
           </ScrollArea>
           
           <div className="px-6 py-4 border-t border-white/10">
-            {/* Theme Selector */}
-            <div className="flex items-center justify-center gap-4 mb-4">
+            {/* Theme and Logout in a row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setIsDarkTheme(false);
+                    document.documentElement.classList.remove('dark');
+                  }}
+                  className={cn(
+                    "h-8 w-8 text-white hover:bg-white/10",
+                    !isDarkTheme && "bg-white/15"
+                  )}
+                >
+                  <Sun className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setIsDarkTheme(true);
+                    document.documentElement.classList.add('dark');
+                  }}
+                  className={cn(
+                    "h-8 w-8 text-white hover:bg-white/10",
+                    isDarkTheme && "bg-white/15"
+                  )}
+                >
+                  <Moon className="h-4 w-4" />
+                </Button>
+              </div>
+              
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => {
-                  setIsDarkTheme(false);
-                  document.documentElement.classList.remove('dark');
+                  logout();
+                  setIsOpen(false);
                 }}
-                className={cn(
-                  "h-8 w-8 text-white hover:bg-white/10",
-                  !isDarkTheme && "bg-white/15"
-                )}
+                className="h-8 w-8 text-white hover:bg-white/10"
               >
-                <Sun className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setIsDarkTheme(true);
-                  document.documentElement.classList.add('dark');
-                }}
-                className={cn(
-                  "h-8 w-8 text-white hover:bg-white/10",
-                  isDarkTheme && "bg-white/15"
-                )}
-              >
-                <Moon className="h-4 w-4" />
+                <LogOut className="h-4 w-4" />
               </Button>
             </div>
-            
-            <Button
-              variant="ghost"
-              onClick={() => {
-                logout();
-                setIsOpen(false);
-              }}
-              className="w-full justify-start text-blue-100 hover:text-white hover:bg-white/10"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
           </div>
         </div>
       </SheetContent>
@@ -367,7 +369,7 @@ export function Sidebar({ className }: SidebarProps) {
           <div className="bg-white/5 p-4 rounded-lg">
             <div className="flex items-center gap-2 mb-3">
               <Clock className="h-5 w-5 text-blue-200" />
-              <span className="text-sm text-blue-200">Tempo de sessão</span>
+              <span className="text-xs text-blue-200">Tempo de sessão</span>
             </div>
             <div className="text-xl font-mono font-bold text-white">
               {sessionTime}
@@ -381,7 +383,7 @@ export function Sidebar({ className }: SidebarProps) {
           <TooltipProvider delayDuration={0}>
             <div className="space-y-4">
               {!isCollapsed && (
-                <h3 className="text-sm font-medium text-blue-200 uppercase tracking-wider">
+                <h3 className="text-xs font-medium text-blue-200 uppercase tracking-wider">
                   Módulos
                 </h3>
               )}
@@ -416,7 +418,7 @@ export function Sidebar({ className }: SidebarProps) {
             {user?.role === "master" && allowedAdminRoutes.length > 0 && (
               <div className="space-y-4">
                 {!isCollapsed && (
-                  <h3 className="text-sm font-medium text-blue-200 uppercase tracking-wider">
+                  <h3 className="text-xs font-medium text-blue-200 uppercase tracking-wider">
                     Administração
                   </h3>
                 )}
@@ -454,9 +456,8 @@ export function Sidebar({ className }: SidebarProps) {
       
       <div className="border-t border-white/10 p-6">
         {!isCollapsed ? (
-          <div className="space-y-4">
-            {/* Theme Selector */}
-            <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
@@ -489,61 +490,58 @@ export function Sidebar({ className }: SidebarProps) {
             
             <Button
               variant="ghost"
+              size="icon"
               onClick={logout}
-              className="w-full justify-start text-blue-100 hover:text-white hover:bg-white/10"
+              className="h-8 w-8 text-white hover:bg-white/10"
             >
-              <LogOut className="h-4 w-4 mr-2 flex-shrink-0" />
-              <span className="truncate">Sair</span>
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         ) : (
-          <div className="space-y-2 flex flex-col items-center">
-            {/* Theme Selector Icons */}
-            <div className="flex flex-col gap-2">
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setIsDarkTheme(false);
-                      document.documentElement.classList.remove('dark');
-                    }}
-                    className={cn(
-                      "h-8 w-8 text-white hover:bg-white/10",
-                      !isDarkTheme && "bg-white/15"
-                    )}
-                  >
-                    <Sun className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  Tema Claro
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setIsDarkTheme(true);
-                      document.documentElement.classList.add('dark');
-                    }}
-                    className={cn(
-                      "h-8 w-8 text-white hover:bg-white/10",
-                      isDarkTheme && "bg-white/15"
-                    )}
-                  >
-                    <Moon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  Tema Escuro
-                </TooltipContent>
-              </Tooltip>
-            </div>
+          <div className="flex flex-col gap-2 items-center">
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setIsDarkTheme(false);
+                    document.documentElement.classList.remove('dark');
+                  }}
+                  className={cn(
+                    "h-8 w-8 text-white hover:bg-white/10",
+                    !isDarkTheme && "bg-white/15"
+                  )}
+                >
+                  <Sun className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                Tema Claro
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setIsDarkTheme(true);
+                    document.documentElement.classList.add('dark');
+                  }}
+                  className={cn(
+                    "h-8 w-8 text-white hover:bg-white/10",
+                    isDarkTheme && "bg-white/15"
+                  )}
+                >
+                  <Moon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                Tema Escuro
+              </TooltipContent>
+            </Tooltip>
             
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
@@ -551,7 +549,7 @@ export function Sidebar({ className }: SidebarProps) {
                   variant="ghost"
                   size="icon"
                   onClick={logout}
-                  className="w-full text-blue-100 hover:text-white hover:bg-white/10"
+                  className="h-8 w-8 text-white hover:bg-white/10"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
