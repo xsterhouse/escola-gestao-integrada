@@ -8,6 +8,8 @@ import { ReceivableAccounts } from "@/components/financial/ReceivableAccounts";
 import { FinancialDashboard } from "@/components/financial/FinancialDashboard";
 import { FinancialReports } from "@/components/financial/FinancialReports";
 import { BankAccounts } from "@/components/financial/BankAccounts";
+import { ResourceCategoriesConfig } from "@/components/financial/ResourceCategoriesConfig";
+import { ExpenseTypesConfig } from "@/components/financial/ExpenseTypesConfig";
 import { 
   BankAccount, 
   BankTransaction, 
@@ -24,6 +26,10 @@ export default function Financial() {
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
   const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
   const [receivableAccounts, setReceivableAccounts] = useState<ReceivableAccount[]>([]);
+  
+  // Configuration states - loaded from localStorage
+  const [resourceCategories, setResourceCategories] = useState<string[]>([]);
+  const [expenseTypes, setExpenseTypes] = useState<string[]>([]);
   
   // Financial summary data
   const [financialSummary, setFinancialSummary] = useState<FinancialSummary>({
@@ -53,6 +59,27 @@ export default function Financial() {
     if (savedReceivableAccounts) {
       setReceivableAccounts(JSON.parse(savedReceivableAccounts));
     }
+
+    // Load configuration data
+    const savedResourceCategories = localStorage.getItem('resourceCategories');
+    if (savedResourceCategories) {
+      setResourceCategories(JSON.parse(savedResourceCategories));
+    } else {
+      // Set default categories if none exist
+      const defaultCategories = ["PNAE", "PNATE", "Recursos Próprios", "Outros"];
+      setResourceCategories(defaultCategories);
+      localStorage.setItem('resourceCategories', JSON.stringify(defaultCategories));
+    }
+
+    const savedExpenseTypes = localStorage.getItem('expenseTypes');
+    if (savedExpenseTypes) {
+      setExpenseTypes(JSON.parse(savedExpenseTypes));
+    } else {
+      // Set default expense types if none exist
+      const defaultTypes = ["Alimentação", "Material Didático", "Transporte", "Infraestrutura", "Serviços", "Água", "Energia", "Internet", "Outros"];
+      setExpenseTypes(defaultTypes);
+      localStorage.setItem('expenseTypes', JSON.stringify(defaultTypes));
+    }
   }, []);
 
   // Save data to localStorage whenever they change
@@ -67,6 +94,14 @@ export default function Financial() {
   useEffect(() => {
     localStorage.setItem('receivableAccounts', JSON.stringify(receivableAccounts));
   }, [receivableAccounts]);
+
+  useEffect(() => {
+    localStorage.setItem('resourceCategories', JSON.stringify(resourceCategories));
+  }, [resourceCategories]);
+
+  useEffect(() => {
+    localStorage.setItem('expenseTypes', JSON.stringify(expenseTypes));
+  }, [expenseTypes]);
   
   // Calculate financial summary based on current data
   const calculateFinancialSummary = () => {
@@ -158,13 +193,15 @@ export default function Financial() {
         />
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-5xl grid-cols-6">
+          <TabsList className="grid w-full max-w-6xl grid-cols-8">
             <TabsTrigger value="dashboard">Visão Geral</TabsTrigger>
             <TabsTrigger value="bank-accounts">Contas Bancárias</TabsTrigger>
             <TabsTrigger value="reconciliation">Conciliação Bancária</TabsTrigger>
             <TabsTrigger value="payables">Contas a Pagar</TabsTrigger>
             <TabsTrigger value="receivables">Contas a Receber</TabsTrigger>
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
+            <TabsTrigger value="categories">Categorias</TabsTrigger>
+            <TabsTrigger value="expenses">Tipos Despesas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-4">
@@ -201,6 +238,8 @@ export default function Financial() {
               calculateFinancialSummary={calculateFinancialSummary}
               bankAccounts={bankAccounts}
               onNavigateToBankReconciliation={handleNavigateToBankReconciliation}
+              resourceCategories={resourceCategories}
+              expenseTypes={expenseTypes}
             />
           </TabsContent>
 
@@ -218,6 +257,20 @@ export default function Financial() {
               transactions={bankTransactions}
               payables={paymentAccounts}
               receivables={receivableAccounts}
+            />
+          </TabsContent>
+
+          <TabsContent value="categories" className="mt-4">
+            <ResourceCategoriesConfig
+              categories={resourceCategories}
+              onCategoriesChange={setResourceCategories}
+            />
+          </TabsContent>
+
+          <TabsContent value="expenses" className="mt-4">
+            <ExpenseTypesConfig
+              expenseTypes={expenseTypes}
+              onExpenseTypesChange={setExpenseTypes}
             />
           </TabsContent>
         </Tabs>

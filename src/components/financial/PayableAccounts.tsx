@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,11 +32,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Filter, Plus, FilePlus, Trash2, Edit2, Download, Upload, CheckCircle, Search, Settings } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Filter, Plus, FilePlus, Trash2, Edit2, Download, Upload, CheckCircle, Search } from "lucide-react";
 import { exportToCsv, generatePDF } from "@/lib/pdf-utils";
-import { ResourceCategoriesConfig } from "./ResourceCategoriesConfig";
-import { ExpenseTypesConfig } from "./ExpenseTypesConfig";
 import { ImportInvoiceFromXmlDialog } from "./ImportInvoiceFromXmlDialog";
 import { PaymentRegistrationDialog } from "./PaymentRegistrationDialog";
 import { InstallmentConfigDialog } from "./InstallmentConfigDialog";
@@ -47,6 +45,8 @@ interface PayableAccountsProps {
   calculateFinancialSummary: () => void;
   bankAccounts?: any[];
   onNavigateToBankReconciliation?: () => void;
+  resourceCategories: string[];
+  expenseTypes: string[];
 }
 
 export function PayableAccounts({
@@ -55,26 +55,18 @@ export function PayableAccounts({
   calculateFinancialSummary,
   bankAccounts = [],
   onNavigateToBankReconciliation,
+  resourceCategories,
+  expenseTypes,
 }: PayableAccountsProps) {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const [isPaymentConfirmOpen, setIsPaymentConfirmOpen] = useState(false);
   const [isImportInvoiceOpen, setIsImportInvoiceOpen] = useState(false);
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isInstallmentConfigOpen, setIsInstallmentConfigOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<PaymentAccount | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [configTab, setConfigTab] = useState("categories");
-  
-  // Configurações locais (normalmente viriam de uma API ou contexto)
-  const [resourceCategories, setResourceCategories] = useState<string[]>([
-    "PNAE", "PNATE", "Recursos Próprios", "Outros"
-  ]);
-  const [expenseTypes, setExpenseTypes] = useState<string[]>([
-    "Alimentação", "Material Didático", "Transporte", "Infraestrutura", "Serviços", "Água", "Energia", "Internet", "Outros"
-  ]);
   
   // Form states for new payment
   const [formData, setFormData] = useState({
@@ -433,10 +425,6 @@ export function PayableAccounts({
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsConfigOpen(true)}>
-            <Settings className="mr-2 h-4 w-4" />
-            Configurações
-          </Button>
           <Button variant="outline" onClick={exportData}>
             <Download className="mr-2 h-4 w-4" />
             Exportar
@@ -701,43 +689,6 @@ export function PayableAccounts({
         savedInvoices={savedInvoices}
         onImport={handleImportFromXml}
       />
-      
-      {/* Configuration Dialog */}
-      <Dialog open={isConfigOpen} onOpenChange={setIsConfigOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Configurações - Contas a Pagar</DialogTitle>
-            <DialogDescription>
-              Configure as categorias de recursos e tipos de despesas.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Tabs value={configTab} onValueChange={setConfigTab}>
-            <TabsList>
-              <TabsTrigger value="categories">Categorias de Recursos</TabsTrigger>
-              <TabsTrigger value="expenses">Tipos de Despesas</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="categories">
-              <ResourceCategoriesConfig
-                categories={resourceCategories}
-                onCategoriesChange={setResourceCategories}
-              />
-            </TabsContent>
-            
-            <TabsContent value="expenses">
-              <ExpenseTypesConfig
-                expenseTypes={expenseTypes}
-                onExpenseTypesChange={setExpenseTypes}
-              />
-            </TabsContent>
-          </Tabs>
-          
-          <DialogFooter>
-            <Button onClick={() => setIsConfigOpen(false)}>Fechar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
