@@ -376,7 +376,7 @@ export interface ContractData {
   };
   dataInicio: Date;
   dataFim: Date;
-  status: 'ativo' | 'vencido' | 'cancelado';
+  status: 'ativo' | 'vencido' | 'cancelado' | 'liquidado';
   items: ContractItem[];
   createdAt: Date;
   updatedAt: Date;
