@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,6 +7,7 @@ import { ModernUserForm } from "@/components/settings/ModernUserForm";
 import { PasswordModal } from "@/components/settings/PasswordModal";
 import { UserDetailsModal } from "@/components/settings/UserDetailsModal";
 import { useToast } from "@/hooks/use-toast";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { Eye, Pencil, Trash2, Ban, ShieldCheck, Plus, Lock, Key } from "lucide-react";
 
 export function UserTab() {
@@ -18,27 +18,10 @@ export function UserTab() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [schools, setSchools] = useState<School[]>([]);
-
-  // Load users and schools from localStorage on component mount
-  useEffect(() => {
-    const savedUsers = localStorage.getItem('users');
-    const savedSchools = localStorage.getItem('schools');
-    
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
-    }
-    
-    if (savedSchools) {
-      setSchools(JSON.parse(savedSchools));
-    }
-  }, []);
-
-  // Save users to localStorage whenever users state changes
-  useEffect(() => {
-    localStorage.setItem('users', JSON.stringify(users));
-  }, [users]);
+  
+  // Usar hook de sincronização para users e schools
+  const { data: users, saveData: setUsers } = useLocalStorageSync<User>('users', []);
+  const { data: schools } = useLocalStorageSync<School>('schools', []);
 
   const handleOpenModal = (user?: User) => {
     if (user) {
@@ -74,7 +57,11 @@ export function UserTab() {
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      setUsers([...users, newUser]);
+      
+      const updatedUsers = [...users, newUser];
+      setUsers(updatedUsers);
+      
+      console.log(`✅ Novo usuário criado: ${userData.name} - Total: ${updatedUsers.length}`);
     }
     setIsModalOpen(false);
     
@@ -128,7 +115,6 @@ export function UserTab() {
 
   const handleSavePassword = (password: string) => {
     if (selectedUser) {
-      // In a real application, this would make an API call to set the password
       console.log(`Setting password for user ${selectedUser.name}`);
       setIsPasswordModalOpen(false);
       setSelectedUser(null);
@@ -151,7 +137,7 @@ export function UserTab() {
         <div>
           <CardTitle>Usuários</CardTitle>
           <CardDescription>
-            Gerencie os usuários do sistema.
+            Gerencie os usuários do sistema. Total: {users.length} | Escolas disponíveis: {schools.length}
           </CardDescription>
         </div>
         <Button 

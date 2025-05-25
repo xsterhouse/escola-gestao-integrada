@@ -1,11 +1,12 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ModernSchoolForm } from "@/components/settings/ModernSchoolForm";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { School } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { 
   Eye, 
   Pencil, 
@@ -21,20 +22,9 @@ export function SchoolTab() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentSchool, setCurrentSchool] = useState<School | null>(null);
-  const [schools, setSchools] = useState<School[]>([]);
-
-  // Load schools from localStorage on component mount
-  useEffect(() => {
-    const savedSchools = localStorage.getItem('schools');
-    if (savedSchools) {
-      setSchools(JSON.parse(savedSchools));
-    }
-  }, []);
-
-  // Save schools to localStorage whenever schools state changes
-  useEffect(() => {
-    localStorage.setItem('schools', JSON.stringify(schools));
-  }, [schools]);
+  
+  // Usar hook de sincronização em vez de useState + useEffect manual
+  const { data: schools, saveData: setSchools } = useLocalStorageSync<School>('schools', []);
 
   const handleOpenModal = (school?: School) => {
     if (school) {
@@ -69,8 +59,13 @@ export function SchoolTab() {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      setSchools([...schools, newSchool]);
+      
+      const updatedSchools = [...schools, newSchool];
+      setSchools(updatedSchools);
+      
+      console.log(`✅ Nova escola criada: ${schoolData.name} - Total: ${updatedSchools.length}`);
     }
+    
     setIsModalOpen(false);
     
     toast({
@@ -112,7 +107,6 @@ export function SchoolTab() {
   };
 
   const handleBlockSchool = (id: string) => {
-    // Implementar lógica de bloqueio
     toast({ 
       title: "Escola bloqueada", 
       description: "A escola foi bloqueada temporariamente."
@@ -125,7 +119,7 @@ export function SchoolTab() {
         <div>
           <CardTitle>Escolas</CardTitle>
           <CardDescription>
-            Gerencie as escolas cadastradas no sistema.
+            Gerencie as escolas cadastradas no sistema. Total: {schools.length}
           </CardDescription>
         </div>
         <Button 
