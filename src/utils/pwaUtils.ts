@@ -27,7 +27,7 @@ export const registerServiceWorker = () => {
 
 export const checkIfPWAInstalled = () => {
   return window.matchMedia('(display-mode: standalone)').matches || 
-         window.navigator.standalone || 
+         (window.navigator as any).standalone || 
          document.referrer.includes('android-app://');
 };
 
