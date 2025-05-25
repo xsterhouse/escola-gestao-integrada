@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User, School } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -37,74 +38,106 @@ const MOCK_MASTER_USER: User = {
   updatedAt: new Date(),
 };
 
-// Mock school data
-const MOCK_SCHOOLS: School[] = [
-  {
-    id: "1",
-    name: "Escola Municipal João da Silva",
-    cnpj: "12.345.678/0001-90",
-    responsibleName: "Maria Oliveira",
-    email: "contato@joaodasilva.edu.br",
-    status: "active", // Adding the required status property
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "2",
-    name: "Colégio Estadual Paulo Freire",
-    cnpj: "98.765.432/0001-10",
-    responsibleName: "Carlos Santos",
-    email: "contato@paulofreire.edu.br",
-    status: "active", // Adding the required status property
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "3",
-    name: "Escola Municipal Maria José",
-    cnpj: "45.678.901/0001-23",
-    responsibleName: "Pedro Alves",
-    email: "contato@mariajose.edu.br",
-    status: "active",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
-
-// Mock school users
-const MOCK_SCHOOL_USERS: User[] = [
-  {
-    id: "2",
-    name: "João Silva",
-    matricula: "ESC001",
-    email: "joao@escola1.com",
-    role: "admin",
-    schoolId: "1",
-    permissions: [
-      { id: "1", name: "dashboard", hasAccess: true },
-      { id: "2", name: "products", hasAccess: true },
-      { id: "3", name: "inventory", hasAccess: true },
-      { id: "4", name: "financial", hasAccess: true }
-    ],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "3",
-    name: "Maria Oliveira",
-    matricula: "ESC002",
-    email: "maria@escola2.com",
-    role: "admin",
-    schoolId: "2",
-    permissions: [
-      { id: "1", name: "dashboard", hasAccess: true },
-      { id: "2", name: "products", hasAccess: true },
-      { id: "3", name: "inventory", hasAccess: true }
-    ],
-    createdAt: new Date(),
-    updatedAt: new Date(),
+// Function to get schools from localStorage or initialize with mock data
+const getStoredSchools = (): School[] => {
+  const stored = localStorage.getItem("schools");
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (error) {
+      console.error("Error parsing stored schools:", error);
+    }
   }
-];
+  
+  // Default mock schools if nothing in localStorage
+  const defaultSchools: School[] = [
+    {
+      id: "1",
+      name: "Escola Municipal João da Silva",
+      cnpj: "12.345.678/0001-90",
+      responsibleName: "Maria Oliveira",
+      email: "contato@joaodasilva.edu.br",
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "2",
+      name: "Colégio Estadual Paulo Freire",
+      cnpj: "98.765.432/0001-10",
+      responsibleName: "Carlos Santos",
+      email: "contato@paulofreire.edu.br",
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "3",
+      name: "Escola Municipal Maria José",
+      cnpj: "45.678.901/0001-23",
+      responsibleName: "Pedro Alves",
+      email: "contato@mariajose.edu.br",
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ];
+  
+  // Save default schools to localStorage
+  localStorage.setItem("schools", JSON.stringify(defaultSchools));
+  return defaultSchools;
+};
+
+// Function to get users from localStorage or initialize with mock data
+const getStoredUsers = (): User[] => {
+  const stored = localStorage.getItem("users");
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (error) {
+      console.error("Error parsing stored users:", error);
+    }
+  }
+  
+  // Default mock users if nothing in localStorage
+  const defaultUsers: User[] = [
+    {
+      id: "2",
+      name: "João Silva",
+      matricula: "ESC001",
+      email: "joao@escola1.com",
+      role: "admin",
+      schoolId: "1",
+      permissions: [
+        { id: "1", name: "dashboard", hasAccess: true },
+        { id: "2", name: "products", hasAccess: true },
+        { id: "3", name: "inventory", hasAccess: true },
+        { id: "4", name: "financial", hasAccess: true }
+      ],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "3",
+      name: "Maria Oliveira",
+      matricula: "ESC002",
+      email: "maria@escola2.com",
+      role: "admin",
+      schoolId: "2",
+      permissions: [
+        { id: "1", name: "dashboard", hasAccess: true },
+        { id: "2", name: "products", hasAccess: true },
+        { id: "3", name: "inventory", hasAccess: true }
+      ],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+  ];
+  
+  // Save default users to localStorage
+  localStorage.setItem("users", JSON.stringify(defaultUsers));
+  return defaultUsers;
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
@@ -118,15 +151,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const savedUser = localStorage.getItem("sigre_user");
     const savedSchool = localStorage.getItem("sigre_school");
     
+    // Initialize schools and users in localStorage if they don't exist
+    getStoredSchools();
+    getStoredUsers();
+    
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
       
+      // Get current schools from localStorage
+      const currentSchools = getStoredSchools();
+      
       // Set available schools based on user role
       if (parsedUser.role === "master") {
-        setAvailableSchools(MOCK_SCHOOLS);
+        setAvailableSchools(currentSchools);
       } else if (parsedUser.schoolId) {
-        const userSchool = MOCK_SCHOOLS.find(school => school.id === parsedUser.schoolId);
+        const userSchool = currentSchools.find(school => school.id === parsedUser.schoolId);
         if (userSchool) {
           setAvailableSchools([userSchool]);
         }
@@ -136,12 +176,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setCurrentSchool(JSON.parse(savedSchool));
       } else if (parsedUser.schoolId) {
         // If no saved school but user has a schoolId, set that as current
-        const userSchool = MOCK_SCHOOLS.find(school => school.id === parsedUser.schoolId);
+        const userSchool = currentSchools.find(school => school.id === parsedUser.schoolId);
         if (userSchool) {
           setCurrentSchool(userSchool);
           localStorage.setItem("sigre_school", JSON.stringify(userSchool));
         }
       }
+    } else {
+      // If no user logged in, still set available schools for login purposes
+      const currentSchools = getStoredSchools();
+      setAvailableSchools(currentSchools);
     }
     
     setIsLoading(false);
@@ -152,13 +196,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     try {
       // For demo purposes, we're using a mock authentication
-      // In a real app, this would be an API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Verificação das credenciais do admin master usando matrícula
       if (matricula === "ADMIN001" && password === "Sigre101020@") {
         setUser(MOCK_MASTER_USER);
-        setAvailableSchools(MOCK_SCHOOLS);
+        const currentSchools = getStoredSchools();
+        setAvailableSchools(currentSchools);
         
         if (remember) {
           localStorage.setItem("sigre_user", JSON.stringify(MOCK_MASTER_USER));
@@ -172,16 +216,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      // Check school users by matricula
-      const schoolUser = MOCK_SCHOOL_USERS.find(
+      // Check school users by matricula from localStorage
+      const storedUsers = getStoredUsers();
+      const schoolUser = storedUsers.find(
         user => user.matricula === matricula && password === "password"
       );
       
       if (schoolUser) {
         setUser(schoolUser);
         
-        // Find user's school
-        const userSchool = MOCK_SCHOOLS.find(school => school.id === schoolUser.schoolId);
+        // Find user's school from localStorage
+        const currentSchools = getStoredSchools();
+        const userSchool = currentSchools.find(school => school.id === schoolUser.schoolId);
         if (userSchool) {
           setCurrentSchool(userSchool);
           setAvailableSchools([userSchool]);

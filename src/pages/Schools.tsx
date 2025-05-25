@@ -15,30 +15,6 @@ import {
 import { School } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
-// Mock data
-const MOCK_SCHOOLS: School[] = [
-  {
-    id: "1",
-    name: "Escola Municipal João da Silva",
-    cnpj: "12.345.678/0001-90",
-    responsibleName: "Maria Oliveira",
-    email: "contato@joaodasilva.edu.br",
-    status: "active", // Adding the required status property
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "2",
-    name: "Colégio Estadual Paulo Freire",
-    cnpj: "98.765.432/0001-10",
-    responsibleName: "Carlos Santos",
-    email: "contato@paulofreire.edu.br",
-    status: "active", // Adding the required status property
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
-
 const Schools = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [schools, setSchools] = useState<School[]>([]);
@@ -47,9 +23,24 @@ const Schools = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // In a real app, this would be an API call
-    setSchools(MOCK_SCHOOLS);
+    // Load schools from localStorage
+    const storedSchools = localStorage.getItem('schools');
+    if (storedSchools) {
+      try {
+        setSchools(JSON.parse(storedSchools));
+      } catch (error) {
+        console.error("Error parsing stored schools:", error);
+        setSchools([]);
+      }
+    }
   }, []);
+
+  // Save schools to localStorage whenever schools state changes
+  useEffect(() => {
+    if (schools.length > 0) {
+      localStorage.setItem('schools', JSON.stringify(schools));
+    }
+  }, [schools]);
 
   const handleOpenForm = (school?: School) => {
     setEditingSchool(school);
@@ -64,21 +55,20 @@ const Schools = () => {
   const handleSaveSchool = (schoolData: Omit<School, "id" | "createdAt" | "updatedAt">) => {
     if (editingSchool) {
       // Update existing school
-      setSchools(
-        schools.map((school) =>
-          school.id === editingSchool.id
-            ? {
-                ...school,
-                ...schoolData,
-                updatedAt: new Date(),
-              }
-            : school
-        )
+      const updatedSchools = schools.map((school) =>
+        school.id === editingSchool.id
+          ? {
+              ...school,
+              ...schoolData,
+              updatedAt: new Date(),
+            }
+          : school
       );
+      setSchools(updatedSchools);
     } else {
       // Create new school
       const newSchool: School = {
-        id: `${schools.length + 1}`,
+        id: `${Date.now()}`,
         ...schoolData,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -91,7 +81,8 @@ const Schools = () => {
   const handleDeleteSchool = (id: string) => {
     // In a real app, we would show a confirmation dialog
     if (window.confirm("Tem certeza que deseja excluir esta escola?")) {
-      setSchools(schools.filter((school) => school.id !== id));
+      const updatedSchools = schools.filter((school) => school.id !== id);
+      setSchools(updatedSchools);
       
       toast({
         title: "Escola excluída",
@@ -154,7 +145,7 @@ const Schools = () => {
                     <TableCell className="font-medium">{school.name}</TableCell>
                     <TableCell>{school.cnpj}</TableCell>
                     <TableCell>{school.responsibleName}</TableCell>
-                    <TableCell>{school.email}</TableCell>
+                    <TableCell>{school.email || "—"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button

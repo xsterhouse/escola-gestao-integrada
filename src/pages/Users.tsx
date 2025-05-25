@@ -16,94 +16,6 @@ import { Badge } from "@/components/ui/badge";
 import { School, User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
-// Mock data
-const MOCK_USERS: User[] = [
-  {
-    id: "1",
-    name: "Admin Master",
-    matricula: "ADMIN001",
-    email: "admin@sigre.com",
-    role: "master",
-    schoolId: null,
-    permissions: [
-      { id: "1", name: "dashboard", hasAccess: true },
-      { id: "2", name: "products", hasAccess: true },
-      { id: "3", name: "inventory", hasAccess: true },
-      { id: "4", name: "financial", hasAccess: true },
-      { id: "5", name: "planning", hasAccess: true },
-      { id: "6", name: "contracts", hasAccess: true },
-      { id: "7", name: "accounting", hasAccess: true },
-      { id: "8", name: "settings", hasAccess: true },
-    ],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "2",
-    name: "Maria Silva",
-    matricula: "ESC001",
-    email: "maria@joaodasilva.edu.br",
-    role: "admin",
-    schoolId: "1",
-    permissions: [
-      { id: "1", name: "dashboard", hasAccess: true },
-      { id: "2", name: "products", hasAccess: true },
-      { id: "3", name: "inventory", hasAccess: true },
-      { id: "4", name: "financial", hasAccess: true },
-      { id: "5", name: "planning", hasAccess: false },
-      { id: "6", name: "contracts", hasAccess: false },
-      { id: "7", name: "accounting", hasAccess: false },
-      { id: "8", name: "settings", hasAccess: false },
-    ],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "3",
-    name: "João Pereira",
-    matricula: "ESC002",
-    email: "joao@paulofreire.edu.br",
-    role: "user",
-    schoolId: "2",
-    permissions: [
-      { id: "1", name: "dashboard", hasAccess: true },
-      { id: "2", name: "products", hasAccess: false },
-      { id: "3", name: "inventory", hasAccess: true },
-      { id: "4", name: "financial", hasAccess: false },
-      { id: "5", name: "planning", hasAccess: false },
-      { id: "6", name: "contracts", hasAccess: false },
-      { id: "7", name: "accounting", hasAccess: false },
-      { id: "8", name: "settings", hasAccess: false },
-    ],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
-
-// Mock schools
-const MOCK_SCHOOLS: School[] = [
-  {
-    id: "1",
-    name: "Escola Municipal João da Silva",
-    cnpj: "12.345.678/0001-90",
-    responsibleName: "Maria Oliveira",
-    email: "contato@joaodasilva.edu.br",
-    status: "active", // Adding the required status property
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "2",
-    name: "Colégio Estadual Paulo Freire",
-    cnpj: "98.765.432/0001-10",
-    responsibleName: "Carlos Santos",
-    email: "contato@paulofreire.edu.br",
-    status: "active", // Adding the required status property
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
-
 const Users = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
@@ -113,10 +25,35 @@ const Users = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // In a real app, these would be API calls
-    setUsers(MOCK_USERS);
-    setSchools(MOCK_SCHOOLS);
+    // Load users and schools from localStorage
+    const storedUsers = localStorage.getItem('users');
+    const storedSchools = localStorage.getItem('schools');
+    
+    if (storedUsers) {
+      try {
+        setUsers(JSON.parse(storedUsers));
+      } catch (error) {
+        console.error("Error parsing stored users:", error);
+        setUsers([]);
+      }
+    }
+    
+    if (storedSchools) {
+      try {
+        setSchools(JSON.parse(storedSchools));
+      } catch (error) {
+        console.error("Error parsing stored schools:", error);
+        setSchools([]);
+      }
+    }
   }, []);
+
+  // Save users to localStorage whenever users state changes
+  useEffect(() => {
+    if (users.length > 0) {
+      localStorage.setItem('users', JSON.stringify(users));
+    }
+  }, [users]);
 
   const handleOpenForm = (user?: User) => {
     setEditingUser(user);
@@ -131,21 +68,20 @@ const Users = () => {
   const handleSaveUser = (userData: Omit<User, "id" | "createdAt" | "updatedAt">) => {
     if (editingUser) {
       // Update existing user
-      setUsers(
-        users.map((user) =>
-          user.id === editingUser.id
-            ? {
-                ...user,
-                ...userData,
-                updatedAt: new Date(),
-              }
-            : user
-        )
+      const updatedUsers = users.map((user) =>
+        user.id === editingUser.id
+          ? {
+              ...user,
+              ...userData,
+              updatedAt: new Date(),
+            }
+          : user
       );
+      setUsers(updatedUsers);
     } else {
       // Create new user
       const newUser: User = {
-        id: `${users.length + 1}`,
+        id: `${Date.now()}`,
         ...userData,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -158,7 +94,8 @@ const Users = () => {
   const handleDeleteUser = (id: string) => {
     // In a real app, we would show a confirmation dialog
     if (window.confirm("Tem certeza que deseja excluir este usuário?")) {
-      setUsers(users.filter((user) => user.id !== id));
+      const updatedUsers = users.filter((user) => user.id !== id);
+      setUsers(updatedUsers);
       
       toast({
         title: "Usuário excluído",
@@ -194,6 +131,7 @@ const Users = () => {
   const filteredUsers = users.filter((user) =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.matricula.toLowerCase().includes(searchTerm.toLowerCase()) ||
     getRoleLabel(user.role).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -210,7 +148,7 @@ const Users = () => {
         <div className="flex justify-between items-center">
           <div className="max-w-sm">
             <Input
-              placeholder="Buscar por nome, e-mail ou tipo..."
+              placeholder="Buscar por nome, e-mail, matrícula ou tipo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -224,6 +162,7 @@ const Users = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>Matrícula</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Escola</TableHead>
@@ -233,7 +172,7 @@ const Users = () => {
             <TableBody>
               {filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
                     {searchTerm 
                       ? "Nenhum usuário encontrado com esse termo de busca." 
                       : "Nenhum usuário cadastrado."}
@@ -243,7 +182,8 @@ const Users = () => {
                 filteredUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell className="font-mono">{user.matricula}</TableCell>
+                    <TableCell>{user.email || "—"}</TableCell>
                     <TableCell>
                       <Badge variant={user.role === "master" ? "default" : "secondary"}>
                         {getRoleLabel(user.role)}
