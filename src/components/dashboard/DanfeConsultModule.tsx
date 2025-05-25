@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,13 +29,94 @@ export function DanfeConsultModule() {
           supplier: "Fornecedor Exemplo LTDA",
           issueDate: "2024-01-15",
           totalValue: 2500.00,
-          status: "Autorizada"
+          status: "Autorizada",
+          // Simulando que temos o XML e PDF base64 salvos
+          xmlContent: `<?xml version="1.0" encoding="UTF-8"?><NFe><infNFe><ide><cUF>35</cUF><cNF>12345678</cNF><natOp>Venda</natOp><mod>55</mod><serie>1</serie><nNF>1234</nNF><dhEmi>2024-01-15T10:00:00-03:00</dhEmi></ide><emit><CNPJ>12345678000123</CNPJ><xNome>Fornecedor Exemplo LTDA</xNome></emit><total><ICMSTot><vNF>2500.00</vNF></ICMSTot></total></infNFe></NFe>`,
+          pdfBase64: null // Será gerado quando necessário
         }
       ];
       
       setSearchResults(mockResults);
       setIsLoading(false);
     }, 1500);
+  };
+
+  const generatePdfFromXml = async (xmlContent: string): Promise<string> => {
+    try {
+      const response = await fetch('https://ws.meudanfe.com/api/v1/get/nfe/xmltodanfepdf/API', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+        body: xmlContent
+      });
+
+      if (response.status === 500) {
+        throw new Error('Falha ao gerar PDF do Danfe confira seu XML.');
+      }
+
+      if (!response.ok) {
+        throw new Error('Erro ao gerar PDF do DANFE');
+      }
+
+      let pdfBase64 = await response.text();
+      
+      // Remove aspas duplas se existirem
+      if (pdfBase64.startsWith('"') && pdfBase64.endsWith('"')) {
+        pdfBase64 = pdfBase64.slice(1, -1);
+      }
+
+      return pdfBase64;
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      throw error;
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (searchResults.length === 0) return;
+    
+    try {
+      const result = searchResults[0];
+      
+      toast({
+        title: "Gerando PDF",
+        description: "Aguarde enquanto o PDF do DANFE está sendo gerado...",
+      });
+
+      // Gera o PDF usando a API do MeuDANFE
+      const pdfBase64 = await generatePdfFromXml(result.xmlContent);
+      
+      // Converte base64 para blob
+      const binaryString = atob(pdfBase64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      
+      // Cria o link de download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `danfe_${result.danfeNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "PDF exportado com sucesso",
+        description: "O arquivo PDF do DANFE foi baixado.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao exportar PDF",
+        description: error instanceof Error ? error.message : "Erro desconhecido ao gerar PDF",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleSaveResults = () => {
@@ -57,51 +137,15 @@ export function DanfeConsultModule() {
     });
   };
 
-  const handleExportPDF = () => {
-    if (searchResults.length === 0) return;
-    
-    // Create a simple PDF export (in a real app, this would use a proper PDF library)
-    const content = searchResults.map(result => 
-      `DANFE: ${result.danfeNumber}\nFornecedor: ${result.supplier}\nData: ${formatDate(result.issueDate)}\nValor: ${formatCurrency(result.totalValue)}\nChave: ${result.accessKey}`
-    ).join('\n\n');
-    
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `danfe_${searchResults[0]?.danfeNumber || 'consulta'}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Exportação concluída",
-      description: "O arquivo foi baixado com sucesso.",
-    });
-  };
-
   const handleExportXML = () => {
     if (searchResults.length === 0) return;
     
-    // Create a simple XML export
-    const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
-<danfe_results>
-${searchResults.map(result => `  <danfe>
-    <numero>${result.danfeNumber}</numero>
-    <fornecedor>${result.supplier}</fornecedor>
-    <data_emissao>${result.issueDate}</data_emissao>
-    <valor_total>${result.totalValue}</valor_total>
-    <chave_acesso>${result.accessKey}</chave_acesso>
-    <status>${result.status}</status>
-  </danfe>`).join('\n')}
-</danfe_results>`;
-    
-    const blob = new Blob([xmlContent], { type: 'application/xml' });
+    const result = searchResults[0];
+    const blob = new Blob([result.xmlContent], { type: 'application/xml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `danfe_${searchResults[0]?.danfeNumber || 'consulta'}.xml`;
+    a.download = `danfe_${result.danfeNumber}.xml`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
