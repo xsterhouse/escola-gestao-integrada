@@ -22,14 +22,13 @@ import {
 } from "@/components/ui/select";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Search, FileUp, Download, Check, RefreshCw, Filter, Plus, FileText } from "lucide-react";
+import { Search, Download, Check, RefreshCw, Filter, Plus, FileText } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NewTransactionModal } from "./NewTransactionModal";
 import { GenerateReportModal } from "./GenerateReportModal";
-import { ImportStatementModal } from "./ImportStatementModal";
 import { toast } from "sonner";
 
 interface BankReconciliationProps {
@@ -58,7 +57,6 @@ export function BankReconciliation({
   // Modal states
   const [isNewTransactionModalOpen, setIsNewTransactionModalOpen] = useState<boolean>(false);
   const [isGenerateReportModalOpen, setIsGenerateReportModalOpen] = useState<boolean>(false);
-  const [isImportStatementModalOpen, setIsImportStatementModalOpen] = useState<boolean>(false);
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -89,11 +87,6 @@ export function BankReconciliation({
   
   const handleAddTransaction = (newTransaction: BankTransaction) => {
     setTransactions([...transactions, newTransaction]);
-    calculateFinancialSummary();
-  };
-  
-  const handleImportTransactions = (newTransactions: BankTransaction[]) => {
-    setTransactions([...transactions, ...newTransactions]);
     calculateFinancialSummary();
   };
   
@@ -137,6 +130,19 @@ export function BankReconciliation({
     return includeTransaction;
   });
   
+  // Calculate running balance for each transaction
+  const transactionsWithBalance = filteredTransactions.map((transaction, index) => {
+    const previousTransactions = filteredTransactions.slice(0, index + 1);
+    const selectedAccountData = bankAccounts.find(a => a.id === selectedAccount);
+    const initialBalance = selectedAccountData?.initialBalance || 0;
+    
+    const balance = previousTransactions.reduce((acc, t) => {
+      return t.transactionType === "credito" ? acc + t.value : acc - t.value;
+    }, initialBalance);
+    
+    return { ...transaction, balance };
+  });
+  
   // Calculate financial summary for displayed transactions
   const displayedInitialBalance = bankAccounts.find(a => a.id === selectedAccount)?.initialBalance || 0;
   const displayedTotalRevenues = filteredTransactions
@@ -146,6 +152,9 @@ export function BankReconciliation({
     .filter(t => t.transactionType === "debito")
     .reduce((sum, t) => sum + t.value, 0);
   const displayedFinalBalance = displayedInitialBalance + displayedTotalRevenues - displayedTotalExpenses;
+  
+  // Get selected account name for highlighting
+  const selectedAccountName = bankAccounts.find(a => a.id === selectedAccount)?.bankName || "";
   
   return (
     <div className="space-y-6">
@@ -191,18 +200,21 @@ export function BankReconciliation({
           <div className="w-full md:w-56">
             <Label htmlFor="account">Conta Bancária</Label>
             <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-              <SelectTrigger id="account">
+              <SelectTrigger id="account" className={selectedAccount ? "ring-2 ring-blue-500 bg-blue-50" : ""}>
                 <SelectValue placeholder="Selecione uma conta" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as contas</SelectItem>
-                {bankAccounts.map(account => (
+                {bankAccounts.filter(account => account.id && account.id.trim() !== "").map(account => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.bankName} - {account.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {selectedAccountName && (
+              <p className="text-sm text-blue-600 font-medium mt-1">Conta selecionada: {selectedAccountName}</p>
+            )}
           </div>
           
           <div className="w-full md:w-auto">
@@ -296,10 +308,6 @@ export function BankReconciliation({
             <FileText className="mr-2 h-4 w-4" />
             Gerar Relatório
           </Button>
-          <Button onClick={() => setIsImportStatementModalOpen(true)}>
-            <FileUp className="mr-2 h-4 w-4" />
-            Importar Extrato
-          </Button>
           <Button variant="outline" onClick={exportTransactions}>
             <Download className="mr-2 h-4 w-4" />
             Exportar
@@ -320,33 +328,35 @@ export function BankReconciliation({
             <TableHeader>
               <TableRow>
                 <TableHead>Data</TableHead>
-                <TableHead>Banco</TableHead>
                 <TableHead>Tipo de Conta</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Valor</TableHead>
+                <TableHead>Saldo</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Situação</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.length === 0 ? (
+              {transactionsWithBalance.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center">
                     Nenhuma transação encontrada.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredTransactions.map(transaction => {
+                transactionsWithBalance.map(transaction => {
                   const account = bankAccounts.find(a => a.id === transaction.bankAccountId);
                   return (
                     <TableRow key={transaction.id}>
                       <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>{account?.bankName}</TableCell>
                       <TableCell>{account?.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}</TableCell>
                       <TableCell>{transaction.description}</TableCell>
                       <TableCell className={transaction.transactionType === 'credito' ? 'text-green-600' : 'text-red-600'}>
                         {formatCurrency(transaction.value)}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {formatCurrency(transaction.balance)}
                       </TableCell>
                       <TableCell>{transaction.transactionType === 'credito' ? 'Crédito' : 'Débito'}</TableCell>
                       <TableCell>
@@ -438,14 +448,6 @@ export function BankReconciliation({
         isOpen={isGenerateReportModalOpen}
         onClose={() => setIsGenerateReportModalOpen(false)}
         bankAccounts={bankAccounts}
-      />
-      
-      {/* Import Statement Modal */}
-      <ImportStatementModal
-        isOpen={isImportStatementModalOpen}
-        onClose={() => setIsImportStatementModalOpen(false)}
-        bankAccounts={bankAccounts}
-        onImport={handleImportTransactions}
       />
     </div>
   );

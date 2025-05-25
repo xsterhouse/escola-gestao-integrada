@@ -2,24 +2,22 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Upload, PlusCircle, TrendingUp } from "lucide-react";
+import { FileText, PlusCircle, TrendingUp } from "lucide-react";
 import { NewTransactionModal } from "./NewTransactionModal";
-import { ImportStatementModal } from "./ImportStatementModal";
 import { GenerateReportModal } from "./GenerateReportModal";
 
 interface FinancialHeaderProps {
   bankAccounts: any[];
   onAddTransaction?: (transaction: any) => void;
-  onImportTransactions?: (transactions: any[]) => void;
+  showActionButtons?: boolean;
 }
 
 export function FinancialHeader({ 
   bankAccounts = [],
   onAddTransaction,
-  onImportTransactions 
+  showActionButtons = false
 }: FinancialHeaderProps) {
   const [isNewTransactionModalOpen, setIsNewTransactionModalOpen] = useState(false);
-  const [isImportStatementModalOpen, setIsImportStatementModalOpen] = useState(false);
   const [isGenerateReportModalOpen, setIsGenerateReportModalOpen] = useState(false);
 
   return (
@@ -40,35 +38,27 @@ export function FinancialHeader({
               </p>
             </div>
             
-            <div className="flex flex-wrap gap-3">
-              <Button 
-                variant="secondary" 
-                size="default" 
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm transition-all duration-300"
-                onClick={() => setIsImportStatementModalOpen(true)}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Importar Extrato
-              </Button>
-              
-              <Button 
-                size="default" 
-                className="bg-white text-[#012340] hover:bg-blue-50 shadow-lg transition-all duration-300"
-                onClick={() => setIsNewTransactionModalOpen(true)}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Novo Lançamento
-              </Button>
-              
-              <Button 
-                size="default" 
-                className="bg-green-500 text-white hover:bg-green-600 shadow-lg transition-all duration-300"
-                onClick={() => setIsGenerateReportModalOpen(true)}
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                Relatórios
-              </Button>
-            </div>
+            {showActionButtons && (
+              <div className="flex flex-wrap gap-3">
+                <Button 
+                  size="default" 
+                  className="bg-white text-[#012340] hover:bg-blue-50 shadow-lg transition-all duration-300"
+                  onClick={() => setIsNewTransactionModalOpen(true)}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Novo Lançamento
+                </Button>
+                
+                <Button 
+                  size="default" 
+                  className="bg-green-500 text-white hover:bg-green-600 shadow-lg transition-all duration-300"
+                  onClick={() => setIsGenerateReportModalOpen(true)}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Relatórios
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -80,16 +70,6 @@ export function FinancialHeader({
           onClose={() => setIsNewTransactionModalOpen(false)}
           bankAccounts={bankAccounts}
           onSave={onAddTransaction}
-        />
-      )}
-      
-      {/* Import Statement Modal */}
-      {onImportTransactions && (
-        <ImportStatementModal
-          isOpen={isImportStatementModalOpen}
-          onClose={() => setIsImportStatementModalOpen(false)}
-          bankAccounts={bankAccounts}
-          onImport={onImportTransactions}
         />
       )}
       

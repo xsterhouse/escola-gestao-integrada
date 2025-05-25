@@ -18,6 +18,8 @@ import {
 } from "@/lib/types";
 
 export default function Financial() {
+  const [activeTab, setActiveTab] = useState("dashboard");
+  
   // State for all financial data - starting with empty arrays, data will be loaded from localStorage
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
@@ -134,10 +136,6 @@ export default function Financial() {
     setBankTransactions([...bankTransactions, transaction]);
   };
   
-  const handleImportTransactions = (transactions: BankTransaction[]) => {
-    setBankTransactions([...bankTransactions, ...transactions]);
-  };
-  
   const handleAddPayment = (payment: PaymentAccount) => {
     setPaymentAccounts([...paymentAccounts, payment]);
   };
@@ -152,10 +150,10 @@ export default function Financial() {
         <FinancialHeader 
           bankAccounts={bankAccounts}
           onAddTransaction={handleAddTransaction}
-          onImportTransactions={handleImportTransactions}
+          showActionButtons={activeTab === "reconciliation"}
         />
         
-        <Tabs defaultValue="dashboard" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-5xl grid-cols-6">
             <TabsTrigger value="dashboard">Visão Geral</TabsTrigger>
             <TabsTrigger value="bank-accounts">Contas Bancárias</TabsTrigger>
