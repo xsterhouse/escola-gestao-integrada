@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Eye, Plus, Trash2, Save, Download, FileText, BarChart3, ArrowLeftRight } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Eye, Plus, Trash2, Save, Download, FileText, BarChart3, ArrowLeftRight, CheckCircle, XCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,16 +23,16 @@ interface ATAItem {
 
 interface ATA {
   id: string;
-  numeroProcesso: string;
-  fornecedor: string;
+  numeroATA: string; // Agora será o ID automático (ATA001, ATA002, etc.)
   dataATA: string;
   dataInicioVigencia: string;
   dataFimVigencia: string;
-  status: string;
+  status: "rascunho" | "finalizada" | "aprovada";
   items: ATAItem[];
   createdAt: string;
   schoolId?: string;
   centralComprasId?: string;
+  valorTotal: number;
 }
 
 const Planning = () => {
@@ -44,8 +45,6 @@ const Planning = () => {
   const [atas, setAtas] = useState<ATA[]>([]);
   const [ataItems, setAtaItems] = useState<ATAItem[]>([]);
   const [formData, setFormData] = useState({
-    numeroProcesso: "",
-    fornecedor: "",
     dataATA: "",
     dataInicioVigencia: "",
     dataFimVigencia: "",
@@ -90,6 +89,16 @@ const Planning = () => {
     }
   };
 
+  // Generate automatic ATA ID
+  const generateATAId = () => {
+    const existingNumbers = atas.map(ata => {
+      const match = ata.numeroATA.match(/ATA(\d+)/);
+      return match ? parseInt(match[1]) : 0;
+    });
+    const nextNumber = Math.max(0, ...existingNumbers) + 1;
+    return `ATA${nextNumber.toString().padStart(3, '0')}`;
+  };
+
   // Get schools and purchasing centers from localStorage
   const getSchoolsFromSettings = () => {
     try {
@@ -111,6 +120,7 @@ const Planning = () => {
 
   const tabs = [
     { id: "nova-ata", label: "Nova ATA" },
+    { id: "gestao-atas", label: "Gestão de ATAs" },
     { id: "vigencia", label: "Vigência" },
     { id: "relatorios", label: "Relatórios" },
     { id: "transferencia", label: "Transferência de Saldos" }
@@ -127,6 +137,28 @@ const Planning = () => {
     toast({
       title: "ATA excluída",
       description: "ATA foi excluída com sucesso"
+    });
+  };
+
+  const handleFinalizeATA = (ataId: string) => {
+    const updatedATAs = atas.map(ata => 
+      ata.id === ataId ? { ...ata, status: "finalizada" as const } : ata
+    );
+    saveATAs(updatedATAs);
+    toast({
+      title: "ATA finalizada",
+      description: "ATA foi finalizada com sucesso"
+    });
+  };
+
+  const handleApproveATA = (ataId: string) => {
+    const updatedATAs = atas.map(ata => 
+      ata.id === ataId ? { ...ata, status: "aprovada" as const } : ata
+    );
+    saveATAs(updatedATAs);
+    toast({
+      title: "ATA aprovada",
+      description: "ATA foi aprovada e está disponível para transferências"
     });
   };
 
@@ -171,7 +203,7 @@ const Planning = () => {
   };
 
   const handleSaveATA = () => {
-    if (!formData.numeroProcesso || !formData.fornecedor || ataItems.length === 0) {
+    if (!formData.dataATA || !formData.dataInicioVigencia || !formData.dataFimVigencia || ataItems.length === 0) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios e adicione pelo menos um item",
@@ -180,12 +212,15 @@ const Planning = () => {
       return;
     }
 
+    const valorTotal = ataItems.reduce((sum, item) => sum + item.valorTotal, 0);
     const newATA: ATA = {
       id: Date.now().toString(),
+      numeroATA: generateATAId(),
       ...formData,
       items: ataItems,
       createdAt: new Date().toISOString(),
-      status: "ativa"
+      status: "rascunho",
+      valorTotal: valorTotal
     };
 
     const updatedATAs = [...atas, newATA];
@@ -193,8 +228,6 @@ const Planning = () => {
     
     // Reset form
     setFormData({
-      numeroProcesso: "",
-      fornecedor: "",
       dataATA: "",
       dataInicioVigencia: "",
       dataFimVigencia: "",
@@ -206,12 +239,21 @@ const Planning = () => {
 
     toast({
       title: "ATA salva",
-      description: "ATA foi salva com sucesso"
+      description: `ATA ${newATA.numeroATA} foi salva com sucesso`
     });
   };
 
-  const getActiveATAs = () => {
-    return atas.filter(ata => ata.status === "ativa");
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "rascunho":
+        return <Badge variant="secondary">Rascunho</Badge>;
+      case "finalizada":
+        return <Badge variant="outline">Finalizada</Badge>;
+      case "aprovada":
+        return <Badge variant="default" className="bg-green-600">Aprovada</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
   };
 
   const renderTabContent = () => {
@@ -231,28 +273,10 @@ const Planning = () => {
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Nova ATA de Registro de Preços</DialogTitle>
+                    <p className="text-sm text-gray-600">ID será gerado automaticamente: {generateATAId()}</p>
                   </DialogHeader>
                   
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Número do Processo</label>
-                        <Input
-                          value={formData.numeroProcesso}
-                          onChange={(e) => setFormData({...formData, numeroProcesso: e.target.value})}
-                          placeholder="Ex: 2025.0037"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Fornecedor</label>
-                        <Input
-                          value={formData.fornecedor}
-                          onChange={(e) => setFormData({...formData, fornecedor: e.target.value})}
-                          placeholder="Nome do fornecedor"
-                        />
-                      </div>
-                    </div>
-
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className="block text-sm font-medium mb-1">Data da ATA</label>
@@ -310,6 +334,7 @@ const Planning = () => {
                       </div>
                     </div>
 
+                    {/* Item addition section remains the same */}
                     <div className="border rounded-lg p-4">
                       <h3 className="font-medium mb-3">Adicionar Item</h3>
                       <div className="grid grid-cols-6 gap-2 mb-4">
@@ -402,8 +427,91 @@ const Planning = () => {
           </div>
         );
 
+      case "gestao-atas":
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold mb-4">Gestão de ATAs</h2>
+            
+            {atas.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <p className="text-gray-600">Nenhuma ATA cadastrada.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-6">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID ATA</TableHead>
+                        <TableHead>Data ATA</TableHead>
+                        <TableHead>Vigência</TableHead>
+                        <TableHead>Valor Total</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {atas.map((ata) => (
+                        <TableRow key={ata.id}>
+                          <TableCell className="font-medium">{ata.numeroATA}</TableCell>
+                          <TableCell>{ata.dataATA}</TableCell>
+                          <TableCell>{ata.dataInicioVigencia} - {ata.dataFimVigencia}</TableCell>
+                          <TableCell>R$ {ata.valorTotal.toFixed(2)}</TableCell>
+                          <TableCell>{getStatusBadge(ata.status)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleViewDetails(ata)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              {ata.status === "rascunho" && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleFinalizeATA(ata.id)}
+                                  className="text-blue-600 hover:text-blue-800"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {ata.status === "finalizada" && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleApproveATA(ata.id)}
+                                  className="text-green-600 hover:text-green-800"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleDeleteATA(ata.id)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        );
+
       case "vigencia":
-        const activeATAs = getActiveATAs();
+        // ... keep existing code (vigencia tab implementation)
+        const activeATAs = atas.filter(ata => ata.status === "aprovada");
         return (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">ATAs em Vigência</h2>
@@ -411,7 +519,7 @@ const Planning = () => {
             {activeATAs.length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center">
-                  <p className="text-gray-600">Nenhuma ATA em vigência encontrada.</p>
+                  <p className="text-gray-600">Nenhuma ATA aprovada em vigência encontrada.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -421,8 +529,8 @@ const Planning = () => {
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h3 className="font-semibold">Processo: {ata.numeroProcesso}</h3>
-                          <p className="text-gray-600">Fornecedor: {ata.fornecedor}</p>
+                          <h3 className="font-semibold">ATA: {ata.numeroATA}</h3>
+                          <p className="text-gray-600">Valor: R$ {ata.valorTotal.toFixed(2)}</p>
                         </div>
                         <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                           {ata.status}
@@ -446,15 +554,6 @@ const Planning = () => {
                           <Eye className="h-4 w-4 mr-1" />
                           Ver detalhes
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-red-600 hover:text-red-800"
-                          onClick={() => handleDeleteATA(ata.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Excluir
-                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -465,18 +564,18 @@ const Planning = () => {
             <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Detalhes do Processo</DialogTitle>
+                  <DialogTitle>Detalhes da ATA</DialogTitle>
                 </DialogHeader>
                 {selectedProcess && (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="font-medium">Processo:</label>
-                        <p>{selectedProcess.numeroProcesso}</p>
+                        <label className="font-medium">ATA:</label>
+                        <p>{selectedProcess.numeroATA}</p>
                       </div>
                       <div>
-                        <label className="font-medium">Fornecedor:</label>
-                        <p>{selectedProcess.fornecedor}</p>
+                        <label className="font-medium">Valor Total:</label>
+                        <p>R$ {selectedProcess.valorTotal.toFixed(2)}</p>
                       </div>
                       <div>
                         <label className="font-medium">Data da ATA:</label>
@@ -508,11 +607,6 @@ const Planning = () => {
                           </div>
                         ))}
                       </div>
-                      <div className="mt-4 pt-4 border-t">
-                        <p className="font-bold">
-                          Total Geral: R$ {selectedProcess.items.reduce((sum, item) => sum + item.valorTotal, 0).toFixed(2)}
-                        </p>
-                      </div>
                     </div>
                   </div>
                 )}
@@ -524,68 +618,94 @@ const Planning = () => {
       case "transferencia":
         const schools = getSchoolsFromSettings();
         const centers = getPurchasingCentersFromSettings();
+        const approvedATAs = atas.filter(ata => ata.status === "aprovada");
         
         return (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold mb-4">Transferência de Saldos</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Escola de Origem</label>
-                  <select className="w-full border border-input rounded-md px-3 py-2">
-                    <option>Selecione a escola de origem</option>
-                    {schools.map((school: any) => (
-                      <option key={school.id} value={school.id}>{school.name}</option>
-                    ))}
-                  </select>
+            {approvedATAs.length === 0 ? (
+              <Card className="bg-yellow-50 border-yellow-200">
+                <CardContent className="p-4">
+                  <h3 className="font-medium text-yellow-800 mb-2 flex items-center gap-2">
+                    <XCircle className="h-4 w-4" />
+                    Nenhuma ATA aprovada disponível
+                  </h3>
+                  <p className="text-yellow-700 text-sm">
+                    Para realizar transferências de saldo, é necessário ter pelo menos uma ATA com status "Aprovada".
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">ATA de Origem</label>
+                    <select className="w-full border border-input rounded-md px-3 py-2">
+                      <option>Selecione a ATA</option>
+                      {approvedATAs.map((ata) => (
+                        <option key={ata.id} value={ata.id}>{ata.numeroATA}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Escola de Origem</label>
+                    <select className="w-full border border-input rounded-md px-3 py-2">
+                      <option>Selecione a escola de origem</option>
+                      {schools.map((school: any) => (
+                        <option key={school.id} value={school.id}>{school.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Escola de Destino</label>
+                    <select className="w-full border border-input rounded-md px-3 py-2">
+                      <option>Selecione a escola de destino</option>
+                      {schools.map((school: any) => (
+                        <option key={school.id} value={school.id}>{school.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Central de Compras</label>
+                    <select className="w-full border border-input rounded-md px-3 py-2">
+                      <option>Selecione a central</option>
+                      {centers.map((center: any) => (
+                        <option key={center.id} value={center.id}>{center.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Escola de Destino</label>
-                  <select className="w-full border border-input rounded-md px-3 py-2">
-                    <option>Selecione a escola de destino</option>
-                    {schools.map((school: any) => (
-                      <option key={school.id} value={school.id}>{school.name}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Central de Compras</label>
-                  <select className="w-full border border-input rounded-md px-3 py-2">
-                    <option>Selecione a central</option>
-                    {centers.map((center: any) => (
-                      <option key={center.id} value={center.id}>{center.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Justificativa</label>
-                  <Textarea 
-                    className="h-36"
-                    placeholder="Explique o motivo da transferência"
-                  />
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Justificativa</label>
+                    <Textarea 
+                      className="h-36"
+                      placeholder="Explique o motivo da transferência"
+                    />
+                  </div>
+                  
+                  <Card className="bg-blue-50 border-blue-200">
+                    <CardContent className="p-4">
+                      <h3 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Informações sobre a transferência
+                      </h3>
+                      <ul className="text-sm text-blue-700 space-y-1">
+                        <li>• As transferências só são permitidas entre escolas da mesma Central de Compras.</li>
+                        <li>• O saldo será automaticamente atualizado nas duas escolas após a confirmação.</li>
+                        <li>• Todas as transferências ficam registradas para fins de auditoria.</li>
+                        <li>• Somente ATAs com status "Aprovada" podem ter saldos transferidos.</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
                 </div>
-                
-                <Card className="bg-blue-50 border-blue-200">
-                  <CardContent className="p-4">
-                    <h3 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Informações sobre a transferência
-                    </h3>
-                    <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• As transferências só são permitidas entre escolas da mesma Central de Compras.</li>
-                      <li>• O saldo será automaticamente atualizado nas duas escolas após a confirmação.</li>
-                      <li>• Todas as transferências ficam registradas para fins de auditoria.</li>
-                    </ul>
-                  </CardContent>
-                </Card>
               </div>
-            </div>
+            )}
           </div>
         );
 
@@ -594,7 +714,7 @@ const Planning = () => {
           <div className="space-y-6">
             <h2 className="text-xl font-semibold mb-4">Relatórios</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="hover:shadow-md transition-all">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-center h-12 w-12 bg-blue-100 text-blue-600 rounded-full mb-3 mx-auto">
@@ -622,20 +742,6 @@ const Planning = () => {
                   </Button>
                 </CardContent>
               </Card>
-              
-              <Card className="hover:shadow-md transition-all">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-center h-12 w-12 bg-blue-100 text-blue-600 rounded-full mb-3 mx-auto">
-                    <FileText className="h-6 w-6" />
-                  </div>
-                  <h3 className="font-semibold text-lg mb-2 text-center">Relatório por Fornecedor</h3>
-                  <p className="text-gray-600 text-sm mb-4 text-center">Acompanhe os contratos e entregas por fornecedor em todas as escolas do município.</p>
-                  <Button className="w-full" variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar
-                  </Button>
-                </CardContent>
-              </Card>
             </div>
             
             <Card>
@@ -643,23 +749,13 @@ const Planning = () => {
                 <CardTitle>Exportar relatório personalizado</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Escola</label>
                     <select className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring">
                       <option>Todas as escolas</option>
                       {getSchoolsFromSettings().map((school: any) => (
                         <option key={school.id} value={school.id}>{school.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fornecedor</label>
-                    <select className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring">
-                      <option>Todos os fornecedores</option>
-                      {atas.map((ata) => (
-                        <option key={ata.id} value={ata.fornecedor}>{ata.fornecedor}</option>
                       ))}
                     </select>
                   </div>
