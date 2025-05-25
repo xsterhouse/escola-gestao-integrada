@@ -87,7 +87,7 @@ export function SystemUserForm({
         name: formData.name,
         matricula: formData.matricula,
         password: formData.password,
-        schoolId: formData.schoolId || null,
+        schoolId: formData.schoolId === "none" ? null : formData.schoolId || null,
         isLinkedToPurchasing: formData.isLinkedToPurchasing,
         status: "active",
       };
@@ -141,7 +141,7 @@ export function SystemUserForm({
                 <SelectValue placeholder="Selecione a escola (opcional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhuma escola específica</SelectItem>
+                <SelectItem value="none">Nenhuma escola específica</SelectItem>
                 {schools.map((school) => (
                   <SelectItem key={school.id} value={school.id}>
                     {school.name}

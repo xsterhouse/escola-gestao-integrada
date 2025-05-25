@@ -52,7 +52,7 @@ export function SystemUserEditModal({
     name: user.name,
     matricula: user.matricula,
     password: user.password,
-    schoolId: user.schoolId || "",
+    schoolId: user.schoolId || "none",
     isLinkedToPurchasing: user.isLinkedToPurchasing,
   });
   
@@ -92,7 +92,7 @@ export function SystemUserEditModal({
         name: formData.name,
         matricula: formData.matricula,
         password: formData.password,
-        schoolId: formData.schoolId || null,
+        schoolId: formData.schoolId === "none" ? null : formData.schoolId,
         isLinkedToPurchasing: formData.isLinkedToPurchasing,
       };
 
@@ -136,7 +136,7 @@ export function SystemUserEditModal({
                 <SelectValue placeholder="Selecione a escola (opcional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhuma escola específica</SelectItem>
+                <SelectItem value="none">Nenhuma escola específica</SelectItem>
                 {schools.map((school) => (
                   <SelectItem key={school.id} value={school.id}>
                     {school.name}
