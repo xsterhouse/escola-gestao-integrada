@@ -35,17 +35,15 @@ type SidebarProps = {
 export function Sidebar({ className }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [sessionStart] = useState(new Date());
   const [sessionTime, setSessionTime] = useState("00:00:00");
   const { user, currentSchool, logout } = useAuth();
   const location = useLocation();
   
-  // Update time every second
+  // Update session time every second
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
-      setCurrentTime(now);
       
       // Calculate session time
       const timeDiff = now.getTime() - sessionStart.getTime();
@@ -61,75 +59,47 @@ export function Sidebar({ className }: SidebarProps) {
     return () => clearInterval(timer);
   }, [sessionStart]);
 
-  // Get greeting based on time
-  const getGreeting = () => {
-    const hour = currentTime.getHours();
-    if (hour < 12) return "Bom dia";
-    if (hour < 18) return "Boa tarde";
-    return "Boa noite";
-  };
-
-  // Format time for Brasília timezone
-  const getBrasiliaTime = () => {
-    return currentTime.toLocaleTimeString('pt-BR', {
-      timeZone: 'America/Sao_Paulo',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  };
-
-  // Get date for Brasília timezone
-  const getBrasiliaDate = () => {
-    return currentTime.toLocaleDateString('pt-BR', {
-      timeZone: 'America/Sao_Paulo',
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long'
-    });
-  };
-  
   // Define the system modules with the new order
   const modules = [
     {
       id: "dashboard",
       name: "Painel",
-      icon: <LayoutDashboard className="h-5 w-5" />,
+      icon: LayoutDashboard,
       path: "/dashboard",
       permission: "dashboard",
     },
     {
       id: "products",
       name: "Produtos",
-      icon: <Package className="h-5 w-5" />,
+      icon: Package,
       path: "/products",
       permission: "products",
     },
     {
       id: "inventory",
       name: "Estoque",
-      icon: <Store className="h-5 w-5" />,
+      icon: Store,
       path: "/inventory",
       permission: "inventory",
     },
     {
       id: "financial",
       name: "Financeiro",
-      icon: <DollarSign className="h-5 w-5" />,
+      icon: DollarSign,
       path: "/financial",
       permission: "financial",
     },
     {
       id: "planning",
       name: "Planejamento",
-      icon: <ClipboardList className="h-5 w-5" />,
+      icon: ClipboardList,
       path: "/planning",
       permission: "planning",
     },
     {
       id: "contracts",
       name: "Contratos",
-      icon: <FileText className="h-5 w-5" />,
+      icon: FileText,
       path: "/contracts",
       permission: "contracts",
     },
@@ -140,14 +110,14 @@ export function Sidebar({ className }: SidebarProps) {
     {
       id: "settings",
       name: "Configurações",
-      icon: <Settings className="h-5 w-5" />,
+      icon: Settings,
       path: "/settings",
       permission: "settings",
     },
     {
       id: "accounting",
       name: "Contabilidade",
-      icon: <BookOpen className="h-5 w-5" />,
+      icon: BookOpen,
       path: "/accounting",
       permission: "accounting",
     },
@@ -186,36 +156,39 @@ export function Sidebar({ className }: SidebarProps) {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="px-6 py-6 border-b border-white/10">
-            <h2 className="text-xl font-bold text-white">SIGRE</h2>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-white/10 p-3 rounded-full">
+                <Building className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl font-bold text-white">SIGRE</h2>
+                <p className="text-sm text-blue-200 truncate">
+                  {currentSchool?.name || "Central de Compras"}
+                </p>
+              </div>
+            </div>
             
             {/* User Profile */}
-            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg mt-4">
+            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
               <div className="bg-white/10 p-2 rounded-full">
                 <User className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{getGreeting()}, {user?.name?.split(' ')[0]}</p>
+                <p className="text-sm font-medium text-white truncate">{user?.name}</p>
                 <p className="text-xs text-blue-200 truncate">{user?.email}</p>
               </div>
             </div>
           </div>
 
-          {/* Digital Clock */}
+          {/* Session Time */}
           <div className="px-6 py-4 border-b border-white/10">
             <div className="bg-white/5 p-4 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <Clock className="h-4 w-4 text-blue-200" />
-                <span className="text-xs text-blue-200">Brasília, Brasil</span>
+                <span className="text-xs text-blue-200">Tempo de sessão</span>
               </div>
               <div className="text-lg font-mono font-bold text-white">
-                {getBrasiliaTime()}
-              </div>
-              <div className="text-xs text-blue-200 capitalize">
-                {getBrasiliaDate()}
-              </div>
-              <div className="mt-3 pt-3 border-t border-white/10">
-                <div className="text-xs text-blue-200">Tempo de sessão</div>
-                <div className="text-sm font-mono text-white">{sessionTime}</div>
+                {sessionTime}
               </div>
             </div>
           </div>
@@ -237,7 +210,7 @@ export function Sidebar({ className }: SidebarProps) {
                       )}
                       onClick={() => setIsOpen(false)}
                     >
-                      {module.icon}
+                      <module.icon className="h-5 w-5" />
                       <span>{module.name}</span>
                     </Link>
                   ))}
@@ -259,7 +232,7 @@ export function Sidebar({ className }: SidebarProps) {
                         )}
                         onClick={() => setIsOpen(false)}
                       >
-                        {route.icon}
+                        <route.icon className="h-5 w-5" />
                         <span>{route.name}</span>
                       </Link>
                     ))}
@@ -291,7 +264,7 @@ export function Sidebar({ className }: SidebarProps) {
   const DesktopSidebar = (
     <div
       className={cn(
-        "hidden md:flex flex-col h-full border-r border-white/10",
+        "hidden md:flex flex-col h-full border-r border-white/10 transition-all duration-300",
         isCollapsed ? "w-20" : "w-80",
         className
       )}
@@ -299,11 +272,25 @@ export function Sidebar({ className }: SidebarProps) {
     >
       {/* Header */}
       <div className={cn(
-        "flex h-16 items-center border-b border-white/10",
+        "flex h-16 items-center border-b border-white/10 transition-all duration-300",
         isCollapsed ? "justify-center px-4" : "justify-between px-6"
       )}>
-        {!isCollapsed && (
-          <h2 className="text-xl font-bold text-white">SIGRE</h2>
+        {!isCollapsed ? (
+          <div className="flex items-center gap-3">
+            <div className="bg-white/10 p-2 rounded-full">
+              <Building className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold text-white">SIGRE</h2>
+              <p className="text-xs text-blue-200 truncate">
+                {currentSchool?.name || "Central de Compras"}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white/10 p-2 rounded-full">
+            <Building className="h-5 w-5 text-white" />
+          </div>
         )}
         <Button
           variant="ghost"
@@ -324,30 +311,23 @@ export function Sidebar({ className }: SidebarProps) {
               <User className="h-6 w-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-lg font-medium text-white">{getGreeting()}, {user?.name?.split(' ')[0]}</p>
+              <p className="text-lg font-medium text-white truncate">{user?.name}</p>
               <p className="text-sm text-blue-200 truncate">{user?.email}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Digital Clock Section */}
+      {/* Session Time Section */}
       {!isCollapsed && (
         <div className="px-6 py-4 border-b border-white/10">
           <div className="bg-white/5 p-4 rounded-lg">
             <div className="flex items-center gap-2 mb-3">
               <Clock className="h-5 w-5 text-blue-200" />
-              <span className="text-sm text-blue-200">Brasília, Brasil</span>
+              <span className="text-sm text-blue-200">Tempo de sessão</span>
             </div>
-            <div className="text-xl font-mono font-bold text-white mb-2">
-              {getBrasiliaTime()}
-            </div>
-            <div className="text-sm text-blue-200 capitalize mb-4">
-              {getBrasiliaDate()}
-            </div>
-            <div className="pt-3 border-t border-white/10">
-              <div className="text-xs text-blue-200 mb-1">Tempo de sessão</div>
-              <div className="text-sm font-mono text-white">{sessionTime}</div>
+            <div className="text-xl font-mono font-bold text-white">
+              {sessionTime}
             </div>
           </div>
         </div>
@@ -376,8 +356,8 @@ export function Sidebar({ className }: SidebarProps) {
                           isCollapsed ? "justify-center" : "gap-3"
                         )}
                       >
-                        {module.icon}
-                        {!isCollapsed && <span>{module.name}</span>}
+                        <module.icon className="h-5 w-5 flex-shrink-0" />
+                        {!isCollapsed && <span className="truncate">{module.name}</span>}
                       </Link>
                     </TooltipTrigger>
                     {isCollapsed && (
@@ -411,8 +391,8 @@ export function Sidebar({ className }: SidebarProps) {
                             isCollapsed ? "justify-center" : "gap-3"
                           )}
                         >
-                          {route.icon}
-                          {!isCollapsed && <span>{route.name}</span>}
+                          <route.icon className="h-5 w-5 flex-shrink-0" />
+                          {!isCollapsed && <span className="truncate">{route.name}</span>}
                         </Link>
                       </TooltipTrigger>
                       {isCollapsed && (
@@ -436,8 +416,8 @@ export function Sidebar({ className }: SidebarProps) {
             onClick={logout}
             className="w-full justify-start text-blue-100 hover:text-white hover:bg-white/10"
           >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
+            <LogOut className="h-4 w-4 mr-2 flex-shrink-0" />
+            <span className="truncate">Sair</span>
           </Button>
         ) : (
           <Tooltip delayDuration={0}>
