@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -234,9 +233,33 @@ export function DanfeConsultModule() {
     }, 1500);
   };
 
+  // Etapa 1: Validar XML antes de processar
+  const validateXmlContent = (xmlContent: string): boolean => {
+    console.log('🔍 Etapa 1: Validando XML...');
+    
+    // Verificar campos obrigatórios
+    const requiredFields = ['<protNFe>', '<det>', '<dest>', '<emit>'];
+    
+    for (const field of requiredFields) {
+      if (!xmlContent.includes(field)) {
+        console.error(`❌ Campo obrigatório não encontrado: ${field}`);
+        return false;
+      }
+    }
+    
+    console.log('✅ XML validado com sucesso');
+    return true;
+  };
+
+  // Etapa 2: Gerar DANFE via API
   const generatePdfFromXml = async (xmlContent: string): Promise<string> => {
     try {
-      console.log('Iniciando geração de PDF do XML com nova API...');
+      console.log('🔧 Etapa 2: Enviando XML para API do DANFE...');
+      
+      // Validar XML antes de enviar
+      if (!validateXmlContent(xmlContent)) {
+        throw new Error('XML inválido - campos obrigatórios não encontrados');
+      }
       
       const response = await fetch('https://ws.meudanfe.com/api/v1/get/nfe/xmltodanfepdf/API', {
         method: 'POST',
@@ -246,21 +269,32 @@ export function DanfeConsultModule() {
         body: xmlContent
       });
 
+      console.log('📊 Etapa 3: Verificando Status da Resposta...');
+      
+      // Etapa 3: Verificar Status
       if (response.status === 200) {
+        console.log('✅ Status 200 - Continuando processamento...');
+        
         let pdfBase64 = await response.text();
         
-        // Remove aspas duplas se estiverem presentes na resposta
+        console.log('🧹 Etapa 4: Tratando PDF em Base64...');
+        
+        // Etapa 4: Remover aspas duplas se estiverem presentes
         pdfBase64 = pdfBase64.replace(/^"|"$/g, "");
         
-        console.log('PDF gerado com sucesso via API');
+        console.log('🔗 Etapa 5: Gerando URL de visualização...');
+        console.log('✅ PDF gerado com sucesso via API');
+        
         return pdfBase64;
       } else if (response.status === 500) {
+        console.error('❌ Status 500 - Falha na API');
         throw new Error('Falha ao gerar PDF do DANFE! Confira o seu XML');
       } else {
+        console.error(`❌ Status ${response.status} - Erro inesperado`);
         throw new Error(`Erro na API: Status ${response.status}`);
       }
     } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
+      console.error('❌ Erro completo no processamento:', error);
       throw new Error(error instanceof Error ? error.message : 'Erro desconhecido ao gerar PDF');
     }
   };
@@ -269,16 +303,17 @@ export function DanfeConsultModule() {
     try {
       toast({
         title: "Gerando PDF",
-        description: "Aguarde enquilo o PDF do DANFE está sendo gerado...",
+        description: "Aguarde enquanto o PDF do DANFE está sendo gerado...",
       });
 
-      // Gera o PDF usando a nova API
+      // Gera o PDF usando a nova API seguindo o fluxo completo
       const pdfBase64 = await generatePdfFromXml(result.xmlContent);
       
-      // Cria a URL para visualização no navegador
+      // Etapa 5: Criar URL para visualização no navegador
       const dataUrl = `data:application/pdf;base64,${pdfBase64}`;
+      console.log('🔗 URL de visualização criada:', dataUrl.substring(0, 50) + '...');
       
-      // Converte base64 para blob para download
+      // Converter base64 para blob para download
       const binaryString = atob(pdfBase64);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
@@ -288,21 +323,23 @@ export function DanfeConsultModule() {
       const blob = new Blob([bytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       
-      // Cria o link de download
+      // Criar link de download
       const a = document.createElement('a');
       a.href = url;
-      a.download = `danfe_${result.danfeNumber}.pdf`;
+      a.download = `danfe_${result.danfeNumber}_${result.accessKey}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
+      console.log('✅ Etapa 6: PDF exportado e disponibilizado para download');
+      
       toast({
         title: "PDF exportado com sucesso",
-        description: "O arquivo PDF do DANFE foi baixado.",
+        description: "O arquivo PDF do DANFE foi baixado com todas as informações.",
       });
     } catch (error) {
-      console.error('Erro completo:', error);
+      console.error('❌ Erro completo no fluxo:', error);
       toast({
         title: "Erro ao exportar PDF",
         description: error instanceof Error ? error.message : "Erro desconhecido ao gerar PDF",
@@ -311,21 +348,53 @@ export function DanfeConsultModule() {
     }
   };
 
+  // Função melhorada para exportar XML com todas as informações
   const handleExportXML = (result: any) => {
-    const blob = new Blob([result.xmlContent], { type: 'application/xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `danfe_${result.danfeNumber}.xml`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Exportação XML concluída",
-      description: "O arquivo XML foi baixado com sucesso.",
-    });
+    try {
+      console.log('📄 Iniciando exportação de XML com todas as informações...');
+      
+      // Validar se o XML contém todas as informações necessárias
+      if (!validateXmlContent(result.xmlContent)) {
+        toast({
+          title: "XML incompleto",
+          description: "O XML não contém todas as informações necessárias.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Criar blob com o conteúdo XML completo
+      const blob = new Blob([result.xmlContent], { 
+        type: 'application/xml;charset=utf-8' 
+      });
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      // Nome do arquivo mais descritivo incluindo dados importantes
+      const fileName = `NFe_${result.danfeNumber}_${result.accessKey}_${result.supplier.replace(/[^a-zA-Z0-9]/g, '_')}.xml`;
+      a.download = fileName;
+      
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      console.log('✅ XML exportado com sucesso:', fileName);
+      
+      toast({
+        title: "Exportação XML concluída",
+        description: `Arquivo ${fileName} baixado com todas as informações da NFe.`,
+      });
+    } catch (error) {
+      console.error('❌ Erro ao exportar XML:', error);
+      toast({
+        title: "Erro na exportação",
+        description: "Ocorreu um erro ao exportar o arquivo XML.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleDeleteDanfe = (accessKey: string) => {
