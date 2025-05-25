@@ -11,8 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { User } from "@/lib/types";
+import { saveUserPassword } from "@/contexts/AuthContext";
 import { Eye, EyeOff, Key } from "lucide-react";
 
 type PasswordModalProps = {
@@ -31,10 +31,8 @@ export function PasswordModal({
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
 
   const validatePassword = (password: string) => {
     let strength = 0;
@@ -57,52 +55,27 @@ export function PasswordModal({
     e.preventDefault();
     
     if (!password) {
-      toast({
-        title: "Senha obrigatória",
-        description: "Por favor, defina uma senha para o usuário.",
-        variant: "destructive",
-      });
       return;
     }
 
     if (password !== confirmPassword) {
-      toast({
-        title: "Senhas não coincidem",
-        description: "A confirmação da senha deve ser igual à senha.",
-        variant: "destructive",
-      });
       return;
     }
 
     if (!validatePassword(password)) {
-      toast({
-        title: "Senha fraca",
-        description: "A senha deve ter pelo menos 8 caracteres e incluir maiúscula, minúscula e número.",
-        variant: "destructive",
-      });
       return;
     }
     
     setIsSubmitting(true);
     
     try {
+      // Salvar a senha no localStorage
+      saveUserPassword(user.id, password);
+      console.log(`🔐 Nova senha definida para usuário: ${user.name} (ID: ${user.id})`);
+      
       onSave(password);
-      
-      toast({
-        title: "Senha definida",
-        description: "A senha foi definida com sucesso para o usuário.",
-      });
-      
-      setPassword("");
-      setConfirmPassword("");
-      setPasswordStrength(0);
-      onClose();
     } catch (error) {
-      toast({
-        title: "Erro ao definir senha",
-        description: "Ocorreu um erro ao definir a senha.",
-        variant: "destructive",
-      });
+      console.error("Erro ao definir senha:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -126,17 +99,17 @@ export function PasswordModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Key className="h-5 w-5" />
-            Definir Senha de Acesso
+            Definir Senha
           </DialogTitle>
           <DialogDescription>
-            Defina uma nova senha de acesso para o usuário {user.name}.
+            Defina uma nova senha para o usuário <strong>{user.name}</strong>.
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Nova Senha *</Label>
+              <Label htmlFor="password">Nova Senha</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -175,35 +148,41 @@ export function PasswordModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Nova Senha *</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirme a nova senha"
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
+              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirme a nova senha"
+                required
+              />
+              {confirmPassword && password !== confirmPassword && (
+                <p className="text-red-500 text-sm">As senhas não coincidem</p>
+              )}
             </div>
           </div>
           
-          <DialogFooter className="mt-6">
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Definindo..." : "Definir Senha"}
+            <Button 
+              type="submit" 
+              disabled={isSubmitting || !password || password !== confirmPassword || !validatePassword(password)}
+              style={{ backgroundColor: '#012340', color: 'white' }}
+              onMouseOver={(e) => {
+                if (!isSubmitting) {
+                  e.currentTarget.style.backgroundColor = '#013a5c';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!isSubmitting) {
+                  e.currentTarget.style.backgroundColor = '#012340';
+                }
+              }}
+            >
+              {isSubmitting ? "Salvando..." : "Definir Senha"}
             </Button>
           </DialogFooter>
         </form>

@@ -38,6 +38,27 @@ const MOCK_MASTER_USER: User = {
   updatedAt: new Date(),
 };
 
+// Função para obter senhas dos usuários do localStorage
+const getUserPasswords = (): Record<string, string> => {
+  const stored = localStorage.getItem("userPasswords");
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (error) {
+      console.error("Error parsing stored user passwords:", error);
+    }
+  }
+  return {};
+};
+
+// Função para salvar senha do usuário
+export const saveUserPassword = (userId: string, password: string) => {
+  const passwords = getUserPasswords();
+  passwords[userId] = password;
+  localStorage.setItem("userPasswords", JSON.stringify(passwords));
+  console.log(`🔐 Senha salva para usuário ID: ${userId}`);
+};
+
 // Function to get schools from localStorage or initialize with mock data
 const getStoredSchools = (): School[] => {
   const stored = localStorage.getItem("schools");
@@ -198,8 +219,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // For demo purposes, we're using a mock authentication
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      console.log(`🔐 Tentativa de login - Matrícula: ${matricula}`);
+      
       // Verificação das credenciais do admin master usando matrícula
       if (matricula === "ADMIN001" && password === "Sigre101020@") {
+        console.log("✅ Login admin master realizado");
         setUser(MOCK_MASTER_USER);
         const currentSchools = getStoredSchools();
         setAvailableSchools(currentSchools);
@@ -218,32 +242,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Check school users by matricula from localStorage
       const storedUsers = getStoredUsers();
-      const schoolUser = storedUsers.find(
-        user => user.matricula === matricula && password === "password"
-      );
+      const userPasswords = getUserPasswords();
+      
+      console.log(`🔍 Procurando usuário com matrícula: ${matricula}`);
+      console.log(`📊 Total de usuários armazenados: ${storedUsers.length}`);
+      
+      const schoolUser = storedUsers.find(user => user.matricula === matricula);
       
       if (schoolUser) {
-        setUser(schoolUser);
+        console.log(`👤 Usuário encontrado: ${schoolUser.name} (ID: ${schoolUser.id})`);
         
-        // Find user's school from localStorage
-        const currentSchools = getStoredSchools();
-        const userSchool = currentSchools.find(school => school.id === schoolUser.schoolId);
-        if (userSchool) {
-          setCurrentSchool(userSchool);
-          setAvailableSchools([userSchool]);
+        // Verificar se existe senha salva para este usuário
+        const storedPassword = userPasswords[schoolUser.id];
+        
+        console.log(`🔐 Senha armazenada existe: ${!!storedPassword}`);
+        
+        if (storedPassword && storedPassword === password) {
+          console.log("✅ Senha validada com sucesso");
           
-          if (remember) {
-            localStorage.setItem("sigre_user", JSON.stringify(schoolUser));
-            localStorage.setItem("sigre_school", JSON.stringify(userSchool));
+          setUser(schoolUser);
+          
+          // Find user's school from localStorage
+          const currentSchools = getStoredSchools();
+          const userSchool = currentSchools.find(school => school.id === schoolUser.schoolId);
+          if (userSchool) {
+            setCurrentSchool(userSchool);
+            setAvailableSchools([userSchool]);
+            
+            if (remember) {
+              localStorage.setItem("sigre_user", JSON.stringify(schoolUser));
+              localStorage.setItem("sigre_school", JSON.stringify(userSchool));
+            }
+            
+            toast({
+              title: "Login realizado com sucesso",
+              description: `Bem-vindo ao ambiente da ${userSchool.name}!`
+            });
+            
+            return;
+          } else {
+            console.log("❌ Escola do usuário não encontrada");
           }
-          
-          toast({
-            title: "Login realizado com sucesso",
-            description: `Bem-vindo ao ambiente da ${userSchool.name}!`
-          });
-          
-          return;
+        } else {
+          console.log("❌ Senha incorreta ou não definida");
         }
+      } else {
+        console.log("❌ Usuário não encontrado");
       }
       
       throw new Error("Credenciais inválidas");

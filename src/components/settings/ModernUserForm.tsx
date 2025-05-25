@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { User, School, ModulePermission } from "@/lib/types";
+import { saveUserPassword } from "@/contexts/AuthContext";
 import { Eye, EyeOff, Shield } from "lucide-react";
 
 type ModernUserFormProps = {
@@ -132,7 +133,10 @@ export function ModernUserForm({
     setIsSubmitting(true);
     
     try {
+      const userId = initialData?.id || Date.now().toString();
+      
       const userData: Partial<User> = {
+        id: userId,
         name: formData.name,
         matricula: formData.matricula,
         email: formData.email,
@@ -145,13 +149,19 @@ export function ModernUserForm({
         })),
       };
 
+      // Salvar senha do usuário se for novo usuário
+      if (!initialData && formData.password) {
+        saveUserPassword(userId, formData.password);
+        console.log(`🔐 Senha salva para usuário: ${formData.name} (ID: ${userId})`);
+      }
+
       onSave(userData);
       
       toast({
         title: initialData ? "Usuário atualizado" : "Usuário cadastrado",
         description: initialData 
           ? "O usuário foi atualizado com sucesso." 
-          : "O usuário foi cadastrado com sucesso.",
+          : "O usuário foi cadastrado com sucesso e já pode fazer login no sistema.",
       });
       
       onClose();
@@ -189,7 +199,7 @@ export function ModernUserForm({
           <DialogDescription>
             {initialData 
               ? "Atualize os dados do usuário no sistema." 
-              : "Cadastre um novo usuário no sistema."}
+              : "Cadastre um novo usuário no sistema com senha para acesso."}
           </DialogDescription>
         </DialogHeader>
         
