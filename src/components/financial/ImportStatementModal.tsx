@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { FileUp, Upload, X, Check } from "lucide-react";
 import { BankAccount, BankTransaction } from "@/lib/types";
@@ -29,11 +30,6 @@ export function ImportStatementModal({
   const [showPreview, setShowPreview] = useState<boolean>(false);
   
   const acceptedFileTypes = ".ofx,.csv,.xml";
-  
-  // Filter bank accounts to ensure no empty IDs
-  const validBankAccounts = bankAccounts.filter(account => 
-    account.id && account.id.trim() !== '' && account.bankName && account.accountNumber
-  );
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -167,7 +163,7 @@ export function ImportStatementModal({
                   <SelectValue placeholder="Selecione uma conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  {validBankAccounts.map(account => (
+                  {bankAccounts.map(account => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.bankName} - {account.accountNumber}
                     </SelectItem>

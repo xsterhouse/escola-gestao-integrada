@@ -29,11 +29,6 @@ export function GenerateReportModal({
   const [accountType, setAccountType] = useState<string>("all");
   const [reconciliationStatus, setReconciliationStatus] = useState<string>("all");
   
-  // Filter bank accounts to ensure no empty IDs
-  const validBankAccounts = bankAccounts.filter(account => 
-    account.id && account.id.trim() !== '' && account.bankName && account.accountNumber
-  );
-  
   const handleGeneratePDF = () => {
     // In a real application, you would fetch data based on filters and generate the PDF
     toast.success("Gerando relatório em PDF...");
@@ -41,7 +36,7 @@ export function GenerateReportModal({
     const reportData = {
       title: "Relatório de Conciliação Bancária",
       period: startDate && endDate ? `${format(startDate, 'dd/MM/yyyy')} até ${format(endDate, 'dd/MM/yyyy')}` : "Todos",
-      bankAccount: bankAccountId === "all" ? "Todas" : validBankAccounts.find(acc => acc.id === bankAccountId)?.bankName || "",
+      bankAccount: bankAccountId === "all" ? "Todas" : bankAccounts.find(acc => acc.id === bankAccountId)?.bankName || "",
       accountType: accountType === "all" ? "Todos" : accountType === "movimento" ? "Movimento" : "Aplicação",
       status: reconciliationStatus === "all" ? "Todos" : 
               reconciliationStatus === "conciliado" ? "Conciliado" : "Não Conciliado",
@@ -151,7 +146,7 @@ export function GenerateReportModal({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os bancos</SelectItem>
-                {validBankAccounts.map(account => (
+                {bankAccounts.map(account => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.bankName} - {account.accountNumber}
                   </SelectItem>

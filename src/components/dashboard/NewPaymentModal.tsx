@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Check, X, Upload } from "lucide-react";
@@ -41,7 +42,7 @@ export function NewPaymentModal({
     { value: "recursos_proprios", label: "Recursos Próprios" },
     { value: "manutencao", label: "Manutenção" },
     { value: "outros", label: "Outros" }
-  ].filter(type => type.value && type.value.trim() !== ''); // Filter out any empty values
+  ];
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];

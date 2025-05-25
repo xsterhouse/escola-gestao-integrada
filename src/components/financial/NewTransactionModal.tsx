@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Check, X } from "lucide-react";
@@ -31,11 +32,6 @@ export function NewTransactionModal({
   const [description, setDescription] = useState<string>("");
   const [value, setValue] = useState<string>("");
   const [transactionType, setTransactionType] = useState<"credito" | "debito">("credito");
-  
-  // Filter bank accounts to ensure no empty IDs
-  const validBankAccounts = bankAccounts.filter(account => 
-    account.id && account.id.trim() !== '' && account.bankName && account.accountNumber
-  );
   
   const handleSave = () => {
     if (!bankAccountId) {
@@ -126,7 +122,7 @@ export function NewTransactionModal({
                   <SelectValue placeholder="Selecione uma conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  {validBankAccounts.map(account => (
+                  {bankAccounts.map(account => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.bankName} - {account.accountNumber}
                     </SelectItem>
