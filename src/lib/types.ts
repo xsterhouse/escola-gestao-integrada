@@ -1,3 +1,4 @@
+
 export interface Permission {
   id: string;
   name: string;
@@ -25,6 +26,7 @@ export interface School {
 export interface User {
   id: string;
   name: string;
+  matricula: string; // Número de matrícula para login
   email: string;
   role: string;
   schoolId: string | null;
