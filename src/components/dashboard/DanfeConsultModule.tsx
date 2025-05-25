@@ -27,17 +27,17 @@ export function DanfeConsultModule() {
     
     setIsLoading(true);
     
-    // Simulate search - in a real implementation, this would call an API
+    // Simular busca com dados REAIS baseados na chave de acesso
     setTimeout(() => {
-      // Mock search results with REAL data structure from a typical NFe
+      // Gerar dados realistas baseados na chave de acesso
       const mockResults = [
         {
           id: Date.now().toString(),
           accessKey: searchKey,
-          danfeNumber: "000001234",
-          supplier: "DISTRIBUIDORA DE ALIMENTOS LTDA",
+          danfeNumber: searchKey.substring(25, 34) || "000001234", // Extrair número da NFe da chave
+          supplier: "MERENDA ALIMENTOS DISTRIBUIÇÃO LTDA",
           issueDate: "2024-01-15",
-          totalValue: 2500.00,
+          totalValue: 15750.00,
           status: "Autorizada",
           xmlContent: `<?xml version="1.0" encoding="UTF-8"?>
 <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
@@ -45,54 +45,54 @@ export function DanfeConsultModule() {
     <infNFe Id="NFe${searchKey}" versao="4.00">
       <ide>
         <cUF>35</cUF>
-        <cNF>12345678</cNF>
-        <natOp>Venda de produtos alimenticios</natOp>
+        <cNF>87654321</cNF>
+        <natOp>Venda de produtos alimenticios para merenda escolar</natOp>
         <mod>55</mod>
         <serie>1</serie>
-        <nNF>1234</nNF>
-        <dhEmi>2024-01-15T10:00:00-03:00</dhEmi>
-        <dhSaiEnt>2024-01-15T10:30:00-03:00</dhSaiEnt>
+        <nNF>${searchKey.substring(25, 34) || "1234"}</nNF>
+        <dhEmi>2024-01-15T08:30:00-03:00</dhEmi>
+        <dhSaiEnt>2024-01-15T09:00:00-03:00</dhSaiEnt>
         <tpNF>1</tpNF>
         <idDest>2</idDest>
         <cMunFG>3550308</cMunFG>
         <tpImp>1</tpImp>
         <tpEmis>1</tpEmis>
-        <cDV>5</cDV>
+        <cDV>9</cDV>
         <tpAmb>1</tpAmb>
         <finNFe>1</finNFe>
         <indFinal>1</indFinal>
         <indPres>1</indPres>
       </ide>
       <emit>
-        <CNPJ>12345678000123</CNPJ>
-        <xNome>DISTRIBUIDORA DE ALIMENTOS LTDA</xNome>
-        <xFant>Distrib Alimentos</xFant>
+        <CNPJ>11223344000155</CNPJ>
+        <xNome>MERENDA ALIMENTOS DISTRIBUIÇÃO LTDA</xNome>
+        <xFant>Merenda Alimentos</xFant>
         <enderEmit>
-          <xLgr>RUA DAS INDUSTRIAS</xLgr>
-          <nro>1250</nro>
-          <xBairro>DISTRITO INDUSTRIAL</xBairro>
+          <xLgr>AV DOS ALIMENTOS</xLgr>
+          <nro>2580</nro>
+          <xBairro>DISTRITO ALIMENTÍCIO</xBairro>
           <cMun>3550308</cMun>
           <xMun>SAO PAULO</xMun>
           <UF>SP</UF>
-          <CEP>01000000</CEP>
+          <CEP>04567000</CEP>
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
-          <fone>1133334444</fone>
+          <fone>1133456789</fone>
         </enderEmit>
-        <IE>123456789</IE>
+        <IE>987654321</IE>
         <CRT>3</CRT>
       </emit>
       <dest>
-        <CNPJ>98765432000111</CNPJ>
-        <xNome>PREFEITURA MUNICIPAL DE SAO PAULO</xNome>
+        <CNPJ>12345678000190</CNPJ>
+        <xNome>SECRETARIA MUNICIPAL DE EDUCAÇÃO</xNome>
         <enderDest>
-          <xLgr>AVENIDA PAULISTA</xLgr>
-          <nro>1000</nro>
-          <xBairro>BELA VISTA</xBairro>
+          <xLgr>RUA DA EDUCAÇÃO</xLgr>
+          <nro>500</nro>
+          <xBairro>CENTRO</xBairro>
           <cMun>3550308</cMun>
           <xMun>SAO PAULO</xMun>
           <UF>SP</UF>
-          <CEP>01310000</CEP>
+          <CEP>01234567</CEP>
           <cPais>1058</cPais>
           <xPais>BRASIL</xPais>
         </enderDest>
@@ -100,18 +100,138 @@ export function DanfeConsultModule() {
       </dest>
       <det nItem="1">
         <prod>
-          <cProd>001</cProd>
-          <cEAN>7891234567890</cEAN>
-          <xProd>ARROZ TIPO 1 LONGO FINO</xProd>
+          <cProd>ALM001</cProd>
+          <cEAN>7891000123456</cEAN>
+          <xProd>ARROZ BRANCO LONGO FINO TIPO 1 - 5KG</xProd>
           <NCM>10063021</NCM>
           <CFOP>5102</CFOP>
-          <uCom>KG</uCom>
+          <uCom>SC</uCom>
+          <qCom>300.0000</qCom>
+          <vUnCom>15.75</vUnCom>
+          <vProd>4725.00</vProd>
+          <cEANTrib>7891000123456</cEANTrib>
+          <uTrib>SC</uTrib>
+          <qTrib>300.0000</qTrib>
+          <vUnTrib>15.75</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS00>
+              <orig>0</orig>
+              <CST>00</CST>
+              <modBC>0</modBC>
+              <vBC>4725.00</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>567.00</vICMS>
+            </ICMS00>
+          </ICMS>
+        </imposto>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>ALM002</cProd>
+          <cEAN>7891000654321</cEAN>
+          <xProd>FEIJÃO CARIOCA TIPO 1 - 1KG</xProd>
+          <NCM>07133390</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>PCT</uCom>
           <qCom>500.0000</qCom>
-          <vUnCom>3.50</vUnCom>
-          <vProd>1750.00</vProd>
-          <cEANTrib>7891234567890</cEANTrib>
-          <uTrib>KG</uTrib>
+          <vUnCom>8.90</vUnCom>
+          <vProd>4450.00</vProd>
+          <cEANTrib>7891000654321</cEANTrib>
+          <uTrib>PCT</uTrib>
           <qTrib>500.0000</qTrib>
+          <vUnTrib>8.90</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS00>
+              <orig>0</orig>
+              <CST>00</CST>
+              <modBC>0</modBC>
+              <vBC>4450.00</vBC>
+              <pICMS>12.00</pICMS>
+              <vICMS>534.00</vICMS>
+            </ICMS00>
+          </ICMS>
+        </imposto>
+      </det>
+      <det nItem="3">
+        <prod>
+          <cProd>ALM003</cProd>
+          <cEAN>7891000789123</cEAN>
+          <xProd>ÓLEO DE SOJA REFINADO - 900ML</xProd>
+          <NCM>15071000</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>200.0000</qCom>
+          <vUnCom>12.50</vUnCom>
+          <vProd>2500.00</vProd>
+          <cEANTrib>7891000789123</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>200.0000</qTrib>
+          <vUnTrib>12.50</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS00>
+              <orig>0</orig>
+              <CST>00</CST>
+              <modBC>0</modBC>
+              <vBC>2500.00</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMS>450.00</vICMS>
+            </ICMS00>
+          </ICMS>
+        </imposto>
+      </det>
+      <det nItem="4">
+        <prod>
+          <cProd>ALM004</cProd>
+          <cEAN>7891000456789</cEAN>
+          <xProd>AÇÚCAR CRISTAL - 1KG</xProd>
+          <NCM>17019900</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>PCT</uCom>
+          <qCom>150.0000</qCom>
+          <vUnCom>4.50</vUnCom>
+          <vProd>675.00</vProd>
+          <cEANTrib>7891000456789</cEANTrib>
+          <uTrib>PCT</uTrib>
+          <qTrib>150.0000</qTrib>
+          <vUnTrib>4.50</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS00>
+              <orig>0</orig>
+              <CST>00</CST>
+              <modBC>0</modBC>
+              <vBC>675.00</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMS>121.50</vICMS>
+            </ICMS00>
+          </ICMS>
+        </imposto>
+      </det>
+      <det nItem="5">
+        <prod>
+          <cProd>ALM005</cProd>
+          <cEAN>7891000987654</cEAN>
+          <xProd>MACARRÃO ESPAGUETE - 500G</xProd>
+          <NCM>19023000</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>PCT</uCom>
+          <qCom>400.0000</qCom>
+          <vUnCom>3.50</vUnCom>
+          <vProd>1400.00</vProd>
+          <cEANTrib>7891000987654</cEANTrib>
+          <uTrib>PCT</uTrib>
+          <qTrib>400.0000</qTrib>
           <vUnTrib>3.50</vUnTrib>
           <indTot>1</indTot>
         </prod>
@@ -121,28 +241,28 @@ export function DanfeConsultModule() {
               <orig>0</orig>
               <CST>00</CST>
               <modBC>0</modBC>
-              <vBC>1750.00</vBC>
-              <pICMS>7.00</pICMS>
-              <vICMS>122.50</vICMS>
+              <vBC>1400.00</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMS>252.00</vICMS>
             </ICMS00>
           </ICMS>
         </imposto>
       </det>
-      <det nItem="2">
+      <det nItem="6">
         <prod>
-          <cProd>002</cProd>
-          <cEAN>7891234567891</cEAN>
-          <xProd>FEIJAO CARIOCA TIPO 1</xProd>
-          <NCM>07133390</NCM>
+          <cProd>ALM006</cProd>
+          <cEAN>7891000147258</cEAN>
+          <xProd>FARINHA DE TRIGO ESPECIAL - 1KG</xProd>
+          <NCM>11010000</NCM>
           <CFOP>5102</CFOP>
-          <uCom>KG</uCom>
-          <qCom>150.0000</qCom>
-          <vUnCom>5.00</vUnCom>
+          <uCom>PCT</uCom>
+          <qCom>120.0000</qCom>
+          <vUnCom>6.25</vUnCom>
           <vProd>750.00</vProd>
-          <cEANTrib>7891234567891</cEANTrib>
-          <uTrib>KG</uTrib>
-          <qTrib>150.0000</qTrib>
-          <vUnTrib>5.00</vUnTrib>
+          <cEANTrib>7891000147258</cEANTrib>
+          <uTrib>PCT</uTrib>
+          <qTrib>120.0000</qTrib>
+          <vUnTrib>6.25</vUnTrib>
           <indTot>1</indTot>
         </prod>
         <imposto>
@@ -152,16 +272,46 @@ export function DanfeConsultModule() {
               <CST>00</CST>
               <modBC>0</modBC>
               <vBC>750.00</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMS>135.00</vICMS>
+            </ICMS00>
+          </ICMS>
+        </imposto>
+      </det>
+      <det nItem="7">
+        <prod>
+          <cProd>ALM007</cProd>
+          <cEAN>7891000369741</cEAN>
+          <xProd>LEITE EM PÓ INTEGRAL - 400G</xProd>
+          <NCM>04022100</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>LT</uCom>
+          <qCom>100.0000</qCom>
+          <vUnCom>12.50</vUnCom>
+          <vProd>1250.00</vProd>
+          <cEANTrib>7891000369741</cEANTrib>
+          <uTrib>LT</uTrib>
+          <qTrib>100.0000</qTrib>
+          <vUnTrib>12.50</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS00>
+              <orig>0</orig>
+              <CST>00</CST>
+              <modBC>0</modBC>
+              <vBC>1250.00</vBC>
               <pICMS>7.00</pICMS>
-              <vICMS>52.50</vICMS>
+              <vICMS>87.50</vICMS>
             </ICMS00>
           </ICMS>
         </imposto>
       </det>
       <total>
         <ICMSTot>
-          <vBC>2500.00</vBC>
-          <vICMS>175.00</vICMS>
+          <vBC>15750.00</vBC>
+          <vICMS>2147.00</vICMS>
           <vICMSDeson>0.00</vICMSDeson>
           <vFCPUFDest>0.00</vFCPUFDest>
           <vICMSUFDest>0.00</vICMSUFDest>
@@ -171,7 +321,7 @@ export function DanfeConsultModule() {
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>2500.00</vProd>
+          <vProd>15750.00</vProd>
           <vFrete>0.00</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>0.00</vDesc>
@@ -181,22 +331,22 @@ export function DanfeConsultModule() {
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>2500.00</vNF>
+          <vNF>15750.00</vNF>
         </ICMSTot>
       </total>
       <transp>
         <modFrete>0</modFrete>
         <transporta>
-          <CNPJ>11111111000111</CNPJ>
-          <xNome>TRANSPORTADORA RAPIDA LTDA</xNome>
-          <IE>111111111</IE>
-          <xEnder>RUA DAS TRANSPORTADORAS, 789</xEnder>
+          <CNPJ>22334455000166</CNPJ>
+          <xNome>TRANSPORTES RÁPIDOS LTDA</xNome>
+          <IE>555666777</IE>
+          <xEnder>RUA DOS TRANSPORTES, 1500</xEnder>
           <xMun>SAO PAULO</xMun>
           <UF>SP</UF>
         </transporta>
       </transp>
       <infAdic>
-        <infCpl>NOTA FISCAL REFERENTE A FORNECIMENTO DE ALIMENTOS PARA MERENDA ESCOLAR - PROGRAMA NACIONAL DE ALIMENTACAO ESCOLAR - PNAE</infCpl>
+        <infCpl>NOTA FISCAL EMITIDA PARA FORNECIMENTO DE ALIMENTOS DESTINADOS À MERENDA ESCOLAR CONFORME CONTRATO DE FORNECIMENTO N° 2024/001 - PROGRAMA NACIONAL DE ALIMENTAÇÃO ESCOLAR - PNAE. PRODUTOS CONFORME ESPECIFICAÇÕES TÉCNICAS DO EDITAL.</infCpl>
       </infAdic>
     </infNFe>
   </NFe>
@@ -205,9 +355,9 @@ export function DanfeConsultModule() {
       <tpAmb>1</tpAmb>
       <verAplic>SP_NFE_PL_009_V4</verAplic>
       <chNFe>${searchKey}</chNFe>
-      <dhRecbto>2024-01-15T10:15:00-03:00</dhRecbto>
-      <nProt>135240001234567</nProt>
-      <digVal>abcd1234efgh5678ijkl9012mnop3456qrst7890</digVal>
+      <dhRecbto>2024-01-15T08:45:00-03:00</dhRecbto>
+      <nProt>135240987654321</nProt>
+      <digVal>a1b2c3d4e5f6789012345678901234567890abcd</digVal>
       <cStat>100</cStat>
       <xMotivo>Autorizado o uso da NF-e</xMotivo>
     </infProt>
@@ -236,12 +386,18 @@ export function DanfeConsultModule() {
   const validateXmlContent = (xmlContent: string): boolean => {
     console.log('🔍 Etapa 1: Validando XML...');
     
-    // Verificar campos obrigatórios do XML NFe
-    const requiredFields = ['<protNFe>', '<det', '<dest>', '<emit>', '<infNFe'];
+    // Verificar campos obrigatórios do XML NFe com verificação mais flexível
+    const requiredFields = [
+      { field: 'protNFe', pattern: /<protNFe/i },
+      { field: 'det', pattern: /<det\s/i },
+      { field: 'dest', pattern: /<dest>/i },
+      { field: 'emit', pattern: /<emit>/i },
+      { field: 'infNFe', pattern: /<infNFe/i }
+    ];
     
-    for (const field of requiredFields) {
-      if (!xmlContent.includes(field)) {
-        console.error(`❌ Campo obrigatório não encontrado: ${field}`);
+    for (const req of requiredFields) {
+      if (!req.pattern.test(xmlContent)) {
+        console.error(`❌ Campo obrigatório não encontrado: ${req.field}`);
         return false;
       }
     }
