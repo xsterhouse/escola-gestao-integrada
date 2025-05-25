@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,20 +32,28 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Plus, Filter, Trash2, Edit2, Download, CheckCircle, Search } from "lucide-react";
 import { exportToCsv, generatePDF } from "@/lib/pdf-utils";
+import { ReceiptRegistrationDialog } from "./ReceiptRegistrationDialog";
+import { ReceivableInstallmentDialog } from "./ReceivableInstallmentDialog";
+import { toast } from "sonner";
 
 interface ReceivableAccountsProps {
   receivableAccounts: ReceivableAccount[];
   setReceivableAccounts: React.Dispatch<React.SetStateAction<ReceivableAccount[]>>;
   calculateFinancialSummary: () => void;
+  bankAccounts?: any[];
+  onNavigateToBankReconciliation?: () => void;
 }
 
 export function ReceivableAccounts({
   receivableAccounts,
   setReceivableAccounts,
   calculateFinancialSummary,
+  bankAccounts = [],
+  onNavigateToBankReconciliation,
 }: ReceivableAccountsProps) {
   const [isAddReceivableOpen, setIsAddReceivableOpen] = useState(false);
   const [isReceiptConfirmOpen, setIsReceiptConfirmOpen] = useState(false);
+  const [isInstallmentConfigOpen, setIsInstallmentConfigOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<ReceivableAccount | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -62,6 +69,7 @@ export function ReceivableAccounts({
     resourceType: "",
     status: "pendente" as const,
     notes: "",
+    installments: 1,
   });
   
   const formatCurrency = (value: number) => {
@@ -72,9 +80,15 @@ export function ReceivableAccounts({
   };
   
   const handleAddReceivable = () => {
+    // Check for installments
+    if (formData.installments > 1) {
+      setIsInstallmentConfigOpen(true);
+      return;
+    }
+
     const newReceivable: ReceivableAccount = {
       id: `receivable-${Date.now()}`,
-      schoolId: "current-school", // This would come from context in real implementation
+      schoolId: "current-school",
       description: formData.description,
       origin: formData.origin,
       expectedDate: formData.expectedDate,
@@ -90,23 +104,77 @@ export function ReceivableAccounts({
     resetForm();
     calculateFinancialSummary();
   };
+
+  const handleCreateInstallments = (installmentData: any) => {
+    const newReceivables: ReceivableAccount[] = installmentData.map((installment: any) => ({
+      id: `receivable-${Date.now()}-${installment.number}`,
+      schoolId: "current-school",
+      description: installment.description,
+      origin: formData.origin,
+      expectedDate: installment.expectedDate,
+      value: installment.value,
+      resourceType: formData.resourceType,
+      status: 'pendente' as const,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    
+    setReceivableAccounts([...receivableAccounts, ...newReceivables]);
+    setIsAddReceivableOpen(false);
+    setIsInstallmentConfigOpen(false);
+    resetForm();
+    calculateFinancialSummary();
+    toast.success(`${formData.installments} parcelas criadas com sucesso!`);
+  };
   
-  const handleReceiptConfirm = () => {
+  const handleReceiptConfirm = (receiptData: any) => {
     if (selectedAccount) {
       const updatedAccounts = receivableAccounts.map(account => 
         account.id === selectedAccount.id 
-          ? { ...account, status: 'recebido' as const, receivedDate: new Date(), updatedAt: new Date() }
+          ? { 
+              ...account, 
+              status: 'recebido' as const, 
+              receivedDate: new Date(), 
+              updatedAt: new Date(),
+              bankAccountId: receiptData.bankAccountId
+            }
           : account
       );
       setReceivableAccounts(updatedAccounts);
       setIsReceiptConfirmOpen(false);
       setSelectedAccount(null);
       calculateFinancialSummary();
+      
+      // Navigate to bank reconciliation if callback is provided
+      if (onNavigateToBankReconciliation) {
+        onNavigateToBankReconciliation();
+      }
+      
+      toast.success("Recebimento registrado com sucesso!");
     }
   };
   
-  const handleDeleteReceivable = (id: string) => {
-    setReceivableAccounts(receivableAccounts.filter(account => account.id !== id));
+  const handleDeleteReceivable = (account: ReceivableAccount) => {
+    if (account.status === 'recebido') {
+      // If received, just remove receipt and return to pending
+      const updatedAccounts = receivableAccounts.map(acc => 
+        acc.id === account.id 
+          ? { 
+              ...acc, 
+              status: 'pendente' as const, 
+              receivedDate: undefined, 
+              bankAccountId: undefined,
+              updatedAt: new Date()
+            }
+          : acc
+      );
+      setReceivableAccounts(updatedAccounts);
+      toast.success("Recebimento removido. Conta retornada para pendente.");
+    } else {
+      // If pending, delete completely
+      setReceivableAccounts(receivableAccounts.filter(acc => acc.id !== account.id));
+      toast.success("Conta excluída com sucesso.");
+    }
     calculateFinancialSummary();
   };
   
@@ -124,29 +192,8 @@ export function ReceivableAccounts({
       resourceType: "",
       status: "pendente",
       notes: "",
+      installments: 1,
     });
-  };
-  
-  const exportData = () => {
-    const exportData = receivableAccounts.map(r => ({
-      descricao: r.description,
-      origem: r.origin,
-      data_prevista: format(new Date(r.expectedDate), 'dd/MM/yyyy'),
-      valor: formatCurrency(r.value),
-      tipo_recurso: r.resourceType,
-      status: r.status === 'pendente' ? 'Pendente' : 'Recebido',
-      data_recebimento: r.receivedDate ? format(new Date(r.receivedDate), 'dd/MM/yyyy') : '-'
-    }));
-    
-    exportToCsv(exportData, 'contas_a_receber', [
-      { header: 'Descrição', key: 'descricao' },
-      { header: 'Origem', key: 'origem' },
-      { header: 'Data Prevista', key: 'data_prevista' },
-      { header: 'Valor', key: 'valor' },
-      { header: 'Tipo de Recurso', key: 'tipo_recurso' },
-      { header: 'Status', key: 'status' },
-      { header: 'Data de Recebimento', key: 'data_recebimento' }
-    ]);
   };
   
   // Filter receivable accounts
@@ -379,8 +426,8 @@ export function ReceivableAccounts({
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          onClick={() => handleDeleteReceivable(account.id)}
-                          title="Excluir"
+                          onClick={() => handleDeleteReceivable(account)}
+                          title={account.status === 'recebido' ? 'Remover Recebimento' : 'Excluir'}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -460,6 +507,19 @@ export function ReceivableAccounts({
                 />
               </div>
               <div>
+                <Label htmlFor="installments">Parcelas</Label>
+                <Input 
+                  id="installments" 
+                  type="number"
+                  min="1"
+                  value={formData.installments}
+                  onChange={(e) => setFormData({...formData, installments: parseInt(e.target.value) || 1})}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-4">
+              <div>
                 <Label htmlFor="resourceType">Tipo de Recurso</Label>
                 <Select 
                   value={formData.resourceType} 
@@ -508,60 +568,22 @@ export function ReceivableAccounts({
         </DialogContent>
       </Dialog>
       
-      {/* Receipt Confirmation Dialog */}
-      <Dialog open={isReceiptConfirmOpen} onOpenChange={setIsReceiptConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Recebimento</DialogTitle>
-            <DialogDescription>
-              Confirme os detalhes para registrar o recebimento.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedAccount && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Descrição</Label>
-                  <Input value={selectedAccount.description} readOnly />
-                </div>
-                <div>
-                  <Label>Origem</Label>
-                  <Input value={selectedAccount.origin} readOnly />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Data Prevista</Label>
-                  <Input value={format(new Date(selectedAccount.expectedDate), 'dd/MM/yyyy')} readOnly />
-                </div>
-                <div>
-                  <Label>Valor</Label>
-                  <Input value={formatCurrency(selectedAccount.value)} readOnly />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1">
-                <div>
-                  <Label>Data de Recebimento</Label>
-                  <Input value={format(new Date(), 'dd/MM/yyyy')} readOnly />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="attachment">Anexar Comprovante (opcional)</Label>
-                <Input id="attachment" type="file" />
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsReceiptConfirmOpen(false)}>Cancelar</Button>
-            <Button onClick={handleReceiptConfirm}>Confirmar Recebimento</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Receipt Registration Dialog */}
+      <ReceiptRegistrationDialog
+        isOpen={isReceiptConfirmOpen}
+        onClose={() => setIsReceiptConfirmOpen(false)}
+        account={selectedAccount}
+        bankAccounts={bankAccounts}
+        onConfirm={handleReceiptConfirm}
+      />
+
+      {/* Installment Configuration Dialog */}
+      <ReceivableInstallmentDialog
+        isOpen={isInstallmentConfigOpen}
+        onClose={() => setIsInstallmentConfigOpen(false)}
+        formData={formData}
+        onConfirm={handleCreateInstallments}
+      />
     </div>
   );
 }

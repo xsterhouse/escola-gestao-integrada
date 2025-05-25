@@ -248,6 +248,8 @@ export default function Financial() {
               receivableAccounts={receivableAccounts}
               setReceivableAccounts={setReceivableAccounts}
               calculateFinancialSummary={calculateFinancialSummary}
+              bankAccounts={bankAccounts}
+              onNavigateToBankReconciliation={handleNavigateToBankReconciliation}
             />
           </TabsContent>
           
