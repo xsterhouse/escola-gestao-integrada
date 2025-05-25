@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { SystemUserForm } from "@/components/settings/SystemUserForm";
 import { SystemUserEditModal } from "@/components/settings/SystemUserEditModal";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
+import { saveUserPassword } from "@/contexts/AuthContext";
 import { Eye, Pencil, Ban, ShieldCheck, Plus, User } from "lucide-react";
 
 interface SystemUser {
@@ -44,6 +44,9 @@ export function SystemUsersTab() {
       updatedAt: new Date()
     };
     
+    // Salvar a senha no sistema de autenticação
+    saveUserPassword(newUser.id, userData.password);
+    
     const updatedUsers = [...systemUsers, newUser];
     setSystemUsers(updatedUsers);
     setIsModalOpen(false);
@@ -62,6 +65,12 @@ export function SystemUsersTab() {
         ? { ...user, ...userData, updatedAt: new Date() } 
         : user
     );
+    
+    // Se a senha foi alterada, salvar no sistema de autenticação
+    if (userData.password && userData.password !== selectedUser.password) {
+      saveUserPassword(selectedUser.id, userData.password);
+    }
+    
     setSystemUsers(updatedUsers);
     setIsEditModalOpen(false);
     setSelectedUser(null);

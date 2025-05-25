@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User, School } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -160,6 +159,19 @@ const getStoredUsers = (): User[] => {
   return defaultUsers;
 };
 
+// Function to get system users from localStorage
+const getStoredSystemUsers = () => {
+  const stored = localStorage.getItem("systemUsers");
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (error) {
+      console.error("Error parsing stored system users:", error);
+    }
+  }
+  return [];
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
@@ -247,7 +259,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log(`🔍 Procurando usuário com matrícula: ${matricula}`);
       console.log(`📊 Total de usuários armazenados: ${storedUsers.length}`);
       
-      const schoolUser = storedUsers.find(user => user.matricula === matricula);
+      let schoolUser = storedUsers.find(user => user.matricula === matricula);
+      
+      // Se não encontrou nos usuários normais, procurar nos usuários do sistema
+      if (!schoolUser) {
+        const systemUsers = getStoredSystemUsers();
+        console.log(`📊 Total de usuários do sistema: ${systemUsers.length}`);
+        
+        const systemUser = systemUsers.find((user: any) => user.matricula === matricula && user.status === "active");
+        
+        if (systemUser) {
+          console.log(`👤 Usuário do sistema encontrado: ${systemUser.name} (ID: ${systemUser.id})`);
+          
+          // Converter usuário do sistema para formato User
+          schoolUser = {
+            id: systemUser.id,
+            name: systemUser.name,
+            matricula: systemUser.matricula,
+            email: `${systemUser.matricula}@sigre.system`,
+            role: "user",
+            schoolId: systemUser.schoolId,
+            permissions: [
+              { id: "1", name: "dashboard", hasAccess: true },
+              { id: "2", name: "products", hasAccess: systemUser.isLinkedToPurchasing },
+              { id: "3", name: "inventory", hasAccess: systemUser.isLinkedToPurchasing },
+              { id: "4", name: "financial", hasAccess: systemUser.isLinkedToPurchasing },
+            ],
+            createdAt: new Date(systemUser.createdAt),
+            updatedAt: new Date(systemUser.updatedAt),
+          };
+        }
+      }
       
       if (schoolUser) {
         console.log(`👤 Usuário encontrado: ${schoolUser.name} (ID: ${schoolUser.id})`);
