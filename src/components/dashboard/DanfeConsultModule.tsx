@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -240,7 +241,7 @@ export function DanfeConsultModule() {
       const response = await fetch('https://ws.meudanfe.com/api/v1/get/nfe/xmltodanfepdf/API', {
         method: 'POST',
         headers: {
-          'Content-Type': 'text/plain',
+          'Content-Type': 'application/xml',
         },
         body: xmlContent
       });
@@ -249,9 +250,7 @@ export function DanfeConsultModule() {
         let pdfBase64 = await response.text();
         
         // Remove aspas duplas se estiverem presentes na resposta
-        if (pdfBase64.startsWith('"') && pdfBase64.endsWith('"')) {
-          pdfBase64 = pdfBase64.slice(1, -1);
-        }
+        pdfBase64 = pdfBase64.replace(/^"|"$/g, "");
         
         console.log('PDF gerado com sucesso via API');
         return pdfBase64;
@@ -270,13 +269,16 @@ export function DanfeConsultModule() {
     try {
       toast({
         title: "Gerando PDF",
-        description: "Aguarde enquanto o PDF do DANFE está sendo gerado...",
+        description: "Aguarde enquilo o PDF do DANFE está sendo gerado...",
       });
 
       // Gera o PDF usando a nova API
       const pdfBase64 = await generatePdfFromXml(result.xmlContent);
       
-      // Converte base64 para blob
+      // Cria a URL para visualização no navegador
+      const dataUrl = `data:application/pdf;base64,${pdfBase64}`;
+      
+      // Converte base64 para blob para download
       const binaryString = atob(pdfBase64);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
