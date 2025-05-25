@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +17,9 @@ import {
 } from "@/lib/types";
 
 export default function Financial() {
+  // State for tracking active tab
+  const [activeTab, setActiveTab] = useState("dashboard");
+  
   // State for all financial data - starting with empty arrays, data will be loaded from localStorage
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
@@ -153,9 +155,10 @@ export default function Financial() {
           bankAccounts={bankAccounts}
           onAddTransaction={handleAddTransaction}
           onImportTransactions={handleImportTransactions}
+          activeTab={activeTab}
         />
         
-        <Tabs defaultValue="dashboard" className="w-full">
+        <Tabs defaultValue="dashboard" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-5xl grid-cols-6">
             <TabsTrigger value="dashboard">Visão Geral</TabsTrigger>
             <TabsTrigger value="bank-accounts">Contas Bancárias</TabsTrigger>

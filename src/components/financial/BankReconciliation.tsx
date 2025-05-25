@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -137,6 +136,25 @@ export function BankReconciliation({
     return includeTransaction;
   });
   
+  // Calculate running balance for filtered transactions
+  const transactionsWithBalance = filteredTransactions
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .reduce((acc, transaction, index) => {
+      const selectedAccountObj = bankAccounts.find(a => a.id === selectedAccount);
+      const initialBalance = selectedAccountObj?.initialBalance || 0;
+      
+      let runningBalance = initialBalance;
+      
+      // Calculate balance from all previous transactions
+      for (let i = 0; i <= index; i++) {
+        const tx = acc[i] || transaction;
+        runningBalance += tx.transactionType === "credito" ? tx.value : -tx.value;
+      }
+      
+      acc.push({ ...transaction, balance: runningBalance });
+      return acc;
+    }, [] as (BankTransaction & { balance: number })[]);
+  
   // Calculate financial summary for displayed transactions
   const displayedInitialBalance = bankAccounts.find(a => a.id === selectedAccount)?.initialBalance || 0;
   const displayedTotalRevenues = filteredTransactions
@@ -146,6 +164,9 @@ export function BankReconciliation({
     .filter(t => t.transactionType === "debito")
     .reduce((sum, t) => sum + t.value, 0);
   const displayedFinalBalance = displayedInitialBalance + displayedTotalRevenues - displayedTotalExpenses;
+
+  // Get selected account name for highlighting
+  const selectedAccountName = bankAccounts.find(a => a.id === selectedAccount)?.bankName || "";
   
   return (
     <div className="space-y-6">
@@ -191,11 +212,11 @@ export function BankReconciliation({
           <div className="w-full md:w-56">
             <Label htmlFor="account">Conta Bancária</Label>
             <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-              <SelectTrigger id="account">
+              <SelectTrigger id="account" className={selectedAccount ? "ring-2 ring-blue-500 bg-blue-50" : ""}>
                 <SelectValue placeholder="Selecione uma conta" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas as contas</SelectItem>
+                <SelectItem value="">Todas as contas</SelectItem>
                 {bankAccounts.map(account => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.bankName} - {account.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}
@@ -203,6 +224,11 @@ export function BankReconciliation({
                 ))}
               </SelectContent>
             </Select>
+            {selectedAccountName && (
+              <p className="text-sm text-blue-600 font-medium mt-1">
+                Conta selecionada: {selectedAccountName}
+              </p>
+            )}
           </div>
           
           <div className="w-full md:w-auto">
@@ -320,58 +346,55 @@ export function BankReconciliation({
             <TableHeader>
               <TableRow>
                 <TableHead>Data</TableHead>
-                <TableHead>Banco</TableHead>
-                <TableHead>Tipo de Conta</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Valor</TableHead>
+                <TableHead>Saldo</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Situação</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.length === 0 ? (
+              {transactionsWithBalance.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center">
+                  <TableCell colSpan={7} className="text-center">
                     Nenhuma transação encontrada.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredTransactions.map(transaction => {
-                  const account = bankAccounts.find(a => a.id === transaction.bankAccountId);
-                  return (
-                    <TableRow key={transaction.id}>
-                      <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>{account?.bankName}</TableCell>
-                      <TableCell>{account?.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}</TableCell>
-                      <TableCell>{transaction.description}</TableCell>
-                      <TableCell className={transaction.transactionType === 'credito' ? 'text-green-600' : 'text-red-600'}>
-                        {formatCurrency(transaction.value)}
-                      </TableCell>
-                      <TableCell>{transaction.transactionType === 'credito' ? 'Crédito' : 'Débito'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <div className={`mr-2 h-2 w-2 rounded-full ${
-                            transaction.reconciliationStatus === 'conciliado' ? 'bg-green-500' : 'bg-orange-500'
-                          }`} />
-                          {transaction.reconciliationStatus === 'conciliado' ? 'Conciliado' : 'Não Conciliado'}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {transaction.reconciliationStatus === 'nao_conciliado' && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleReconcileTransaction(transaction)}
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Conciliar
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                transactionsWithBalance.map(transaction => (
+                  <TableRow key={transaction.id}>
+                    <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
+                    <TableCell>{transaction.description}</TableCell>
+                    <TableCell className={transaction.transactionType === 'credito' ? 'text-green-600' : 'text-red-600'}>
+                      {formatCurrency(transaction.value)}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {formatCurrency(transaction.balance)}
+                    </TableCell>
+                    <TableCell>{transaction.transactionType === 'credito' ? 'Crédito' : 'Débito'}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <div className={`mr-2 h-2 w-2 rounded-full ${
+                          transaction.reconciliationStatus === 'conciliado' ? 'bg-green-500' : 'bg-orange-500'
+                        }`} />
+                        {transaction.reconciliationStatus === 'conciliado' ? 'Conciliado' : 'Não Conciliado'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {transaction.reconciliationStatus === 'nao_conciliado' && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleReconcileTransaction(transaction)}
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Conciliar
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
