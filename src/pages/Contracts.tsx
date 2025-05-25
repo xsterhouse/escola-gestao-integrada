@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ContractsHeader } from "@/components/contracts/ContractsHeader";
 import { ExcelImportSection } from "@/components/contracts/ExcelImportSection";
-import { ContractTrackingTable } from "@/components/contracts/ContractTrackingTable";
+import { ContractsTable } from "@/components/contracts/ContractsTable";
 import { ContractReportsSection } from "@/components/contracts/ContractReportsSection";
 import { ContractValiditySection } from "@/components/contracts/ContractValiditySection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,15 +16,15 @@ export default function Contracts() {
   const { toast } = useToast();
 
   const handleExcelImport = (contractData: ContractData) => {
-    // Verificar se já existe um contrato com o mesmo número de processo
+    // Check if contract with same ATA ID already exists
     const existingContract = contracts.find(
-      contract => contract.numeroContrato === contractData.numeroContrato
+      contract => contract.ataId === contractData.ataId
     );
 
     if (existingContract) {
       toast({
         title: "Erro na Importação",
-        description: `Já existe um contrato com o número de processo ${contractData.numeroContrato}. Não é possível importar dados duplicados.`,
+        description: `Já existe um contrato importado para a ATA ${contractData.ataId}. Não é possível importar dados duplicados.`,
         variant: "destructive",
       });
       return;
@@ -33,7 +33,7 @@ export default function Contracts() {
     setContracts(prev => [...prev, contractData]);
     toast({
       title: "Contrato Importado",
-      description: `Contrato ${contractData.numeroContrato} importado com sucesso.`,
+      description: `Contrato para ATA ${contractData.ataId} importado com sucesso.`,
     });
   };
 
@@ -72,12 +72,7 @@ export default function Contracts() {
           
           <TabsContent value="tracking" className="space-y-6">
             <ExcelImportSection onImport={handleExcelImport} />
-            <ContractTrackingTable 
-              contracts={filteredContracts} 
-              filter={filter}
-              onFilterChange={setFilter}
-              onUpdateContract={handleUpdateContract}
-            />
+            <ContractsTable contracts={filteredContracts} />
           </TabsContent>
           
           <TabsContent value="validity" className="space-y-6">

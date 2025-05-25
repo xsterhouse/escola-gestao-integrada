@@ -362,11 +362,21 @@ export interface ContractItem {
 export interface ContractData {
   id: string;
   numeroContrato: string;
+  ataId?: string; // Add ATA ID reference
   fornecedorId: string;
-  fornecedor: ContractSupplier;
+  fornecedor: {
+    id: string;
+    cnpj: string;
+    razaoSocial: string;
+    endereco: string;
+    telefone: string;
+    email: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
   dataInicio: Date;
   dataFim: Date;
-  status: 'ativo' | 'encerrado' | 'vencido' | 'liquidado';
+  status: 'ativo' | 'vencido' | 'cancelado';
   items: ContractItem[];
   createdAt: Date;
   updatedAt: Date;
