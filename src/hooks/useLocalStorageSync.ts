@@ -1,13 +1,20 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export function useLocalStorageSync<T>(key: string, initialValue: T[]) {
   const [data, setData] = useState<T[]>(initialValue);
+  const keyRef = useRef(key);
+  const initializedRef = useRef(false);
 
-  // Carregar dados do localStorage - sem dependências para evitar recriação
+  // Update key ref when key changes
+  useEffect(() => {
+    keyRef.current = key;
+  }, [key]);
+
+  // Carregar dados do localStorage - função estável
   const loadData = useCallback(() => {
     try {
-      const stored = localStorage.getItem(key);
+      const stored = localStorage.getItem(keyRef.current);
       if (stored) {
         const parsed = JSON.parse(stored);
         setData(Array.isArray(parsed) ? parsed : []);
@@ -15,41 +22,44 @@ export function useLocalStorageSync<T>(key: string, initialValue: T[]) {
         setData([]);
       }
     } catch (error) {
-      console.error(`Erro ao carregar ${key}:`, error);
+      console.error(`Erro ao carregar ${keyRef.current}:`, error);
       setData([]);
     }
-  }, []); // Removendo key das dependências para evitar recriação
+  }, []);
 
-  // Salvar dados no localStorage
+  // Salvar dados no localStorage - função estável
   const saveData = useCallback((newData: T[]) => {
     try {
-      localStorage.setItem(key, JSON.stringify(newData));
+      localStorage.setItem(keyRef.current, JSON.stringify(newData));
       setData(newData);
       
       // Disparar evento customizado para outros componentes
-      window.dispatchEvent(new CustomEvent(`storage-${key}`, {
+      window.dispatchEvent(new CustomEvent(`storage-${keyRef.current}`, {
         detail: newData
       }));
     } catch (error) {
-      console.error(`Erro ao salvar ${key}:`, error);
+      console.error(`Erro ao salvar ${keyRef.current}:`, error);
     }
-  }, [key]);
+  }, []);
 
   // Carregar dados apenas uma vez na montagem do componente
   useEffect(() => {
-    loadData();
-  }, [key]); // Apenas key como dependência, não loadData
+    if (!initializedRef.current) {
+      loadData();
+      initializedRef.current = true;
+    }
+  }, [loadData]);
 
   // Escutar mudanças no localStorage de outras abas/componentes
   useEffect(() => {
     // Listener para mudanças no localStorage (outras abas)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === key && e.newValue) {
+      if (e.key === keyRef.current && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
           setData(Array.isArray(parsed) ? parsed : []);
         } catch (error) {
-          console.error(`Erro ao processar mudança de storage para ${key}:`, error);
+          console.error(`Erro ao processar mudança de storage para ${keyRef.current}:`, error);
         }
       }
     };
@@ -59,14 +69,16 @@ export function useLocalStorageSync<T>(key: string, initialValue: T[]) {
       setData(e.detail);
     };
 
+    const eventName = `storage-${keyRef.current}`;
+    
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener(`storage-${key}`, handleLocalChange as EventListener);
+    window.addEventListener(eventName, handleLocalChange as EventListener);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener(`storage-${key}`, handleLocalChange as EventListener);
+      window.removeEventListener(eventName, handleLocalChange as EventListener);
     };
-  }, [key]);
+  }, []);
 
   return { data, saveData, loadData };
 }
