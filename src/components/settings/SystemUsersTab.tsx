@@ -44,8 +44,15 @@ export function SystemUsersTab() {
       updatedAt: new Date()
     };
     
+    console.log(`💾 Salvando usuário: ${newUser.name} com ID: ${newUser.id}`);
+    console.log(`🔐 Salvando senha para usuário ID: ${newUser.id}`);
+    
     // Salvar a senha no sistema de autenticação
     saveUserPassword(newUser.id, userData.password);
+    
+    // Verificar se a senha foi salva corretamente
+    const passwords = JSON.parse(localStorage.getItem("userPasswords") || "{}");
+    console.log(`✅ Senha salva: ${!!passwords[newUser.id]}`);
     
     const updatedUsers = [...systemUsers, newUser];
     setSystemUsers(updatedUsers);
@@ -68,6 +75,7 @@ export function SystemUsersTab() {
     
     // Se a senha foi alterada, salvar no sistema de autenticação
     if (userData.password && userData.password !== selectedUser.password) {
+      console.log(`🔐 Atualizando senha para usuário ID: ${selectedUser.id}`);
       saveUserPassword(selectedUser.id, userData.password);
     }
     
