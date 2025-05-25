@@ -10,7 +10,7 @@ import { ImportProductsCard } from "@/components/products/ImportProductsCard";
 import { ProductsListCard } from "@/components/products/ProductsListCard";
 import { ProductsHeader } from "@/components/products/ProductsHeader";
 import { Product } from "@/lib/types";
-import { generatePDF } from "@/lib/pdf-utils";
+import { generateImprovedProductPDF } from "@/lib/improved-pdf-utils";
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>(() => {
@@ -89,10 +89,11 @@ export default function Products() {
     setProductToDelete(null);
   };
 
-  // Handle exporting to PDF
+  // Handle exporting to PDF with improved layout
   const handleExportPDF = (allProducts: boolean = false) => {
     const productsToExport = allProducts ? products : filteredProducts;
-    generatePDF(productsToExport);
+    const title = allProducts ? "Relatório de Todos os Produtos" : "Relatório de Produtos Filtrados";
+    generateImprovedProductPDF(productsToExport, title);
     toast.success("PDF gerado com sucesso!");
   };
 
@@ -103,6 +104,8 @@ export default function Products() {
           onImport={() => setIsAddDialogOpen(true)}
           onExportCurrent={() => handleExportPDF(false)}
           onExportAll={() => handleExportPDF(true)}
+          currentProducts={filteredProducts}
+          allProducts={products}
         />
 
         <ImportProductsCard 
