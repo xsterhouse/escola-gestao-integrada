@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -23,9 +24,7 @@ import {
   Shield, 
   LogOut,
   User,
-  Clock,
-  Sun,
-  Moon
+  Clock
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -38,7 +37,6 @@ export function Sidebar({ className }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [sessionStart] = useState(new Date());
   const [sessionTime, setSessionTime] = useState("00:00:00");
-  const [isDarkTheme, setIsDarkTheme] = useState(false);
   const { user, currentSchool, logout } = useAuth();
   const location = useLocation();
   
@@ -60,17 +58,6 @@ export function Sidebar({ className }: SidebarProps) {
 
     return () => clearInterval(timer);
   }, [sessionStart]);
-
-  // Theme toggle handler
-  const toggleTheme = () => {
-    setIsDarkTheme(!isDarkTheme);
-    // Here you would implement the actual theme switching logic
-    if (!isDarkTheme) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
 
   // Define the system modules with the new order
   const modules = [
@@ -170,7 +157,7 @@ export function Sidebar({ className }: SidebarProps) {
           {/* Header */}
           <div className="px-6 py-6 border-b border-white/10">
             <div className="flex flex-col gap-4 mb-4">
-              <h2 className="text-xl font-bold text-white text-center">SIGRE</h2>
+              <h2 className="text-xl font-bold text-white text-left">SIGRE</h2>
               <div className="flex items-center gap-3 justify-center">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-blue-200 truncate text-center">
@@ -255,51 +242,17 @@ export function Sidebar({ className }: SidebarProps) {
           </ScrollArea>
           
           <div className="px-6 py-4 border-t border-white/10">
-            {/* Theme and Logout in a row */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setIsDarkTheme(false);
-                    document.documentElement.classList.remove('dark');
-                  }}
-                  className={cn(
-                    "h-8 w-8 text-white hover:bg-white/10",
-                    !isDarkTheme && "bg-white/15"
-                  )}
-                >
-                  <Sun className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setIsDarkTheme(true);
-                    document.documentElement.classList.add('dark');
-                  }}
-                  className={cn(
-                    "h-8 w-8 text-white hover:bg-white/10",
-                    isDarkTheme && "bg-white/15"
-                  )}
-                >
-                  <Moon className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  logout();
-                  setIsOpen(false);
-                }}
-                className="h-8 w-8 text-white hover:bg-white/10"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                logout();
+                setIsOpen(false);
+              }}
+              className="h-8 w-8 text-white hover:bg-white/10"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </SheetContent>
@@ -322,10 +275,10 @@ export function Sidebar({ className }: SidebarProps) {
         isCollapsed ? "justify-center px-4" : "justify-between px-6"
       )}>
         {!isCollapsed ? (
-          <div className="flex flex-col items-center w-full">
+          <div className="flex flex-col items-start w-full">
             <h2 className="text-lg font-bold text-white">SIGRE</h2>
             <div className="flex items-center gap-2 mt-1">
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-start">
                 <p className="text-xs text-blue-200 truncate">
                   {currentSchool?.name}
                 </p>
@@ -456,109 +409,30 @@ export function Sidebar({ className }: SidebarProps) {
       
       <div className="border-t border-white/10 p-6">
         {!isCollapsed ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setIsDarkTheme(false);
-                  document.documentElement.classList.remove('dark');
-                }}
-                className={cn(
-                  "h-8 w-8 text-white hover:bg-white/10",
-                  !isDarkTheme && "bg-white/15"
-                )}
-              >
-                <Sun className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setIsDarkTheme(true);
-                  document.documentElement.classList.add('dark');
-                }}
-                className={cn(
-                  "h-8 w-8 text-white hover:bg-white/10",
-                  isDarkTheme && "bg-white/15"
-                )}
-              >
-                <Moon className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={logout}
-              className="h-8 w-8 text-white hover:bg-white/10"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={logout}
+            className="h-8 w-8 text-white hover:bg-white/10"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
         ) : (
-          <div className="flex flex-col gap-2 items-center">
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setIsDarkTheme(false);
-                    document.documentElement.classList.remove('dark');
-                  }}
-                  className={cn(
-                    "h-8 w-8 text-white hover:bg-white/10",
-                    !isDarkTheme && "bg-white/15"
-                  )}
-                >
-                  <Sun className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                Tema Claro
-              </TooltipContent>
-            </Tooltip>
-            
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setIsDarkTheme(true);
-                    document.documentElement.classList.add('dark');
-                  }}
-                  className={cn(
-                    "h-8 w-8 text-white hover:bg-white/10",
-                    isDarkTheme && "bg-white/15"
-                  )}
-                >
-                  <Moon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                Tema Escuro
-              </TooltipContent>
-            </Tooltip>
-            
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={logout}
-                  className="h-8 w-8 text-white hover:bg-white/10"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                Sair
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={logout}
+                className="h-8 w-8 text-white hover:bg-white/10"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              Sair
+            </TooltipContent>
+          </Tooltip>
         )}
       </div>
     </div>
