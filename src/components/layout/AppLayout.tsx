@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { OfflineIndicator } from "@/components/ui/offline-indicator";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -54,6 +55,9 @@ export function AppLayout({
           {children}
         </main>
       </div>
+      
+      {/* Indicador de status offline/online */}
+      <OfflineIndicator />
     </div>
   );
 }
