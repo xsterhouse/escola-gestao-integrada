@@ -34,6 +34,7 @@ export function ModernUserForm({
 }: ModernUserFormProps) {
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
+    matricula: initialData?.matricula || "",
     email: initialData?.email || "",
     role: initialData?.role || "user",
     schoolId: initialData?.schoolId || "",
@@ -90,7 +91,7 @@ export function ModernUserForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.role) {
+    if (!formData.name || !formData.matricula || !formData.email || !formData.role) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -133,6 +134,7 @@ export function ModernUserForm({
     try {
       const userData: Partial<User> = {
         name: formData.name,
+        matricula: formData.matricula,
         email: formData.email,
         role: formData.role,
         schoolId: formData.schoolId || null,
@@ -207,6 +209,17 @@ export function ModernUserForm({
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="matricula">Número de Matrícula *</Label>
+                <Input
+                  id="matricula"
+                  value={formData.matricula}
+                  onChange={(e) => setFormData(prev => ({ ...prev, matricula: e.target.value }))}
+                  placeholder="Número de matrícula para login"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="email">E-mail *</Label>
                 <Input
                   id="email"
@@ -232,9 +245,9 @@ export function ModernUserForm({
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="school">Escola</Label>
-                <Select value={formData.schoolId} onValueChange={(value) => setFormData(prev => ({ ...prev, schoolId: value }))}>
+                <Select value={formData.schoolId} onValueChange={(value) => setFormData(prev => ({ ...prev, schoolId: value === "none" ? "" : value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a escola" />
                   </SelectTrigger>

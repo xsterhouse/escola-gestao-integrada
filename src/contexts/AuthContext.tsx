@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User, School } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -8,7 +7,7 @@ type AuthContextType = {
   currentSchool: School | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string, remember: boolean) => Promise<void>;
+  login: (matricula: string, password: string, remember: boolean) => Promise<void>;
   logout: () => void;
   setCurrentSchool: (school: School) => void;
   availableSchools: School[];
@@ -20,7 +19,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const MOCK_MASTER_USER: User = {
   id: "1",
   name: "Admin Master",
-  email: "admin@sigre.net.br", // Atualizado para o email correto
+  matricula: "ADMIN001",
+  email: "admin@sigre.net.br",
   role: "master",
   schoolId: null,
   permissions: [
@@ -145,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string, remember: boolean) => {
+  const login = async (matricula: string, password: string, remember: boolean) => {
     setIsLoading(true);
     
     try {
@@ -153,8 +153,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // In a real app, this would be an API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Verificação correta das credenciais do admin master
-      if (email === "admin@sigre.net.br" && password === "Sigre101020@") {
+      // Verificação das credenciais do admin master usando matrícula
+      if (matricula === "ADMIN001" && password === "Sigre101020@") {
         setUser(MOCK_MASTER_USER);
         setAvailableSchools(MOCK_SCHOOLS);
         
@@ -170,9 +170,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      // Check school users
+      // Check school users by matricula
       const schoolUser = MOCK_SCHOOL_USERS.find(
-        user => user.email === email && password === "password" // For demo, all school users have "password" as password
+        user => user.matricula === matricula && password === "password"
       );
       
       if (schoolUser) {
@@ -203,7 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Login failed:", error);
       toast({
         title: "Erro de autenticação",
-        description: "Email ou senha incorretos",
+        description: "Matrícula ou senha incorretos",
         variant: "destructive"
       });
       throw error;

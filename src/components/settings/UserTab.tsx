@@ -65,6 +65,7 @@ export function UserTab() {
       const newUser: User = {
         id: Date.now().toString(),
         name: userData.name || "",
+        matricula: userData.matricula || "",
         email: userData.email || "",
         role: userData.role || "user",
         schoolId: userData.schoolId || null,
@@ -173,6 +174,7 @@ export function UserTab() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>Matrícula</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Perfil</TableHead>
               <TableHead>Escola</TableHead>
@@ -183,7 +185,7 @@ export function UserTab() {
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                   Nenhum usuário cadastrado. Clique em "Novo Usuário" para começar.
                 </TableCell>
               </TableRow>
@@ -191,6 +193,7 @@ export function UserTab() {
               users.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell className="font-mono">{user.matricula}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.role === "master" ? "Admin Master" : user.role === "admin" ? "Administrador" : "Usuário"}</TableCell>
                   <TableCell className="text-sm">{getSchoolName(user.schoolId)}</TableCell>

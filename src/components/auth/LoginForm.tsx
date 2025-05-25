@@ -9,27 +9,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 
 export function LoginForm() {
-  const [email, setEmail] = useState("");
+  const [matricula, setMatricula] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState({ email: "", password: "" });
+  const [errors, setErrors] = useState({ matricula: "", password: "" });
   const navigate = useNavigate();
   const { login } = useAuth();
   const { toast } = useToast();
 
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
   const validateForm = () => {
-    const newErrors = { email: "", password: "" };
+    const newErrors = { matricula: "", password: "" };
     
-    if (!email) {
-      newErrors.email = "E-mail é obrigatório";
-    } else if (!validateEmail(email)) {
-      newErrors.email = "E-mail inválido";
+    if (!matricula) {
+      newErrors.matricula = "Número de matrícula é obrigatório";
+    } else if (matricula.length < 3) {
+      newErrors.matricula = "Matrícula deve ter pelo menos 3 caracteres";
     }
     
     if (!password) {
@@ -39,7 +34,7 @@ export function LoginForm() {
     }
     
     setErrors(newErrors);
-    return !newErrors.email && !newErrors.password;
+    return !newErrors.matricula && !newErrors.password;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,7 +52,7 @@ export function LoginForm() {
     setIsSubmitting(true);
     
     try {
-      await login(email, password, remember);
+      await login(matricula, password, remember);
       navigate("/dashboard");
       toast({
         title: "Login realizado com sucesso",
@@ -66,7 +61,7 @@ export function LoginForm() {
     } catch (error) {
       toast({
         title: "Falha no login",
-        description: "E-mail ou senha incorretos.",
+        description: "Matrícula ou senha incorretos.",
         variant: "destructive",
       });
     } finally {
@@ -79,23 +74,23 @@ export function LoginForm() {
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-white font-medium">E-mail</Label>
+            <Label htmlFor="matricula" className="text-white font-medium">Número de Matrícula</Label>
             <Input
-              id="email"
-              type="email"
-              placeholder="seu.email@exemplo.com"
-              value={email}
+              id="matricula"
+              type="text"
+              placeholder="Digite sua matrícula"
+              value={matricula}
               onChange={(e) => {
-                setEmail(e.target.value);
-                if (errors.email) setErrors({ ...errors, email: "" });
+                setMatricula(e.target.value);
+                if (errors.matricula) setErrors({ ...errors, matricula: "" });
               }}
               className={`bg-white/10 border-white/20 text-white placeholder:text-white/60 focus:bg-white/20 focus:border-white/40 transition-all duration-300 hover:bg-white/15 ${
-                errors.email ? "border-red-400 focus:border-red-400" : ""
+                errors.matricula ? "border-red-400 focus:border-red-400" : ""
               }`}
-              autoComplete="email"
+              autoComplete="username"
             />
-            {errors.email && (
-              <p className="text-red-300 text-sm font-medium">{errors.email}</p>
+            {errors.matricula && (
+              <p className="text-red-300 text-sm font-medium">{errors.matricula}</p>
             )}
           </div>
           
