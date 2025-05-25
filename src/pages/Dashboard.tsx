@@ -1,9 +1,9 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImportXmlModal } from "@/components/dashboard/ImportXmlModal";
-import { DanfeConsultModule } from "@/components/dashboard/DanfeConsultModule";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   FileText, 
@@ -197,9 +197,6 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
-
-        {/* Módulo DANFE */}
-        <DanfeConsultModule />
       </div>
 
       <ImportXmlModal 
