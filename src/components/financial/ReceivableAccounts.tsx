@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ReceivableAccount } from "@/lib/types";
+import { ReceivableAccount, BankTransaction } from "@/lib/types";
 import {
   Table,
   TableBody,
@@ -42,6 +42,8 @@ interface ReceivableAccountsProps {
   calculateFinancialSummary: () => void;
   bankAccounts?: any[];
   onNavigateToBankReconciliation?: () => void;
+  bankTransactions?: BankTransaction[];
+  setBankTransactions?: React.Dispatch<React.SetStateAction<BankTransaction[]>>;
 }
 
 export function ReceivableAccounts({
@@ -50,6 +52,8 @@ export function ReceivableAccounts({
   calculateFinancialSummary,
   bankAccounts = [],
   onNavigateToBankReconciliation,
+  bankTransactions = [],
+  setBankTransactions,
 }: ReceivableAccountsProps) {
   const [isAddReceivableOpen, setIsAddReceivableOpen] = useState(false);
   const [isReceiptConfirmOpen, setIsReceiptConfirmOpen] = useState(false);
@@ -159,6 +163,7 @@ export function ReceivableAccounts({
   
   const handleReceiptConfirm = (receiptData: any) => {
     if (selectedAccount) {
+      // Update the receivable account status
       const updatedAccounts = receivableAccounts.map(account => 
         account.id === selectedAccount.id 
           ? { 
@@ -171,6 +176,28 @@ export function ReceivableAccounts({
           : account
       );
       setReceivableAccounts(updatedAccounts);
+
+      // Create a corresponding bank transaction
+      if (setBankTransactions && bankTransactions) {
+        const newBankTransaction: BankTransaction = {
+          id: `transaction-${Date.now()}`,
+          schoolId: "current-school",
+          bankAccountId: receiptData.bankAccountId,
+          date: new Date(),
+          description: `Recebimento: ${selectedAccount.description} - ${selectedAccount.origin}`,
+          value: selectedAccount.value,
+          transactionType: 'credito',
+          reconciliationStatus: 'conciliado',
+          category: 'Receita',
+          resourceType: selectedAccount.resourceType,
+          documentId: selectedAccount.id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        setBankTransactions([...bankTransactions, newBankTransaction]);
+      }
+
       setIsReceiptConfirmOpen(false);
       setSelectedAccount(null);
       calculateFinancialSummary();
@@ -180,7 +207,7 @@ export function ReceivableAccounts({
         onNavigateToBankReconciliation();
       }
       
-      toast.success("Recebimento registrado com sucesso!");
+      toast.success("Recebimento registrado e transação bancária criada com sucesso!");
     }
   };
   
@@ -199,6 +226,15 @@ export function ReceivableAccounts({
           : acc
       );
       setReceivableAccounts(updatedAccounts);
+
+      // Remove corresponding bank transaction if exists
+      if (setBankTransactions && bankTransactions) {
+        const updatedTransactions = bankTransactions.filter(transaction => 
+          transaction.documentId !== account.id
+        );
+        setBankTransactions(updatedTransactions);
+      }
+
       toast.success("Recebimento removido. Conta retornada para pendente.");
     } else {
       // If pending, delete completely

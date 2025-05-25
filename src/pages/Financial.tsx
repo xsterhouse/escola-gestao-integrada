@@ -250,6 +250,8 @@ export default function Financial() {
               calculateFinancialSummary={calculateFinancialSummary}
               bankAccounts={bankAccounts}
               onNavigateToBankReconciliation={handleNavigateToBankReconciliation}
+              bankTransactions={bankTransactions}
+              setBankTransactions={setBankTransactions}
             />
           </TabsContent>
           
