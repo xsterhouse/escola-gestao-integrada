@@ -3,7 +3,6 @@ import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SchoolTab } from "@/components/settings/SchoolTab";
-import { UserTab } from "@/components/settings/UserTab";
 import { PurchasingCenterTab } from "@/components/settings/PurchasingCenterTab";
 import { PermissionsTab } from "@/components/settings/PermissionsTab";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,7 +23,7 @@ const Settings = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight mb-2">Configurações</h1>
           <p className="text-muted-foreground">
-            Gerencie escolas, usuários e permissões do sistema.
+            Gerencie escolas e permissões do sistema.
           </p>
         </div>
 
@@ -33,19 +32,14 @@ const Settings = () => {
           onValueChange={setActiveTab}
           className="space-y-4"
         >
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full md:w-auto">
+          <TabsList className="grid grid-cols-1 md:grid-cols-3 gap-2 w-full md:w-auto">
             <TabsTrigger value="schools">Escolas</TabsTrigger>
-            <TabsTrigger value="users">Usuários</TabsTrigger>
             <TabsTrigger value="purchasing">Central de Compras</TabsTrigger>
             <TabsTrigger value="permissions">Permissões do Sistema</TabsTrigger>
           </TabsList>
           
           <TabsContent value="schools">
             <SchoolTab />
-          </TabsContent>
-          
-          <TabsContent value="users">
-            <UserTab />
           </TabsContent>
           
           <TabsContent value="purchasing">
