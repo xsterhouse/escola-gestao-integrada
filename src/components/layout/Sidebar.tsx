@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -24,9 +23,12 @@ import {
   Shield, 
   LogOut,
   User,
-  Clock
+  Clock,
+  Sun,
+  Moon
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 
 type SidebarProps = {
   className?: string;
@@ -37,6 +39,7 @@ export function Sidebar({ className }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [sessionStart] = useState(new Date());
   const [sessionTime, setSessionTime] = useState("00:00:00");
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
   const { user, currentSchool, logout } = useAuth();
   const location = useLocation();
   
@@ -58,6 +61,17 @@ export function Sidebar({ className }: SidebarProps) {
 
     return () => clearInterval(timer);
   }, [sessionStart]);
+
+  // Theme toggle handler
+  const toggleTheme = () => {
+    setIsDarkTheme(!isDarkTheme);
+    // Here you would implement the actual theme switching logic
+    if (!isDarkTheme) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
   // Define the system modules with the new order
   const modules = [
@@ -156,16 +170,32 @@ export function Sidebar({ className }: SidebarProps) {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="px-6 py-6 border-b border-white/10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-white/10 p-3 rounded-full">
+            <div className="flex flex-col gap-4 mb-4">
+              <h2 className="text-xl font-bold text-white text-center">SIGRE</h2>
+              <div className="flex items-center gap-3 justify-center">
                 <Building className="h-6 w-6 text-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-blue-200 truncate text-center">
+                    Central de Compras
+                  </p>
+                  <p className="text-sm text-blue-200 truncate text-center">
+                    {currentSchool?.name}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold text-white">SIGRE</h2>
-                <p className="text-sm text-blue-200 truncate">
-                  {currentSchool?.name || "Central de Compras"}
-                </p>
+            </div>
+            
+            {/* Theme Selector */}
+            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg mb-4">
+              <div className="flex items-center gap-2">
+                <Sun className="h-4 w-4 text-white" />
+                <span className="text-sm text-white">Tema</span>
+                <Moon className="h-4 w-4 text-white" />
               </div>
+              <Switch
+                checked={isDarkTheme}
+                onCheckedChange={toggleTheme}
+              />
             </div>
             
             {/* User Profile */}
@@ -276,15 +306,16 @@ export function Sidebar({ className }: SidebarProps) {
         isCollapsed ? "justify-center px-4" : "justify-between px-6"
       )}>
         {!isCollapsed ? (
-          <div className="flex items-center gap-3">
-            <div className="bg-white/10 p-2 rounded-full">
-              <Building className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-white">SIGRE</h2>
-              <p className="text-xs text-blue-200 truncate">
-                {currentSchool?.name || "Central de Compras"}
-              </p>
+          <div className="flex flex-col items-center w-full">
+            <h2 className="text-lg font-bold text-white">SIGRE</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <Building className="h-4 w-4 text-blue-200" />
+              <div className="flex flex-col items-center">
+                <p className="text-xs text-blue-200">Central de Compras</p>
+                <p className="text-xs text-blue-200 truncate">
+                  {currentSchool?.name}
+                </p>
+              </div>
             </div>
           </div>
         ) : (
@@ -297,11 +328,28 @@ export function Sidebar({ className }: SidebarProps) {
           size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
           title={isCollapsed ? "Expandir" : "Recolher"}
-          className="h-9 w-9 text-white hover:bg-white/10"
+          className="h-9 w-9 text-white hover:bg-white/10 absolute top-4 right-4"
         >
           {isCollapsed ? <ChevronDown className="h-5 w-5 rotate-90" /> : <ChevronDown className="h-5 w-5 -rotate-90" />}
         </Button>
       </div>
+
+      {/* Theme Selector Section */}
+      {!isCollapsed && (
+        <div className="px-6 py-4 border-b border-white/10">
+          <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Sun className="h-4 w-4 text-white" />
+              <span className="text-sm text-white">Tema</span>
+              <Moon className="h-4 w-4 text-white" />
+            </div>
+            <Switch
+              checked={isDarkTheme}
+              onCheckedChange={toggleTheme}
+            />
+          </div>
+        </div>
+      )}
 
       {/* User Profile Section */}
       {!isCollapsed && (
