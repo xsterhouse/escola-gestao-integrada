@@ -239,7 +239,7 @@ export function ModernUserForm({
                     <SelectValue placeholder="Selecione a escola" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma escola específica</SelectItem>
+                    <SelectItem value="none">Nenhuma escola específica</SelectItem>
                     {validSchools.map((school) => (
                       <SelectItem key={school.id} value={school.id}>
                         {school.name}
