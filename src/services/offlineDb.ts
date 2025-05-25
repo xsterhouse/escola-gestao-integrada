@@ -51,7 +51,7 @@ export const offlineStorage = {
   },
 
   async getUnsyncedData() {
-    return await offlineDb.offlineData.where('synced').equals(false).toArray();
+    return await offlineDb.offlineData.where('synced').equals(0).toArray();
   },
 
   async markAsSynced(id: number) {

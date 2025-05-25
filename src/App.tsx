@@ -15,42 +15,40 @@ import Settings from "./pages/Settings";
 import Products from "./pages/Products";
 import Inventory from "./pages/Inventory";
 import Financial from "./pages/Financial";
-import Contracts from "./pages/Contracts"; // Import the Contracts page
-import Planning from "./pages/Planning"; // Import the new Planning page
-import Accounting from "./pages/Accounting"; // Import the new Accounting page
+import Contracts from "./pages/Contracts";
+import Planning from "./pages/Planning";
+import Accounting from "./pages/Accounting";
 import NotFound from "./pages/NotFound";
 
 function App() {
   const queryClient = React.useMemo(() => new QueryClient(), []);
 
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/schools" element={<Schools />} />
-                <Route path="/users" element={<Users />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/inventory" element={<Inventory />} />
-                <Route path="/financial" element={<Financial />} />
-                <Route path="/contracts" element={<Contracts />} />
-                <Route path="/planning" element={<Planning />} />
-                <Route path="/accounting" element={<Accounting />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </TooltipProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/schools" element={<Schools />} />
+              <Route path="/users" element={<Users />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/inventory" element={<Inventory />} />
+              <Route path="/financial" element={<Financial />} />
+              <Route path="/contracts" element={<Contracts />} />
+              <Route path="/planning" element={<Planning />} />
+              <Route path="/accounting" element={<Accounting />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </TooltipProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 
