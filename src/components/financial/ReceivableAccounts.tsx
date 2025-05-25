@@ -90,8 +90,18 @@ export function ReceivableAccounts({
       'Data de Recebimento': account.receivedDate ? format(new Date(account.receivedDate), 'dd/MM/yyyy') : '-'
     }));
 
+    const columns = [
+      { header: 'Descrição', key: 'Descrição' },
+      { header: 'Origem', key: 'Origem' },
+      { header: 'Tipo de Recurso', key: 'Tipo de Recurso' },
+      { header: 'Data Prevista', key: 'Data Prevista' },
+      { header: 'Valor', key: 'Valor' },
+      { header: 'Status', key: 'Status' },
+      { header: 'Data de Recebimento', key: 'Data de Recebimento' }
+    ];
+
     try {
-      exportToCsv(dataToExport, 'contas-a-receber', 'Contas a Receber');
+      exportToCsv(dataToExport, 'contas-a-receber', columns);
       toast.success("Dados exportados com sucesso!");
     } catch (error) {
       console.error('Erro ao exportar dados:', error);
