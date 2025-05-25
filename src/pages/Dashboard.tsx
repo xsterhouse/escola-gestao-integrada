@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -151,8 +150,8 @@ const Dashboard = () => {
                   <DollarSign className="h-6 w-6 text-[#012340]" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Novo Pagamento</p>
-                  <p className="text-sm text-muted-foreground">Registrar pagamento</p>
+                  <p className="text-sm font-medium text-muted-foreground">Financeiro</p>
+                  <p className="text-sm text-muted-foreground">Gestão financeira</p>
                 </div>
               </div>
             </CardContent>
