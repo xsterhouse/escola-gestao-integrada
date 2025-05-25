@@ -205,7 +205,7 @@ export function AddManualMovementDialog({
                       <Input 
                         {...field} 
                         placeholder="Un, Kg, L..."
-                        readOnly={watchType === 'saida' && selectedProduct}
+                        readOnly={watchType === 'saida' && !!selectedProduct}
                       />
                     </FormControl>
                     <FormMessage />
@@ -227,7 +227,7 @@ export function AddManualMovementDialog({
                       step="0.01" 
                       {...field}
                       onChange={e => field.onChange(parseFloat(e.target.value))}
-                      readOnly={watchType === 'saida' && selectedProduct}
+                      readOnly={watchType === 'saida' && !!selectedProduct}
                     />
                   </FormControl>
                   <FormMessage />
