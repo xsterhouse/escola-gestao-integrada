@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,74 +23,80 @@ export function DanfeConsultModule() {
     }
   }, []);
 
-  // Função para extrair informações da chave de acesso NFe
-  const parseAccessKey = (key: string) => {
-    if (key.length !== 44) {
-      return {
-        uf: "35", // SP por padrão
-        year: "24",
-        month: "01", 
-        cnpj: "11223344000155",
-        model: "55",
-        series: "001",
-        number: "000001234",
-        code: "87654321"
-      };
-    }
+  // Função para consultar NFe na API real
+  const consultNFeAPI = async (accessKey: string): Promise<any> => {
+    try {
+      console.log('🔍 Consultando NFe na API oficial com chave:', accessKey);
+      
+      const response = await fetch('https://ws.meudanfe.com/api/v1/get/nfe/chave/API', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chave: accessKey
+        })
+      });
 
-    return {
-      uf: key.substring(0, 2),
-      year: key.substring(2, 4),
-      month: key.substring(4, 6),
-      cnpj: key.substring(6, 20),
-      model: key.substring(20, 22),
-      series: key.substring(22, 25),
-      number: key.substring(25, 34),
-      code: key.substring(34, 42)
-    };
+      if (response.ok) {
+        const data = await response.text();
+        console.log('✅ Dados recebidos da API:', data.substring(0, 200) + '...');
+        return data;
+      } else {
+        console.error('❌ Erro na consulta API:', response.status);
+        throw new Error(`Erro na API: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao consultar API:', error);
+      throw error;
+    }
   };
 
-  // Função para gerar dados baseados na chave de acesso
-  const generateDataFromKey = (accessKey: string) => {
-    const keyInfo = parseAccessKey(accessKey);
-    
-    // Mapear UF para estado
-    const ufToState = {
-      "11": "RO", "12": "AC", "13": "AM", "14": "RR", "15": "PA", "16": "AP", "17": "TO",
-      "21": "MA", "22": "PI", "23": "CE", "24": "RN", "25": "PB", "26": "PE", "27": "AL", "28": "SE", "29": "BA",
-      "31": "MG", "32": "ES", "33": "RJ", "35": "SP",
-      "41": "PR", "42": "SC", "43": "RS",
-      "50": "MS", "51": "MT", "52": "GO", "53": "DF"
-    };
-
-    const state = ufToState[keyInfo.uf as keyof typeof ufToState] || "SP";
-    
-    // Gerar razão social baseada no CNPJ e estado
-    const cnpjBase = keyInfo.cnpj.substring(0, 8);
-    const supplierNames = [
-      `DISTRIBUIDORA REGIONAL ${state} LTDA`,
-      `COMERCIAL ALIMENTÍCIA ${state} EIRELI`,
-      `FORNECEDORA ESCOLAR ${state} LTDA`,
-      `ATACADISTA MUNICIPAL ${state} S.A.`,
-      `CENTRAL DE ABASTECIMENTO ${state} LTDA`
-    ];
-    
-    const supplierIndex = parseInt(cnpjBase.substring(0, 1)) % supplierNames.length;
-    const supplierName = supplierNames[supplierIndex];
-
-    // Gerar valor baseado no código da NFe
-    const baseValue = parseInt(keyInfo.code.substring(0, 4)) * 10 + Math.random() * 5000;
-    const totalValue = Math.round(baseValue * 100) / 100;
-
-    return {
-      supplier: supplierName,
-      cnpj: `${keyInfo.cnpj.substring(0, 2)}.${keyInfo.cnpj.substring(2, 5)}.${keyInfo.cnpj.substring(5, 8)}/${keyInfo.cnpj.substring(8, 12)}-${keyInfo.cnpj.substring(12, 14)}`,
-      state: state,
-      danfeNumber: keyInfo.number,
-      totalValue: totalValue,
-      issueYear: `20${keyInfo.year}`,
-      issueMonth: keyInfo.month
-    };
+  // Função para extrair dados do XML retornado pela API
+  const parseXMLResponse = (xmlContent: string, accessKey: string) => {
+    try {
+      console.log('🔧 Extraindo dados do XML retornado pela API...');
+      
+      // Criar parser DOM para extrair dados reais do XML
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
+      
+      // Extrair dados reais do emissor
+      const emit = xmlDoc.querySelector('emit');
+      const supplierName = emit?.querySelector('xNome')?.textContent || 'Fornecedor não identificado';
+      const supplierCNPJ = emit?.querySelector('CNPJ')?.textContent || '';
+      
+      // Extrair dados da NFe
+      const ide = xmlDoc.querySelector('ide');
+      const danfeNumber = ide?.querySelector('nNF')?.textContent || '';
+      const issueDate = ide?.querySelector('dhEmi')?.textContent || '';
+      
+      // Extrair valor total
+      const total = xmlDoc.querySelector('ICMSTot');
+      const totalValue = parseFloat(total?.querySelector('vNF')?.textContent || '0');
+      
+      console.log('✅ Dados extraídos:', {
+        supplier: supplierName,
+        cnpj: supplierCNPJ,
+        danfe: danfeNumber,
+        value: totalValue
+      });
+      
+      return {
+        id: Date.now().toString(),
+        accessKey: accessKey,
+        danfeNumber: danfeNumber,
+        supplier: supplierName,
+        cnpj: supplierCNPJ,
+        issueDate: issueDate ? new Date(issueDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        totalValue: totalValue,
+        status: "Autorizada",
+        xmlContent: xmlContent
+      };
+    } catch (error) {
+      console.error('❌ Erro ao processar XML:', error);
+      throw new Error('Erro ao processar dados da NFe');
+    }
   };
 
   const handleSearch = async () => {
@@ -97,288 +104,16 @@ export function DanfeConsultModule() {
     
     setIsLoading(true);
     
-    // Simular busca com dados REAIS baseados na chave de acesso
-    setTimeout(() => {
-      const generatedData = generateDataFromKey(searchKey);
+    try {
+      console.log('🚀 Iniciando busca real da NFe...');
       
-      // Gerar dados realistas baseados na chave de acesso
-      const mockResults = [
-        {
-          id: Date.now().toString(),
-          accessKey: searchKey,
-          danfeNumber: generatedData.danfeNumber,
-          supplier: generatedData.supplier,
-          issueDate: `${generatedData.issueYear}-${generatedData.issueMonth}-15`,
-          totalValue: generatedData.totalValue,
-          status: "Autorizada",
-          xmlContent: `<?xml version="1.0" encoding="UTF-8"?>
-<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
-  <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
-    <infNFe Id="NFe${searchKey}" versao="4.00">
-      <ide>
-        <cUF>${parseAccessKey(searchKey).uf}</cUF>
-        <cNF>${parseAccessKey(searchKey).code}</cNF>
-        <natOp>Venda de produtos alimenticios para merenda escolar</natOp>
-        <mod>55</mod>
-        <serie>${parseInt(parseAccessKey(searchKey).series)}</serie>
-        <nNF>${generatedData.danfeNumber}</nNF>
-        <dhEmi>${generatedData.issueYear}-${generatedData.issueMonth}-15T08:30:00-03:00</dhEmi>
-        <dhSaiEnt>${generatedData.issueYear}-${generatedData.issueMonth}-15T09:00:00-03:00</dhSaiEnt>
-        <tpNF>1</tpNF>
-        <idDest>2</idDest>
-        <cMunFG>3550308</cMunFG>
-        <tpImp>1</tpImp>
-        <tpEmis>1</tpEmis>
-        <cDV>9</cDV>
-        <tpAmb>1</tpAmb>
-        <finNFe>1</finNFe>
-        <indFinal>1</indFinal>
-        <indPres>1</indPres>
-      </ide>
-      <emit>
-        <CNPJ>${parseAccessKey(searchKey).cnpj}</CNPJ>
-        <xNome>${generatedData.supplier}</xNome>
-        <xFant>${generatedData.supplier.split(' ')[0]} ${generatedData.supplier.split(' ')[1]}</xFant>
-        <enderEmit>
-          <xLgr>AV DOS ALIMENTOS</xLgr>
-          <nro>2580</nro>
-          <xBairro>DISTRITO ALIMENTÍCIO</xBairro>
-          <cMun>3550308</cMun>
-          <xMun>CAPITAL</xMun>
-          <UF>${generatedData.state}</UF>
-          <CEP>04567000</CEP>
-          <cPais>1058</cPais>
-          <xPais>BRASIL</xPais>
-          <fone>1133456789</fone>
-        </enderEmit>
-        <IE>987654321</IE>
-        <CRT>3</CRT>
-      </emit>
-      <dest>
-        <CNPJ>12345678000190</CNPJ>
-        <xNome>SECRETARIA MUNICIPAL DE EDUCAÇÃO</xNome>
-        <enderDest>
-          <xLgr>RUA DA EDUCAÇÃO</xLgr>
-          <nro>500</nro>
-          <xBairro>CENTRO</xBairro>
-          <cMun>3550308</cMun>
-          <xMun>SAO PAULO</xMun>
-          <UF>SP</UF>
-          <CEP>01234567</CEP>
-          <cPais>1058</cPais>
-          <xPais>BRASIL</xPais>
-        </enderDest>
-        <indIEDest>9</indIEDest>
-      </dest>
-      <det nItem="1">
-        <prod>
-          <cProd>ALM001</cProd>
-          <cEAN>7891000123456</cEAN>
-          <xProd>ARROZ BRANCO LONGO FINO TIPO 1 - 5KG</xProd>
-          <NCM>10063021</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>SC</uCom>
-          <qCom>300.0000</qCom>
-          <vUnCom>15.75</vUnCom>
-          <vProd>${(generatedData.totalValue * 0.3).toFixed(2)}</vProd>
-          <cEANTrib>7891000123456</cEANTrib>
-          <uTrib>SC</uTrib>
-          <qTrib>300.0000</qTrib>
-          <vUnTrib>15.75</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMS00>
-              <orig>0</orig>
-              <CST>00</CST>
-              <modBC>0</modBC>
-              <vBC>${(generatedData.totalValue * 0.3).toFixed(2)}</vBC>
-              <pICMS>12.00</pICMS>
-              <vICMS>${(generatedData.totalValue * 0.3 * 0.12).toFixed(2)}</vICMS>
-            </ICMS00>
-          </ICMS>
-        </imposto>
-      </det>
-      <det nItem="2">
-        <prod>
-          <cProd>ALM002</cProd>
-          <cEAN>7891000654321</cEAN>
-          <xProd>FEIJÃO CARIOCA TIPO 1 - 1KG</xProd>
-          <NCM>07133390</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>PCT</uCom>
-          <qCom>500.0000</qCom>
-          <vUnCom>8.90</vUnCom>
-          <vProd>${(generatedData.totalValue * 0.25).toFixed(2)}</vProd>
-          <cEANTrib>7891000654321</cEANTrib>
-          <uTrib>PCT</uTrib>
-          <qTrib>500.0000</qTrib>
-          <vUnTrib>8.90</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMS00>
-              <orig>0</orig>
-              <CST>00</CST>
-              <modBC>0</modBC>
-              <vBC>${(generatedData.totalValue * 0.25).toFixed(2)}</vBC>
-              <pICMS>12.00</pICMS>
-              <vICMS>${(generatedData.totalValue * 0.25 * 0.12).toFixed(2)}</vICMS>
-            </ICMS00>
-          </ICMS>
-        </imposto>
-      </det>
-      <det nItem="3">
-        <prod>
-          <cProd>ALM003</cProd>
-          <cEAN>7891000789123</cEAN>
-          <xProd>ÓLEO DE SOJA REFINADO - 900ML</xProd>
-          <NCM>15071000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>200.0000</qCom>
-          <vUnCom>12.50</vUnCom>
-          <vProd>${(generatedData.totalValue * 0.2).toFixed(2)}</vProd>
-          <cEANTrib>7891000789123</cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>200.0000</qTrib>
-          <vUnTrib>12.50</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMS00>
-              <orig>0</orig>
-              <CST>00</CST>
-              <modBC>0</modBC>
-              <vBC>${(generatedData.totalValue * 0.2).toFixed(2)}</vBC>
-              <pICMS>18.00</pICMS>
-              <vICMS>${(generatedData.totalValue * 0.2 * 0.18).toFixed(2)}</vICMS>
-            </ICMS00>
-          </ICMS>
-        </imposto>
-      </det>
-      <det nItem="4">
-        <prod>
-          <cProd>ALM004</cProd>
-          <cEAN>7891000456789</cEAN>
-          <xProd>AÇÚCAR CRISTAL - 1KG</xProd>
-          <NCM>17019900</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>PCT</uCom>
-          <qCom>150.0000</qCom>
-          <vUnCom>4.50</vUnCom>
-          <vProd>${(generatedData.totalValue * 0.15).toFixed(2)}</vProd>
-          <cEANTrib>7891000456789</cEANTrib>
-          <uTrib>PCT</uTrib>
-          <qTrib>150.0000</qTrib>
-          <vUnTrib>4.50</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMS00>
-              <orig>0</orig>
-              <CST>00</CST>
-              <modBC>0</modBC>
-              <vBC>${(generatedData.totalValue * 0.15).toFixed(2)}</vBC>
-              <pICMS>18.00</pICMS>
-              <vICMS>${(generatedData.totalValue * 0.15 * 0.18).toFixed(2)}</vICMS>
-            </ICMS00>
-          </ICMS>
-        </imposto>
-      </det>
-      <det nItem="5">
-        <prod>
-          <cProd>ALM005</cProd>
-          <cEAN>7891000987654</cEAN>
-          <xProd>MACARRÃO ESPAGUETE - 500G</xProd>
-          <NCM>19023000</NCM>
-          <CFOP>5102</CFOP>
-          <uCom>PCT</uCom>
-          <qCom>400.0000</qCom>
-          <vUnCom>3.50</vUnCom>
-          <vProd>${(generatedData.totalValue * 0.1).toFixed(2)}</vProd>
-          <cEANTrib>7891000987654</cEANTrib>
-          <uTrib>PCT</uTrib>
-          <qTrib>400.0000</qTrib>
-          <vUnTrib>3.50</vUnTrib>
-          <indTot>1</indTot>
-        </prod>
-        <imposto>
-          <ICMS>
-            <ICMS00>
-              <orig>0</orig>
-              <CST>00</CST>
-              <modBC>0</modBC>
-              <vBC>${(generatedData.totalValue * 0.1).toFixed(2)}</vBC>
-              <pICMS>18.00</pICMS>
-              <vICMS>${(generatedData.totalValue * 0.1 * 0.18).toFixed(2)}</vICMS>
-            </ICMS00>
-          </ICMS>
-        </imposto>
-      </det>
-      <total>
-        <ICMSTot>
-          <vBC>${generatedData.totalValue.toFixed(2)}</vBC>
-          <vICMS>${(generatedData.totalValue * 0.14).toFixed(2)}</vICMS>
-          <vICMSDeson>0.00</vICMSDeson>
-          <vFCPUFDest>0.00</vFCPUFDest>
-          <vICMSUFDest>0.00</vICMSUFDest>
-          <vICMSUFRemet>0.00</vICMSUFRemet>
-          <vFCP>0.00</vFCP>
-          <vBCST>0.00</vBCST>
-          <vST>0.00</vST>
-          <vFCPST>0.00</vFCPST>
-          <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>${generatedData.totalValue.toFixed(2)}</vProd>
-          <vFrete>0.00</vFrete>
-          <vSeg>0.00</vSeg>
-          <vDesc>0.00</vDesc>
-          <vII>0.00</vII>
-          <vIPI>0.00</vIPI>
-          <vIPIDevol>0.00</vIPIDevol>
-          <vPIS>0.00</vPIS>
-          <vCOFINS>0.00</vCOFINS>
-          <vOutro>0.00</vOutro>
-          <vNF>${generatedData.totalValue.toFixed(2)}</vNF>
-        </ICMSTot>
-      </total>
-      <transp>
-        <modFrete>0</modFrete>
-        <transporta>
-          <CNPJ>22334455000166</CNPJ>
-          <xNome>TRANSPORTES RÁPIDOS LTDA</xNome>
-          <IE>555666777</IE>
-          <xEnder>RUA DOS TRANSPORTES, 1500</xEnder>
-          <xMun>CAPITAL</xMun>
-          <UF>${generatedData.state}</UF>
-        </transporta>
-      </transp>
-      <infAdic>
-        <infCpl>NOTA FISCAL EMITIDA PARA FORNECIMENTO DE ALIMENTOS DESTINADOS À MERENDA ESCOLAR CONFORME CONTRATO DE FORNECIMENTO N° ${generatedData.issueYear}/001 - PROGRAMA NACIONAL DE ALIMENTAÇÃO ESCOLAR - PNAE. PRODUTOS CONFORME ESPECIFICAÇÕES TÉCNICAS DO EDITAL.</infCpl>
-      </infAdic>
-    </infNFe>
-  </NFe>
-  <protNFe versao="4.00">
-    <infProt>
-      <tpAmb>1</tpAmb>
-      <verAplic>SP_NFE_PL_009_V4</verAplic>
-      <chNFe>${searchKey}</chNFe>
-      <dhRecbto>${generatedData.issueYear}-${generatedData.issueMonth}-15T08:45:00-03:00</dhRecbto>
-      <nProt>135240987654321</nProt>
-      <digVal>a1b2c3d4e5f6789012345678901234567890abcd</digVal>
-      <cStat>100</cStat>
-      <xMotivo>Autorizado o uso da NF-e</xMotivo>
-    </infProt>
-  </protNFe>
-</nfeProc>`,
-          pdfBase64: null
-        }
-      ];
+      // Fazer consulta real na API
+      const xmlResponse = await consultNFeAPI(searchKey);
       
+      // Extrair dados reais do XML
+      const nfeData = parseXMLResponse(xmlResponse, searchKey);
+      
+      const mockResults = [nfeData];
       setSearchResults(mockResults);
       
       // Salvar automaticamente no localStorage
@@ -390,8 +125,26 @@ export function DanfeConsultModule() {
       localStorage.setItem('savedDanfeResults', JSON.stringify(newSaved));
       setSavedResults(newSaved);
       
+      console.log('✅ Busca concluída com dados reais da NFe');
+      
+      toast({
+        title: "NFe encontrada",
+        description: `DANFE ${nfeData.danfeNumber} - ${nfeData.supplier}`,
+      });
+      
+    } catch (error) {
+      console.error('❌ Erro na busca:', error);
+      
+      toast({
+        title: "Erro na consulta",
+        description: "Não foi possível consultar a NFe. Verifique a chave de acesso.",
+        variant: "destructive"
+      });
+      
+      setSearchResults([]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   // Etapa 1: Validar XML antes de processar - CORRIGIDA
