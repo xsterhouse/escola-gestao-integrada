@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Dialog, 
@@ -38,6 +37,7 @@ export function UserForm({
   schools = [], // Provide default empty array to prevent undefined errors
 }: UserFormProps) {
   const [name, setName] = useState(initialData?.name || "");
+  const [matricula, setMatricula] = useState(initialData?.matricula || "");
   const [email, setEmail] = useState(initialData?.email || "");
   const [role, setRole] = useState(initialData?.role || "user");
   const [schoolId, setSchoolId] = useState(initialData?.schoolId || "");
@@ -69,7 +69,7 @@ export function UserForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !email || !role) {
+    if (!name || !matricula || !role) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -92,6 +92,7 @@ export function UserForm({
     try {
       onSave({
         name,
+        matricula,
         email,
         role,
         schoolId: role === "master" ? null : schoolId,
@@ -154,16 +155,26 @@ export function UserForm({
                 required
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="matricula">Matrícula *</Label>
+              <Input
+                id="matricula"
+                value={matricula}
+                onChange={(e) => setMatricula(e.target.value)}
+                placeholder="Número de matrícula"
+                required
+              />
+            </div>
             
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail *</Label>
+              <Label htmlFor="email">E-mail</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="email@exemplo.com"
-                required
               />
             </div>
             

@@ -76,6 +76,7 @@ const MOCK_SCHOOL_USERS: User[] = [
   {
     id: "2",
     name: "João Silva",
+    matricula: "ESC001",
     email: "joao@escola1.com",
     role: "admin",
     schoolId: "1",
@@ -91,6 +92,7 @@ const MOCK_SCHOOL_USERS: User[] = [
   {
     id: "3",
     name: "Maria Oliveira",
+    matricula: "ESC002",
     email: "maria@escola2.com",
     role: "admin",
     schoolId: "2",

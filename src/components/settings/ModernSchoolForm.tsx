@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Dialog, 
@@ -43,36 +42,7 @@ export function ModernSchoolForm({
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [cnpjError, setCnpjError] = useState("");
   const { toast } = useToast();
-
-  const validateCNPJ = async (cnpj: string) => {
-    // Remove caracteres não numéricos
-    const cleanCNPJ = cnpj.replace(/\D/g, '');
-    
-    if (cleanCNPJ.length !== 14) {
-      setCnpjError("CNPJ deve ter 14 dígitos");
-      return false;
-    }
-
-    // Simulação de validação de CNPJ ativo (em produção, usar API da Receita Federal)
-    const isValid = await simulateCNPJValidation(cleanCNPJ);
-    if (!isValid) {
-      setCnpjError("CNPJ inválido ou inativo");
-      return false;
-    }
-
-    setCnpjError("");
-    return true;
-  };
-
-  const simulateCNPJValidation = async (cnpj: string): Promise<boolean> => {
-    // Simulação - em produção, fazer chamada para API da Receita Federal
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Aceitar CNPJs que começam com 11, 12, 13 como válidos para demo
-    return cnpj.startsWith('11') || cnpj.startsWith('12') || cnpj.startsWith('13');
-  };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -88,17 +58,12 @@ export function ModernSchoolForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.cnpj || !formData.responsibleName || !formData.email) {
+    if (!formData.name || !formData.cnpj || !formData.responsibleName) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos obrigatórios.",
         variant: "destructive",
       });
-      return;
-    }
-
-    const cnpjValid = await validateCNPJ(formData.cnpj);
-    if (!cnpjValid) {
       return;
     }
     
@@ -213,11 +178,7 @@ export function ModernSchoolForm({
                 onChange={(e) => setFormData(prev => ({ ...prev, cnpj: e.target.value }))}
                 placeholder="00.000.000/0000-00"
                 required
-                className={cnpjError ? "border-red-500" : ""}
               />
-              {cnpjError && (
-                <p className="text-sm text-red-500">{cnpjError}</p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -242,14 +203,13 @@ export function ModernSchoolForm({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail *</Label>
+              <Label htmlFor="email">E-mail</Label>
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="email@exemplo.com"
-                required
               />
             </div>
             
