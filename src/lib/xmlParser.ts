@@ -69,21 +69,26 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
     const totalValueStr = icmsTot?.querySelector("vNF")?.textContent || "0";
     const totalValue = parseFloat(totalValueStr);
 
-    // Extract items
+    // Extract ALL items from the XML
     const detNodes = xmlDoc.querySelectorAll("det");
     const items: InvoiceItem[] = [];
     
-    detNodes.forEach((det) => {
+    console.log(`Processando ${detNodes.length} itens encontrados no XML`);
+    
+    detNodes.forEach((det, index) => {
       const prod = det.querySelector("prod");
       if (prod) {
         const description = prod.querySelector("xProd")?.textContent || "";
         const quantityStr = prod.querySelector("qCom")?.textContent || "0";
         const unitPriceStr = prod.querySelector("vUnCom")?.textContent || "0";
         const unitOfMeasure = prod.querySelector("uCom")?.textContent || "Un";
+        const totalPriceStr = prod.querySelector("vProd")?.textContent || "0";
         
-        const quantity = parseFloat(quantityStr);
-        const unitPrice = parseFloat(unitPriceStr);
-        const totalPrice = quantity * unitPrice;
+        const quantity = parseFloat(quantityStr.replace(',', '.'));
+        const unitPrice = parseFloat(unitPriceStr.replace(',', '.'));
+        const totalPrice = parseFloat(totalPriceStr.replace(',', '.'));
+
+        console.log(`Item ${index + 1}: ${description} - Qtd: ${quantity} - Preço Unit: ${unitPrice} - Total: ${totalPrice}`);
 
         if (description && quantity > 0) {
           items.push({
@@ -102,6 +107,8 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
     if (items.length === 0) {
       throw new Error("Nenhum item encontrado no XML");
     }
+
+    console.log(`Total de itens processados: ${items.length}`);
 
     return {
       supplier,

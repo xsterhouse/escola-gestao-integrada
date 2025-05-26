@@ -93,6 +93,8 @@ export function ImportXmlDialog({
         const parsed = parseXMLToInvoice(content);
         setParsedData(parsed);
         
+        console.log(`XML processado com sucesso: ${parsed.items.length} itens encontrados`);
+        
         // Verificar se já existe uma nota com o mesmo DANFE
         const duplicate = checkDuplicateInvoice(parsed.danfeNumber);
         if (duplicate) {
@@ -177,6 +179,8 @@ export function ImportXmlDialog({
         invoiceId
       }));
       
+      console.log(`Criando nota fiscal com ${items.length} itens`);
+      
       const invoice: Invoice = {
         id: invoiceId,
         supplierId: parsedData.supplier.id,
@@ -188,8 +192,8 @@ export function ImportXmlDialog({
         financialProgramming: values.financialProgrammingDate 
           ? `${values.financialProgrammingDate} - ${values.installments || 1} parcela(s)`
           : undefined,
-        status: 'pendente', // Nova nota sempre começa como pendente
-        isActive: false, // Só fica ativa após aprovação
+        status: 'pendente',
+        isActive: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -208,7 +212,7 @@ export function ImportXmlDialog({
         
         toast({
           title: "Importação concluída",
-          description: "O arquivo XML foi importado com sucesso. A nota está aguardando aprovação.",
+          description: `XML importado com sucesso! ${items.length} itens foram processados. A nota está aguardando aprovação.`,
         });
       }, 1500);
     } catch (error) {
