@@ -74,36 +74,11 @@ export function FinancialReports({
   const [password, setPassword] = useState("");
   const [selectedReportId, setSelectedReportId] = useState("");
   
-  // Sample reports data - would be fetched from API in real implementation
-  const [reports] = useState([
-    {
-      id: "report-1",
-      title: "Prestação de Contas PNAE - Março 2025",
-      resourceType: "PNAE",
-      period: "01/03/2025 - 31/03/2025",
-      createdAt: new Date(2025, 2, 31),
-      createdBy: "João Silva",
-      status: "finalizado"
-    },
-    {
-      id: "report-2",
-      title: "Prestação de Contas PNATE - 1º Trimestre 2025",
-      resourceType: "PNATE",
-      period: "01/01/2025 - 31/03/2025",
-      createdAt: new Date(2025, 3, 5),
-      createdBy: "Maria Oliveira",
-      status: "finalizado"
-    },
-    {
-      id: "report-3",
-      title: "Relatório de Pagamentos - Fevereiro 2025",
-      resourceType: "Todos",
-      period: "01/02/2025 - 28/02/2025",
-      createdAt: new Date(2025, 2, 3),
-      createdBy: "Carlos Santos",
-      status: "finalizado"
-    },
-  ]);
+  // Relatórios salvos carregados do localStorage (dados reais)
+  const [reports] = useState(() => {
+    const savedReports = localStorage.getItem('financialReports');
+    return savedReports ? JSON.parse(savedReports) : [];
+  });
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -123,15 +98,16 @@ export function FinancialReports({
   };
   
   const confirmDeleteReport = () => {
-    // In a real app, you would verify password and delete the report
-    // Here we're just closing the dialog
+    // Em uma aplicação real, verificaria a senha e deletaria o relatório
+    const updatedReports = reports.filter((r: any) => r.id !== selectedReportId);
+    localStorage.setItem('financialReports', JSON.stringify(updatedReports));
     setIsDeleteDialogOpen(false);
     setPassword("");
   };
   
-  // Function to generate a resource report (PNAE, PNATE, etc.)
+  // Função para gerar relatório de recursos (PNAE, PNATE, etc.)
   const generateResourceReport = () => {
-    // Filter and format data for the report
+    // Filtrar e formatar dados para o relatório
     const filteredPayments = payables.filter(payment => {
       if (resourceTypeFilter !== "all" && payment.resourceCategory !== resourceTypeFilter) {
         return false;
@@ -172,13 +148,13 @@ export function FinancialReports({
       return true;
     });
     
-    // Prepare data for export
+    // Preparar dados para exportação
     const reportTitle = `Prestação de Contas - ${resourceTypeFilter !== "all" ? resourceTypeFilter : "Todos os recursos"}`;
     const reportPeriod = startDate && endDate 
       ? `${format(startDate, 'dd/MM/yyyy')} - ${format(endDate, 'dd/MM/yyyy')}`
       : "Período completo";
     
-    // Format payments data
+    // Formatar dados de pagamentos
     const paymentsData = filteredPayments.map(payment => ({
       tipo: "Despesa",
       descricao: payment.description,
@@ -189,7 +165,7 @@ export function FinancialReports({
       status: payment.status === 'a_pagar' ? 'A Pagar' : 'Pago'
     }));
     
-    // Format receipts data
+    // Formatar dados de recebimentos
     const receiptsData = filteredReceipts.map(receipt => ({
       tipo: "Receita",
       descricao: receipt.description,
@@ -200,10 +176,10 @@ export function FinancialReports({
       status: receipt.status === 'pendente' ? 'Pendente' : 'Recebido'
     }));
     
-    // Combine data
+    // Combinar dados
     const reportData = [...receiptsData, ...paymentsData];
     
-    // Export to CSV
+    // Exportar para CSV
     exportToCsv(reportData, `prestacao_contas_${resourceTypeFilter}`, [
       { header: 'Tipo', key: 'tipo' },
       { header: 'Descrição', key: 'descricao' },
@@ -215,9 +191,9 @@ export function FinancialReports({
     ]);
   };
   
-  // Function to generate payment and receipt report
+  // Função para gerar relatório de pagamentos e recebimentos
   const generateTransactionsReport = () => {
-    // Filter data based on selected filters
+    // Filtrar dados baseado nos filtros selecionados
     const filteredPayments = payables.filter(payment => {
       let include = true;
       
@@ -278,7 +254,7 @@ export function FinancialReports({
       return include;
     });
     
-    // Prepare data for export
+    // Preparar dados para exportação
     const paymentsData = filteredPayments.map(payment => ({
       tipo: "Pagamento",
       descricao: payment.description,
@@ -297,10 +273,10 @@ export function FinancialReports({
       situacao: receipt.status === 'pendente' ? 'Pendente' : 'Recebido'
     }));
     
-    // Combine data
+    // Combinar dados
     const reportData = [...receiptsData, ...paymentsData];
     
-    // Export to CSV
+    // Exportar para CSV
     exportToCsv(reportData, 'pagamentos_recebimentos', [
       { header: 'Tipo', key: 'tipo' },
       { header: 'Descrição', key: 'descricao' },
@@ -419,42 +395,50 @@ export function FinancialReports({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.filter(r => r.resourceType !== "Todos").map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell className="font-medium">{report.title}</TableCell>
-                      <TableCell>{report.resourceType}</TableCell>
-                      <TableCell>{report.period}</TableCell>
-                      <TableCell>{format(new Date(report.createdAt), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>{report.createdBy}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewReport(report.id)}
-                            title="Visualizar"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Download"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteReport(report.id)}
-                            title="Excluir"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                  {reports.filter((r: any) => r.resourceType !== "Todos").length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        Nenhum relatório de prestação de contas encontrado. Gere novos relatórios usando os filtros acima.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    reports.filter((r: any) => r.resourceType !== "Todos").map((report: any) => (
+                      <TableRow key={report.id}>
+                        <TableCell className="font-medium">{report.title}</TableCell>
+                        <TableCell>{report.resourceType}</TableCell>
+                        <TableCell>{report.period}</TableCell>
+                        <TableCell>{format(new Date(report.createdAt), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>{report.createdBy}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewReport(report.id)}
+                              title="Visualizar"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Download"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteReport(report.id)}
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -569,41 +553,49 @@ export function FinancialReports({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.filter(r => r.resourceType === "Todos").map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell className="font-medium">{report.title}</TableCell>
-                      <TableCell>{report.period}</TableCell>
-                      <TableCell>{format(new Date(report.createdAt), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>{report.createdBy}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewReport(report.id)}
-                            title="Visualizar"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Download"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteReport(report.id)}
-                            title="Excluir"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                  {reports.filter((r: any) => r.resourceType === "Todos").length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                        Nenhum relatório de pagamentos e recebimentos encontrado. Gere novos relatórios usando os filtros acima.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    reports.filter((r: any) => r.resourceType === "Todos").map((report: any) => (
+                      <TableRow key={report.id}>
+                        <TableCell className="font-medium">{report.title}</TableCell>
+                        <TableCell>{report.period}</TableCell>
+                        <TableCell>{format(new Date(report.createdAt), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>{report.createdBy}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewReport(report.id)}
+                              title="Visualizar"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Download"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteReport(report.id)}
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -663,21 +655,21 @@ export function FinancialReports({
           <div className="space-y-6">
             <div className="border-b pb-4">
               <h3 className="text-xl font-semibold">
-                {reports.find(r => r.id === selectedReportId)?.title || "Relatório"}
+                {reports.find((r: any) => r.id === selectedReportId)?.title || "Relatório"}
               </h3>
               <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted-foreground">
                 <div>
                   <span className="font-medium">Período:</span>{" "}
-                  {reports.find(r => r.id === selectedReportId)?.period}
+                  {reports.find((r: any) => r.id === selectedReportId)?.period}
                 </div>
                 <div>
                   <span className="font-medium">Gerado por:</span>{" "}
-                  {reports.find(r => r.id === selectedReportId)?.createdBy}
+                  {reports.find((r: any) => r.id === selectedReportId)?.createdBy}
                 </div>
                 <div>
                   <span className="font-medium">Data de criação:</span>{" "}
-                  {reports.find(r => r.id === selectedReportId)?.createdAt && 
-                   format(new Date(reports.find(r => r.id === selectedReportId)!.createdAt), 'dd/MM/yyyy')}
+                  {reports.find((r: any) => r.id === selectedReportId)?.createdAt && 
+                   format(new Date(reports.find((r: any) => r.id === selectedReportId)!.createdAt), 'dd/MM/yyyy')}
                 </div>
               </div>
             </div>
@@ -690,7 +682,7 @@ export function FinancialReports({
                     <CardTitle className="text-sm">Total Receitas</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl font-bold text-green-600">{formatCurrency(35000)}</p>
+                    <p className="text-xl font-bold text-green-600">{formatCurrency(0)}</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -698,7 +690,7 @@ export function FinancialReports({
                     <CardTitle className="text-sm">Total Despesas</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl font-bold text-red-600">{formatCurrency(29500)}</p>
+                    <p className="text-xl font-bold text-red-600">{formatCurrency(0)}</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -706,7 +698,7 @@ export function FinancialReports({
                     <CardTitle className="text-sm">Saldo</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl font-bold">{formatCurrency(5500)}</p>
+                    <p className="text-xl font-bold">{formatCurrency(0)}</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -714,7 +706,7 @@ export function FinancialReports({
                     <CardTitle className="text-sm">Itens</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl font-bold">26</p>
+                    <p className="text-xl font-bold">0</p>
                   </CardContent>
                 </Card>
               </div>
@@ -733,56 +725,15 @@ export function FinancialReports({
                   </TableHeader>
                   <TableBody>
                     <TableRow>
-                      <TableCell>Recebimento PNAE - Março 2025</TableCell>
-                      <TableCell>PNAE</TableCell>
-                      <TableCell>05/03/2025</TableCell>
-                      <TableCell className="text-green-600">{formatCurrency(35000)}</TableCell>
-                      <TableCell>Receita</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Compra de alimentos - Fornecedor XYZ</TableCell>
-                      <TableCell>Alimentação</TableCell>
-                      <TableCell>10/03/2025</TableCell>
-                      <TableCell className="text-red-600">{formatCurrency(12500)}</TableCell>
-                      <TableCell>Despesa</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Compra de frutas e legumes</TableCell>
-                      <TableCell>Alimentação</TableCell>
-                      <TableCell>15/03/2025</TableCell>
-                      <TableCell className="text-red-600">{formatCurrency(8700)}</TableCell>
-                      <TableCell>Despesa</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Compra de carnes</TableCell>
-                      <TableCell>Alimentação</TableCell>
-                      <TableCell>20/03/2025</TableCell>
-                      <TableCell className="text-red-600">{formatCurrency(8300)}</TableCell>
-                      <TableCell>Despesa</TableCell>
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                        Nenhum dado disponível no relatório selecionado.
+                      </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
               </div>
             </div>
           </div>
-          
-          <DialogFooter className="pt-4">
-            <div className="flex gap-2 w-full justify-between">
-              <Button variant="outline" onClick={() => setIsViewReportOpen(false)}>
-                Fechar
-              </Button>
-              <div className="flex gap-2">
-                <Button variant="outline">
-                  <Download className="mr-2 h-4 w-4" />
-                  Exportar PDF
-                </Button>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Exportar Excel
-                </Button>
-              </div>
-            </div>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

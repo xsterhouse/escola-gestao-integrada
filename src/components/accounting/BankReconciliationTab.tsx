@@ -50,35 +50,9 @@ export function BankReconciliationTab() {
     const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
     setAccountingEntries(entries);
 
-    // Simular transações bancárias (em uma aplicação real, isso viria da API do banco)
-    const mockBankTransactions: BankTransaction[] = [
-      {
-        id: "bank_1",
-        date: "2024-01-15",
-        description: "Transferência recebida - Pagamento fornecedor ABC",
-        value: 1500.00,
-        type: "credit",
-        reconciled: false
-      },
-      {
-        id: "bank_2", 
-        date: "2024-01-16",
-        description: "Débito - Taxa bancária",
-        value: 25.50,
-        type: "debit",
-        reconciled: false
-      },
-      {
-        id: "bank_3",
-        date: "2024-01-17",
-        description: "Depósito em conta",
-        value: 2000.00,
-        type: "credit",
-        reconciled: false
-      }
-    ];
-    
-    setBankTransactions(mockBankTransactions);
+    // Carregar transações bancárias (agora apenas do localStorage, sem dados mockados)
+    const transactions = JSON.parse(localStorage.getItem('bankTransactions') || '[]');
+    setBankTransactions(transactions);
   }, []);
 
   const handleReconciliation = (bankTransactionId: string, accountingEntryId: string) => {
@@ -260,57 +234,71 @@ export function BankReconciliationTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {getFilteredBankTransactions().map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell className="font-medium">
-                    {new Date(transaction.date).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell className="max-w-xs">
-                    <div className="truncate" title={transaction.description}>
-                      {transaction.description}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={transaction.type === 'credit' ? 'default' : 'secondary'}>
-                      {transaction.type === 'credit' ? 'Crédito' : 'Débito'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-semibold">
-                    <span className={transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'}>
-                      {transaction.type === 'debit' ? '-' : '+'}
-                      {transaction.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={transaction.reconciled ? 'default' : 'secondary'}>
-                      {transaction.reconciled ? 'Conciliada' : 'Pendente'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {transaction.reconciled && transaction.accountingEntryId ? (
-                      <span className="text-sm text-gray-600">#{transaction.accountingEntryId.slice(-6)}</span>
-                    ) : (
-                      <span className="text-sm text-gray-400">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {!transaction.reconciled && (
-                      <Select onValueChange={(entryId) => handleReconciliation(transaction.id, entryId)}>
-                        <SelectTrigger className="w-40">
-                          <SelectValue placeholder="Vincular" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getUnreconciledEntries().map((entry) => (
-                            <SelectItem key={entry.id} value={entry.id}>
-                              {entry.history.substring(0, 30)}...
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+              {getFilteredBankTransactions().length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    {bankTransactions.length === 0 
+                      ? "Nenhuma transação bancária encontrada. As transações serão carregadas automaticamente quando disponíveis."
+                      : "Nenhuma transação encontrada com os filtros aplicados."
+                    }
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                getFilteredBankTransactions().map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell className="font-medium">
+                      {new Date(transaction.date).toLocaleDateString('pt-BR')}
+                    </TableCell>
+                    <TableCell className="max-w-xs">
+                      <div className="truncate" title={transaction.description}>
+                        {transaction.description}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={transaction.type === 'credit' ? 'default' : 'secondary'}>
+                        {transaction.type === 'credit' ? 'Crédito' : 'Débito'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">
+                      <span className={transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'}>
+                        {transaction.type === 'debit' ? '-' : '+'}
+                        {transaction.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={transaction.reconciled ? 'default' : 'secondary'}>
+                        {transaction.reconciled ? 'Conciliada' : 'Pendente'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {transaction.reconciled && transaction.accountingEntryId ? (
+                        <span className="text-sm text-gray-600">#{transaction.accountingEntryId.slice(-6)}</span>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {!transaction.reconciled && getUnreconciledEntries().length > 0 && (
+                        <Select onValueChange={(entryId) => handleReconciliation(transaction.id, entryId)}>
+                          <SelectTrigger className="w-40">
+                            <SelectValue placeholder="Vincular" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getUnreconciledEntries().map((entry) => (
+                              <SelectItem key={entry.id} value={entry.id}>
+                                {entry.history.substring(0, 30)}...
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {!transaction.reconciled && getUnreconciledEntries().length === 0 && (
+                        <span className="text-sm text-gray-400">Sem lançamentos</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
