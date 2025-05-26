@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -27,18 +26,45 @@ import {
   Clock
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 
 type SidebarProps = {
   className?: string;
 };
+
+interface PurchasingCenter {
+  id: string;
+  name: string;
+  description: string;
+  schoolIds: string[];
+  status: "active" | "inactive";
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export function Sidebar({ className }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [sessionStart] = useState(new Date());
   const [sessionTime, setSessionTime] = useState("00:00:00");
+  const [userPurchasingCenter, setUserPurchasingCenter] = useState<string | null>(null);
   const { user, currentSchool, logout } = useAuth();
   const location = useLocation();
+  
+  // Carregar dados das centrais de compras
+  const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasingCenters', []);
+  
+  // Encontrar a central de compras do usuário/escola atual
+  useEffect(() => {
+    if (currentSchool && purchasingCenters.length > 0) {
+      const center = purchasingCenters.find(pc => 
+        pc.schoolIds.includes(currentSchool.id) && pc.status === "active"
+      );
+      setUserPurchasingCenter(center?.name || null);
+    } else {
+      setUserPurchasingCenter(null);
+    }
+  }, [currentSchool, purchasingCenters]);
   
   // Update session time every second
   useEffect(() => {
@@ -163,6 +189,11 @@ export function Sidebar({ className }: SidebarProps) {
                   <p className="text-sm text-blue-200 truncate text-center">
                     {currentSchool?.name}
                   </p>
+                  {userPurchasingCenter && (
+                    <p className="text-xs text-blue-300 truncate text-center mt-1">
+                      Central: {userPurchasingCenter}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -282,6 +313,11 @@ export function Sidebar({ className }: SidebarProps) {
                 <p className="text-xs text-blue-200 truncate">
                   {currentSchool?.name}
                 </p>
+                {userPurchasingCenter && (
+                  <p className="text-xs text-blue-300 truncate">
+                    Central: {userPurchasingCenter}
+                  </p>
+                )}
               </div>
             </div>
           </div>

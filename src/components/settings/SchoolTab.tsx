@@ -16,11 +16,13 @@ import {
   Plus,
   Lock
 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export function SchoolTab() {
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [currentSchool, setCurrentSchool] = useState<School | null>(null);
   
   // Usar hook de sincronização em vez de useState + useEffect manual
@@ -91,19 +93,19 @@ export function SchoolTab() {
   };
 
   const handleDeleteSchool = (id: string) => {
-    const updatedSchools = schools.filter(school => school.id !== id);
-    setSchools(updatedSchools);
-    toast({ 
-      title: "Escola excluída", 
-      description: "A escola foi removida do sistema permanentemente."
-    });
+    if (window.confirm("Tem certeza que deseja excluir esta escola? Esta ação não pode ser desfeita.")) {
+      const updatedSchools = schools.filter(school => school.id !== id);
+      setSchools(updatedSchools);
+      toast({ 
+        title: "Escola excluída", 
+        description: "A escola foi removida do sistema permanentemente."
+      });
+    }
   };
 
   const handleViewSchool = (school: School) => {
-    toast({ 
-      title: "Visualizar Escola", 
-      description: `Detalhes da escola ${school.name}`
-    });
+    setCurrentSchool(school);
+    setIsViewModalOpen(true);
   };
 
   const handleBlockSchool = (id: string) => {
@@ -255,10 +257,103 @@ export function SchoolTab() {
 
       <ModernSchoolForm 
         isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setCurrentSchool(null);
+        }}
         onSave={handleSaveSchool}
         initialData={currentSchool || undefined}
       />
+
+      {/* Modal de Visualização */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Visualizar Escola</DialogTitle>
+            <DialogDescription>
+              Detalhes da escola cadastrada no sistema.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {currentSchool && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+              {currentSchool.logo && (
+                <div className="md:col-span-2 flex justify-center">
+                  <img 
+                    src={currentSchool.logo} 
+                    alt={`Logo ${currentSchool.name}`} 
+                    className="h-20 w-20 object-contain border rounded"
+                  />
+                </div>
+              )}
+              
+              <div>
+                <label className="text-sm font-medium">Nome da Instituição</label>
+                <p className="text-sm text-gray-600">{currentSchool.name}</p>
+              </div>
+              
+              {currentSchool.tradingName && (
+                <div>
+                  <label className="text-sm font-medium">Nome Fantasia</label>
+                  <p className="text-sm text-gray-600">{currentSchool.tradingName}</p>
+                </div>
+              )}
+              
+              <div>
+                <label className="text-sm font-medium">CNPJ</label>
+                <p className="text-sm text-gray-600">{currentSchool.cnpj}</p>
+              </div>
+              
+              {currentSchool.director && (
+                <div>
+                  <label className="text-sm font-medium">Diretor(a)</label>
+                  <p className="text-sm text-gray-600">{currentSchool.director}</p>
+                </div>
+              )}
+              
+              <div>
+                <label className="text-sm font-medium">Responsável</label>
+                <p className="text-sm text-gray-600">{currentSchool.responsibleName}</p>
+              </div>
+              
+              {currentSchool.email && (
+                <div>
+                  <label className="text-sm font-medium">E-mail</label>
+                  <p className="text-sm text-gray-600">{currentSchool.email}</p>
+                </div>
+              )}
+              
+              {currentSchool.phone && (
+                <div>
+                  <label className="text-sm font-medium">Telefone</label>
+                  <p className="text-sm text-gray-600">{currentSchool.phone}</p>
+                </div>
+              )}
+              
+              {currentSchool.address && (
+                <div>
+                  <label className="text-sm font-medium">Endereço</label>
+                  <p className="text-sm text-gray-600">{currentSchool.address}</p>
+                </div>
+              )}
+              
+              {currentSchool.cityState && (
+                <div>
+                  <label className="text-sm font-medium">Cidade/Estado</label>
+                  <p className="text-sm text-gray-600">{currentSchool.cityState}</p>
+                </div>
+              )}
+              
+              <div>
+                <label className="text-sm font-medium">Status</label>
+                <p className="text-sm text-gray-600">
+                  {currentSchool.status === "active" ? "Ativa" : "Suspensa"}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
