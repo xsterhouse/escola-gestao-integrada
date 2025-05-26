@@ -9,7 +9,7 @@ import { SystemUserEditModal } from "@/components/settings/SystemUserEditModal";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { saveUserPassword } from "@/contexts/AuthContext";
-import { Eye, Pencil, Ban, ShieldCheck, Plus, User, Trash2 } from "lucide-react";
+import { Eye, Pencil, Ban, ShieldCheck, Plus, User, Trash2, Building } from "lucide-react";
 
 interface SystemUser {
   id: string;
@@ -18,6 +18,7 @@ interface SystemUser {
   password: string;
   schoolId: string | null;
   isLinkedToPurchasing: boolean;
+  purchasingCenterIds?: string[];
   status: "active" | "blocked";
   createdAt: Date;
   updatedAt: Date;
@@ -28,6 +29,14 @@ interface School {
   name: string;
 }
 
+interface PurchasingCenter {
+  id: string;
+  name: string;
+  description: string;
+  schoolIds: string[];
+  status: "active" | "inactive";
+}
+
 export function SystemUsersTab() {
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,6 +45,7 @@ export function SystemUsersTab() {
   
   const { data: systemUsers, saveData: setSystemUsers } = useLocalStorageSync<SystemUser>('systemUsers', []);
   const { data: schools } = useLocalStorageSync<School>('schools', []);
+  const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasingCenters', []);
 
   const handleSaveUser = (userData: Omit<SystemUser, "id" | "createdAt" | "updatedAt">) => {
     const newUser: SystemUser = {
@@ -125,9 +135,17 @@ export function SystemUsersTab() {
     const school = schools.find(s => s.id === user.schoolId);
     const schoolName = school ? school.name : "Nenhuma escola vinculada";
     
+    const userPurchasingCenters = user.purchasingCenterIds 
+      ? purchasingCenters.filter(pc => user.purchasingCenterIds!.includes(pc.id))
+      : [];
+    
+    const purchasingCenterNames = userPurchasingCenters.length > 0 
+      ? userPurchasingCenters.map(pc => pc.name).join(", ")
+      : "Nenhuma central vinculada";
+    
     toast({
       title: "Detalhes do Usuário",
-      description: `Nome: ${user.name}, Matrícula: ${user.matricula}, Escola: ${schoolName}, Central de Compras: ${user.isLinkedToPurchasing ? "Sim" : "Não"}`,
+      description: `Nome: ${user.name}, Matrícula: ${user.matricula}, Escola: ${schoolName}, Centrais: ${purchasingCenterNames}`,
     });
   };
 
@@ -140,6 +158,20 @@ export function SystemUsersTab() {
     if (!schoolId) return "Nenhuma escola";
     const school = schools.find(s => s.id === schoolId);
     return school ? school.name : "Escola não encontrada";
+  };
+
+  const getPurchasingCenterNames = (purchasingCenterIds?: string[]) => {
+    if (!purchasingCenterIds || purchasingCenterIds.length === 0) {
+      return "Nenhuma";
+    }
+    
+    const userCenters = purchasingCenters.filter(pc => 
+      purchasingCenterIds.includes(pc.id)
+    );
+    
+    return userCenters.length > 0 
+      ? userCenters.map(pc => pc.name).join(", ")
+      : "Centrais não encontradas";
   };
 
   return (
@@ -176,7 +208,7 @@ export function SystemUsersTab() {
               <TableHead>Nome</TableHead>
               <TableHead>Matrícula</TableHead>
               <TableHead>Escola</TableHead>
-              <TableHead>Central de Compras</TableHead>
+              <TableHead>Centrais de Compras</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -194,10 +226,11 @@ export function SystemUsersTab() {
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell className="font-mono">{user.matricula}</TableCell>
                   <TableCell className="text-sm">{getSchoolName(user.schoolId)}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.isLinkedToPurchasing ? "default" : "outline"}>
-                      {user.isLinkedToPurchasing ? "Vinculado" : "Não vinculado"}
-                    </Badge>
+                  <TableCell className="text-sm max-w-48">
+                    <div className="flex items-center gap-1">
+                      <Building className="h-3 w-3 text-gray-500" />
+                      <span className="truncate">{getPurchasingCenterNames(user.purchasingCenterIds)}</span>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={user.status === "active" ? "default" : "destructive"}>
