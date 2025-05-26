@@ -22,23 +22,54 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
   }
 
   try {
-    // Extract supplier information
-    const emit = xmlDoc.querySelector("emit");
-    if (!emit) {
-      throw new Error("Dados do emitente não encontrados no XML");
-    }
+    // Define namespace resolver for NF-e XML
+    const nsResolver = (prefix: string) => {
+      const namespaces: { [key: string]: string } = {
+        'nfe': 'http://www.portalfiscal.inf.br/nfe'
+      };
+      return namespaces[prefix] || null;
+    };
 
-    const supplierCNPJ = emit.querySelector("CNPJ")?.textContent || "";
-    const supplierName = emit.querySelector("xNome")?.textContent || "";
-    const supplierAddress = [
-      emit.querySelector("xLgr")?.textContent,
-      emit.querySelector("nro")?.textContent,
-      emit.querySelector("xBairro")?.textContent,
-      emit.querySelector("xMun")?.textContent,
-      emit.querySelector("UF")?.textContent
-    ].filter(Boolean).join(", ");
+    // Function to get text content using XPath with namespace
+    const getXPathValue = (xpath: string, context: Node = xmlDoc): string => {
+      const result = xmlDoc.evaluate(xpath, context, nsResolver, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+      return result.singleNodeValue?.textContent?.trim() || "";
+    };
+
+    // Function to get all nodes using XPath
+    const getXPathNodes = (xpath: string, context: Node = xmlDoc): Node[] => {
+      const result = xmlDoc.evaluate(xpath, context, nsResolver, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+      const nodes: Node[] = [];
+      for (let i = 0; i < result.snapshotLength; i++) {
+        const node = result.snapshotItem(i);
+        if (node) nodes.push(node);
+      }
+      return nodes;
+    };
+
+    // Extract supplier information (emitente)
+    const supplierName = getXPathValue("//nfe:emit/nfe:xNome") || 
+                        getXPathValue("//emit/xNome");
     
-    const supplierPhone = emit.querySelector("fone")?.textContent || "";
+    const supplierCNPJ = getXPathValue("//nfe:emit/nfe:CNPJ") || 
+                        getXPathValue("//emit/CNPJ");
+
+    // Build supplier address
+    const addressParts = [
+      getXPathValue("//nfe:emit/nfe:enderEmit/nfe:xLgr") || getXPathValue("//emit/enderEmit/xLgr"),
+      getXPathValue("//nfe:emit/nfe:enderEmit/nfe:nro") || getXPathValue("//emit/enderEmit/nro"),
+      getXPathValue("//nfe:emit/nfe:enderEmit/nfe:xBairro") || getXPathValue("//emit/enderEmit/xBairro"),
+      getXPathValue("//nfe:emit/nfe:enderEmit/nfe:xMun") || getXPathValue("//emit/enderEmit/xMun"),
+      getXPathValue("//nfe:emit/nfe:enderEmit/nfe:UF") || getXPathValue("//emit/enderEmit/UF")
+    ].filter(Boolean);
+
+    const supplierAddress = addressParts.join(", ");
+    const supplierPhone = getXPathValue("//nfe:emit/nfe:enderEmit/nfe:fone") || 
+                         getXPathValue("//emit/enderEmit/fone");
+
+    if (!supplierName || !supplierCNPJ) {
+      throw new Error("Dados do emitente não encontrados ou incompletos no XML");
+    }
 
     const supplier: Supplier = {
       id: uuidv4(),
@@ -48,67 +79,93 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
       phone: supplierPhone
     };
 
-    // Extract invoice information
-    const ide = xmlDoc.querySelector("ide");
-    if (!ide) {
-      throw new Error("Dados de identificação da nota não encontrados no XML");
+    // Extract invoice identification (identificação da nota)
+    const danfeNumber = getXPathValue("//nfe:ide/nfe:nNF") || 
+                       getXPathValue("//ide/nNF");
+    
+    const issueDateStr = getXPathValue("//nfe:ide/nfe:dhEmi") || 
+                        getXPathValue("//ide/dhEmi") ||
+                        getXPathValue("//nfe:ide/nfe:dEmi") || 
+                        getXPathValue("//ide/dEmi");
+
+    if (!danfeNumber) {
+      throw new Error("Número da DANFE não encontrado no XML");
     }
 
-    const danfeNumber = ide.querySelector("nNF")?.textContent || "";
-    const issueDateStr = ide.querySelector("dhEmi")?.textContent || ide.querySelector("dEmi")?.textContent || "";
-    
     let issueDate: Date;
     if (issueDateStr) {
       issueDate = new Date(issueDateStr);
+      if (isNaN(issueDate.getTime())) {
+        throw new Error("Data de emissão inválida no XML");
+      }
     } else {
       throw new Error("Data de emissão não encontrada no XML");
     }
 
-    // Extract total value
-    const icmsTot = xmlDoc.querySelector("ICMSTot");
-    const totalValueStr = icmsTot?.querySelector("vNF")?.textContent || "0";
-    const totalValue = parseFloat(totalValueStr);
+    // Extract total value (valor total da NF-e)
+    const totalValueStr = getXPathValue("//nfe:total/nfe:ICMSTot/nfe:vNF") || 
+                         getXPathValue("//total/ICMSTot/vNF");
+    
+    if (!totalValueStr) {
+      throw new Error("Valor total da nota não encontrado no XML");
+    }
 
-    // Extract ALL items from the XML
-    const detNodes = xmlDoc.querySelectorAll("det");
+    const totalValue = parseFloat(totalValueStr.replace(',', '.'));
+    if (isNaN(totalValue)) {
+      throw new Error("Valor total da nota inválido");
+    }
+
+    // Extract ALL items (detalhes dos produtos/serviços)
+    const detailNodes = getXPathNodes("//nfe:det") || getXPathNodes("//det");
     const items: InvoiceItem[] = [];
     
-    console.log(`Processando ${detNodes.length} itens encontrados no XML`);
+    console.log(`Processando ${detailNodes.length} itens encontrados no XML da NF-e`);
     
-    detNodes.forEach((det, index) => {
-      const prod = det.querySelector("prod");
-      if (prod) {
-        const description = prod.querySelector("xProd")?.textContent || "";
-        const quantityStr = prod.querySelector("qCom")?.textContent || "0";
-        const unitPriceStr = prod.querySelector("vUnCom")?.textContent || "0";
-        const unitOfMeasure = prod.querySelector("uCom")?.textContent || "Un";
-        const totalPriceStr = prod.querySelector("vProd")?.textContent || "0";
-        
-        const quantity = parseFloat(quantityStr.replace(',', '.'));
-        const unitPrice = parseFloat(unitPriceStr.replace(',', '.'));
-        const totalPrice = parseFloat(totalPriceStr.replace(',', '.'));
+    detailNodes.forEach((detNode, index) => {
+      // Extract product information from each detail node
+      const description = getXPathValue(".//nfe:prod/nfe:xProd", detNode) || 
+                         getXPathValue(".//prod/xProd", detNode);
+      
+      const quantityStr = getXPathValue(".//nfe:prod/nfe:qCom", detNode) || 
+                         getXPathValue(".//prod/qCom", detNode);
+      
+      const unitPriceStr = getXPathValue(".//nfe:prod/nfe:vUnCom", detNode) || 
+                          getXPathValue(".//prod/vUnCom", detNode);
+      
+      const unitOfMeasure = getXPathValue(".//nfe:prod/nfe:uCom", detNode) || 
+                           getXPathValue(".//prod/uCom", detNode) || "Un";
+      
+      const totalPriceStr = getXPathValue(".//nfe:prod/nfe:vProd", detNode) || 
+                           getXPathValue(".//prod/vProd", detNode);
 
-        console.log(`Item ${index + 1}: ${description} - Qtd: ${quantity} - Preço Unit: ${unitPrice} - Total: ${totalPrice}`);
+      // Convert values, handling Brazilian decimal format (comma as decimal separator)
+      const quantity = parseFloat(quantityStr.replace(',', '.')) || 0;
+      const unitPrice = parseFloat(unitPriceStr.replace(',', '.')) || 0;
+      const totalPrice = parseFloat(totalPriceStr.replace(',', '.')) || 0;
 
-        if (description && quantity > 0) {
-          items.push({
-            id: uuidv4(),
-            description,
-            quantity,
-            unitPrice,
-            totalPrice,
-            unitOfMeasure,
-            invoiceId: "" // Will be set later
-          });
-        }
+      console.log(`Item ${index + 1}: ${description} - Qtd: ${quantity} - Preço Unit: ${unitPrice} - Total: ${totalPrice}`);
+
+      // Only add items with valid description and quantity
+      if (description && quantity > 0) {
+        items.push({
+          id: uuidv4(),
+          description: description.trim(),
+          quantity,
+          unitPrice,
+          totalPrice,
+          unitOfMeasure: unitOfMeasure.trim(),
+          invoiceId: "" // Will be set later when creating the invoice
+        });
+      } else {
+        console.warn(`Item ${index + 1} ignorado por dados inválidos: descrição="${description}", quantidade=${quantity}`);
       }
     });
 
     if (items.length === 0) {
-      throw new Error("Nenhum item encontrado no XML");
+      throw new Error("Nenhum item válido encontrado no XML da NF-e");
     }
 
-    console.log(`Total de itens processados: ${items.length}`);
+    console.log(`Total de ${items.length} itens processados com sucesso da NF-e`);
 
     return {
       supplier,
@@ -119,22 +176,28 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
     };
 
   } catch (error) {
-    console.error("Erro ao processar XML:", error);
-    throw new Error(`Erro ao processar XML: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    console.error("Erro ao processar XML da NF-e:", error);
+    throw new Error(`Erro ao processar XML da NF-e: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
   }
 }
 
-// Função para validar se o XML é uma NFe válida
+// Function to validate if XML is a valid NF-e
 export function validateNFeXML(xmlContent: string): boolean {
   try {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
     
-    // Verificar se é uma NFe
+    // Check for NF-e structure
     const nfeProc = xmlDoc.querySelector("nfeProc");
     const nfe = xmlDoc.querySelector("NFe");
+    const nfeWithNamespace = xmlDoc.querySelector("nfe\\:NFe, NFe");
     
-    return !!(nfeProc || nfe);
+    // Check for required elements that indicate it's a NF-e
+    const hasEmit = xmlDoc.querySelector("emit") || xmlDoc.querySelector("nfe\\:emit");
+    const hasIde = xmlDoc.querySelector("ide") || xmlDoc.querySelector("nfe\\:ide");
+    const hasDet = xmlDoc.querySelector("det") || xmlDoc.querySelector("nfe\\:det");
+    
+    return !!(nfeProc || nfe || nfeWithNamespace) && !!(hasEmit && hasIde && hasDet);
   } catch {
     return false;
   }
