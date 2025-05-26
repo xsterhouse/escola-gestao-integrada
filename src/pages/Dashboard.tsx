@@ -3,13 +3,16 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportXmlModal } from "@/components/dashboard/ImportXmlModal";
+import { DanfeConsultModule } from "@/components/dashboard/DanfeConsultModule";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   FileText, 
   Package, 
   DollarSign,
-  Import
+  Import,
+  Search
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -88,115 +91,128 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card 
-            className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
-            onClick={() => navigate('/contracts')}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-[#012340]/10 p-3 rounded-lg">
-                  <FileText className="h-6 w-6 text-[#012340]" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Novo Contrato</p>
-                  <p className="text-sm text-muted-foreground">Cadastrar novo contrato</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card 
-            className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
-            onClick={() => navigate('/products')}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-[#012340]/10 p-3 rounded-lg">
-                  <Package className="h-6 w-6 text-[#012340]" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Registrar Produto</p>
-                  <p className="text-sm text-muted-foreground">Adicionar novo produto</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card 
-            className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
-            onClick={() => setIsImportModalOpen(true)}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-[#012340]/10 p-3 rounded-lg">
-                  <Import className="h-6 w-6 text-[#012340]" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Importar Nota</p>
-                  <p className="text-sm text-muted-foreground">Importar Nota XML</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card 
-            className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
-            onClick={() => navigate('/financial')}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-[#012340]/10 p-3 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-[#012340]" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Financeiro</p>
-                  <p className="text-sm text-muted-foreground">Gestão financeira</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <Tabs defaultValue="actions" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="actions">Ações Rápidas</TabsTrigger>
+            <TabsTrigger value="danfe">Consulta DANFE</TabsTrigger>
+          </TabsList>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="border-t-4 border-t-[#012340] md:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">Contratos Ativos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">{activeContracts}</div>
-                <div className="bg-[#012340]/10 p-2 rounded-lg">
-                  <FileText className="h-5 w-5 text-[#012340]" />
-                </div>
-              </div>
-              <div className="text-xs text-muted-foreground mt-2">
-                <span className="flex items-center">
-                  Contratos cadastrados no sistema
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-t-4 border-t-[#012340] md:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">Produtos em Estoque</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">{stockProducts}</div>
-                <div className="bg-[#012340]/10 p-2 rounded-lg">
-                  <Package className="h-5 w-5 text-[#012340]" />
-                </div>
-              </div>
-              <div className="text-xs text-muted-foreground mt-2">
-                <span className="flex items-center">
-                  Produtos cadastrados no sistema
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="actions" className="mt-4 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card 
+                className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+                onClick={() => navigate('/contracts')}
+              >
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-[#012340]/10 p-3 rounded-lg">
+                      <FileText className="h-6 w-6 text-[#012340]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Novo Contrato</p>
+                      <p className="text-sm text-muted-foreground">Cadastrar novo contrato</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card 
+                className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+                onClick={() => navigate('/products')}
+              >
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-[#012340]/10 p-3 rounded-lg">
+                      <Package className="h-6 w-6 text-[#012340]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Registrar Produto</p>
+                      <p className="text-sm text-muted-foreground">Adicionar novo produto</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card 
+                className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+                onClick={() => setIsImportModalOpen(true)}
+              >
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-[#012340]/10 p-3 rounded-lg">
+                      <Import className="h-6 w-6 text-[#012340]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Importar Nota</p>
+                      <p className="text-sm text-muted-foreground">Importar Nota XML</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card 
+                className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+                onClick={() => navigate('/financial')}
+              >
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-[#012340]/10 p-3 rounded-lg">
+                      <DollarSign className="h-6 w-6 text-[#012340]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Financeiro</p>
+                      <p className="text-sm text-muted-foreground">Gestão financeira</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="border-t-4 border-t-[#012340] md:col-span-1">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-medium">Contratos Ativos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="text-3xl font-bold">{activeContracts}</div>
+                    <div className="bg-[#012340]/10 p-2 rounded-lg">
+                      <FileText className="h-5 w-5 text-[#012340]" />
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    <span className="flex items-center">
+                      Contratos cadastrados no sistema
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-t-4 border-t-[#012340] md:col-span-1">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-medium">Produtos em Estoque</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="text-3xl font-bold">{stockProducts}</div>
+                    <div className="bg-[#012340]/10 p-2 rounded-lg">
+                      <Package className="h-5 w-5 text-[#012340]" />
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    <span className="flex items-center">
+                      Produtos cadastrados no sistema
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="danfe" className="mt-4">
+            <DanfeConsultModule />
+          </TabsContent>
+        </Tabs>
       </div>
 
       <ImportXmlModal 
