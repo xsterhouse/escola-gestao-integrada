@@ -75,6 +75,7 @@ const Dashboard = () => {
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
+        {/* Header Section */}
         <div className="bg-white p-6 rounded-lg shadow flex flex-col md:flex-row justify-between items-start md:items-center">
           <div>
             <h1 className="text-2xl font-bold tracking-tight mb-1">
@@ -98,6 +99,7 @@ const Dashboard = () => {
           </TabsList>
 
           <TabsContent value="actions" className="mt-4 space-y-6">
+            {/* Quick Actions Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card 
                 className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
@@ -168,6 +170,7 @@ const Dashboard = () => {
               </Card>
             </div>
 
+            {/* Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card className="border-t-4 border-t-[#012340] md:col-span-1">
                 <CardHeader className="pb-2">
@@ -206,6 +209,11 @@ const Dashboard = () => {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* DANFE Consultation Module - Now below the metrics cards */}
+            <div className="mt-8">
+              <DanfeConsultModule />
             </div>
           </TabsContent>
 
