@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -295,6 +296,23 @@ export function PermissionsTab() {
       title: "Permissões de usuário salvas",
       description: "As permissões específicas do usuário foram atualizadas com sucesso."
     });
+  };
+
+  const handleOpenRoleModal = (role?: UserRole) => {
+    if (role) {
+      setEditingRole(role);
+      setRoleForm({
+        name: role.name,
+        description: role.description
+      });
+    } else {
+      setEditingRole(null);
+      setRoleForm({
+        name: "",
+        description: ""
+      });
+    }
+    setIsRoleModalOpen(true);
   };
 
   const handleSaveRole = (e: React.FormEvent) => {
