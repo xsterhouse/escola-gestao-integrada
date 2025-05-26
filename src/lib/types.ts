@@ -125,6 +125,11 @@ export interface Invoice {
   totalValue: number;
   items: InvoiceItem[];
   financialProgramming?: string; // Added during XML import
+  status: 'pendente' | 'aprovada' | 'rejeitada'; // Status de aprovação
+  isActive: boolean; // Se a nota está ativa
+  approvedBy?: string; // ID do usuário que aprovou
+  approvedAt?: Date; // Data de aprovação
+  rejectionReason?: string; // Motivo da rejeição
   createdAt: Date;
   updatedAt: Date;
 }

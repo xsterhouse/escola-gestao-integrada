@@ -21,9 +21,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { FileUp, Search } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FileUp, Search, AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Supplier, Invoice, InvoiceItem } from "@/lib/types";
+import { Invoice } from "@/lib/types";
+import { parseXMLToInvoice, validateNFeXML } from "@/lib/xmlParser";
 
 interface ImportXmlDialogProps {
   open: boolean;
@@ -53,6 +55,8 @@ export function ImportXmlDialog({
   const [fileName, setFileName] = useState("");
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<Invoice[]>([]);
+  const [parsedData, setParsedData] = useState<any>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -69,11 +73,35 @@ export function ImportXmlDialog({
     if (!file) return;
     
     setFileName(file.name);
+    setValidationError(null);
+    setParsedData(null);
     form.setValue("xmlFile", e.target.files);
     
     const reader = new FileReader();
     reader.onload = (e) => {
-      setFileContent(e.target?.result as string);
+      const content = e.target?.result as string;
+      setFileContent(content);
+      
+      // Validar se é um XML de NFe válido
+      if (!validateNFeXML(content)) {
+        setValidationError("O arquivo selecionado não é um XML de NFe válido.");
+        return;
+      }
+
+      // Tentar fazer o parse do XML
+      try {
+        const parsed = parseXMLToInvoice(content);
+        setParsedData(parsed);
+        
+        // Verificar se já existe uma nota com o mesmo DANFE
+        const duplicate = checkDuplicateInvoice(parsed.danfeNumber);
+        if (duplicate) {
+          setValidationError(`Esta nota fiscal (DANFE: ${parsed.danfeNumber}) já foi importada e está ${duplicate.status === 'aprovada' ? 'aprovada e ativa' : duplicate.status}.`);
+        }
+      } catch (error) {
+        console.error("Erro ao processar XML:", error);
+        setValidationError(error instanceof Error ? error.message : "Erro ao processar o arquivo XML");
+      }
     };
     reader.readAsText(file);
   };
@@ -112,80 +140,56 @@ export function ImportXmlDialog({
     return numeric;
   };
 
-  const checkDuplicateInvoice = (danfeNumber: string): boolean => {
-    return existingInvoices.some(invoice => invoice.danfeNumber === danfeNumber);
+  const checkDuplicateInvoice = (danfeNumber: string): Invoice | null => {
+    return existingInvoices.find(invoice => 
+      invoice.danfeNumber === danfeNumber && 
+      (invoice.status === 'aprovada' && invoice.isActive)
+    ) || null;
   };
 
   const handleSubmit = (values: FormValues) => {
+    if (!fileContent || !parsedData) {
+      toast({
+        title: "Erro na importação",
+        description: "Nenhum arquivo válido foi processado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (validationError) {
+      toast({
+        title: "Erro na importação",
+        description: validationError,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     try {
-      if (!fileContent) {
-        throw new Error("No file content to process");
-      }
-      
-      // Mock parsing XML data with correct values
-      const mockDanfeNumber = "NF" + Math.random().toString().substring(2, 11);
-      
-      // Check for duplicate
-      if (checkDuplicateInvoice(mockDanfeNumber)) {
-        toast({
-          title: "XML já importado",
-          description: "Esta nota fiscal já foi importada anteriormente.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-      
-      const supplier: Supplier = {
-        id: uuidv4(),
-        name: "Fornecedor XML Corrigido",
-        cnpj: "12.345.678/0001-99",
-        address: "Rua do XML, 123",
-        phone: "(11) 1234-5678"
-      };
-      
-      // Correct XML parsing with proper values
-      const items: InvoiceItem[] = [
-        {
-          id: uuidv4(),
-          description: "Papel Sulfite A4 75g",
-          quantity: 100,
-          unitPrice: 25.50,
-          totalPrice: 2550.00,
-          unitOfMeasure: "Pct",
-          invoiceId: "",
-        },
-        {
-          id: uuidv4(),
-          description: "Caneta Esferográfica Azul",
-          quantity: 500,
-          unitPrice: 2.80,
-          totalPrice: 1400.00,
-          unitOfMeasure: "Un",
-          invoiceId: "",
-        }
-      ];
-      
-      const totalValue = items.reduce((sum, item) => sum + item.totalPrice, 0);
       const invoiceId = uuidv4();
       
-      items.forEach(item => {
-        item.invoiceId = invoiceId;
-      });
+      // Atualizar IDs dos itens com o ID da nota
+      const items = parsedData.items.map((item: any) => ({
+        ...item,
+        invoiceId
+      }));
       
       const invoice: Invoice = {
         id: invoiceId,
-        supplierId: supplier.id,
-        supplier,
-        issueDate: new Date(),
-        danfeNumber: mockDanfeNumber,
-        totalValue,
+        supplierId: parsedData.supplier.id,
+        supplier: parsedData.supplier,
+        issueDate: parsedData.issueDate,
+        danfeNumber: parsedData.danfeNumber,
+        totalValue: parsedData.totalValue,
         items,
         financialProgramming: values.financialProgrammingDate 
           ? `${values.financialProgrammingDate} - ${values.installments || 1} parcela(s)`
           : undefined,
+        status: 'pendente', // Nova nota sempre começa como pendente
+        isActive: false, // Só fica ativa após aprovação
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -193,30 +197,44 @@ export function ImportXmlDialog({
       setTimeout(() => {
         setIsLoading(false);
         onSubmit(invoice);
+        
+        // Reset form
         form.reset();
         setFileName("");
         setFileContent(null);
         setSearchResults([]);
+        setParsedData(null);
+        setValidationError(null);
         
         toast({
           title: "Importação concluída",
-          description: "O arquivo XML foi importado com sucesso.",
+          description: "O arquivo XML foi importado com sucesso. A nota está aguardando aprovação.",
         });
       }, 1500);
     } catch (error) {
       setIsLoading(false);
-      console.error("Error parsing XML:", error);
+      console.error("Error processing invoice:", error);
       toast({
         title: "Erro na importação",
-        description: "Ocorreu um erro ao processar o arquivo XML.",
+        description: "Ocorreu um erro ao processar a nota fiscal.",
         variant: "destructive",
       });
     }
   };
 
+  const handleClose = () => {
+    form.reset();
+    setFileName("");
+    setFileContent(null);
+    setSearchResults([]);
+    setParsedData(null);
+    setValidationError(null);
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Importar XML de Nota Fiscal</DialogTitle>
         </DialogHeader>
@@ -249,7 +267,7 @@ export function ImportXmlDialog({
                       <p className="text-sm text-yellow-800 font-medium">XMLs encontrados:</p>
                       {searchResults.map(invoice => (
                         <p key={invoice.id} className="text-sm text-yellow-700">
-                          DANFE: {invoice.danfeNumber} - {invoice.supplier.name}
+                          DANFE: {invoice.danfeNumber} - {invoice.supplier.name} - Status: {invoice.status}
                         </p>
                       ))}
                     </div>
@@ -299,6 +317,32 @@ export function ImportXmlDialog({
               )}
             />
 
+            {/* Mensagens de validação */}
+            {validationError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{validationError}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Dados processados */}
+            {parsedData && !validationError && (
+              <Alert>
+                <CheckCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>XML processado com sucesso!</strong>
+                  <div className="mt-2 space-y-1 text-sm">
+                    <p><strong>Fornecedor:</strong> {parsedData.supplier.name}</p>
+                    <p><strong>CNPJ:</strong> {parsedData.supplier.cnpj}</p>
+                    <p><strong>DANFE:</strong> {parsedData.danfeNumber}</p>
+                    <p><strong>Data de Emissão:</strong> {new Date(parsedData.issueDate).toLocaleDateString('pt-BR')}</p>
+                    <p><strong>Valor Total:</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parsedData.totalValue)}</p>
+                    <p><strong>Itens:</strong> {parsedData.items.length} produtos</p>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -346,12 +390,15 @@ export function ImportXmlDialog({
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => onOpenChange(false)}
+                onClick={handleClose}
                 disabled={isLoading}
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={!fileName || isLoading}>
+              <Button 
+                type="submit" 
+                disabled={!fileName || isLoading || !!validationError || !parsedData}
+              >
                 {isLoading ? "Importando..." : "Importar XML"}
               </Button>
             </DialogFooter>

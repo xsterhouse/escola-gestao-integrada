@@ -9,9 +9,10 @@ import { InventoryReports } from "@/components/inventory/InventoryReports";
 import { AddInvoiceDialog } from "@/components/inventory/AddInvoiceDialog";
 import { ImportXmlDialog } from "@/components/inventory/ImportXmlDialog";
 import { Invoice } from "@/lib/types";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 
 export default function Inventory() {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const { data: invoices, saveData: setInvoices } = useLocalStorageSync<Invoice>('invoices', []);
   const [isAddInvoiceOpen, setIsAddInvoiceOpen] = useState(false);
   const [isImportXmlOpen, setIsImportXmlOpen] = useState(false);
   
@@ -23,6 +24,13 @@ export default function Inventory() {
   const handleXmlImport = (invoice: Invoice) => {
     setInvoices([...invoices, invoice]);
     setIsImportXmlOpen(false);
+  };
+
+  const handleUpdateInvoice = (updatedInvoice: Invoice) => {
+    const updatedInvoices = invoices.map(invoice => 
+      invoice.id === updatedInvoice.id ? updatedInvoice : invoice
+    );
+    setInvoices(updatedInvoices);
   };
 
   return (
@@ -41,7 +49,10 @@ export default function Inventory() {
           </TabsList>
 
           <TabsContent value="inventory" className="mt-4">
-            <InventoryTable invoices={invoices} />
+            <InventoryTable 
+              invoices={invoices} 
+              onUpdateInvoice={handleUpdateInvoice}
+            />
           </TabsContent>
 
           <TabsContent value="movements" className="mt-4">
