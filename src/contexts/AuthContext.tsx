@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User, School } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -303,6 +304,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (systemUser) {
           console.log(`👤 Usuário do sistema encontrado: ${systemUser.name} (ID: ${systemUser.id})`);
+          console.log(`🏢 IDs das centrais vinculadas: ${JSON.stringify(systemUser.purchasingCenterIds)}`);
           
           // Converter usuário do sistema para formato User
           schoolUser = {
@@ -322,20 +324,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             updatedAt: new Date(systemUser.updatedAt),
           };
 
-          // Carregar centrais de compras vinculadas ao usuário do sistema
+          // Carregar TODAS as centrais de compras vinculadas ao usuário do sistema
           if (systemUser.purchasingCenterIds && systemUser.purchasingCenterIds.length > 0) {
             const allPurchasingCenters = getStoredPurchasingCenters();
-            const userCenters = allPurchasingCenters.filter(center => 
-              systemUser.purchasingCenterIds.includes(center.id)
-            );
+            console.log(`📋 Total de centrais disponíveis: ${allPurchasingCenters.length}`);
             
-            console.log(`🏢 Centrais de compras vinculadas ao usuário: ${userCenters.length}`);
+            const userCenters = allPurchasingCenters.filter(center => {
+              const isLinked = systemUser.purchasingCenterIds.includes(center.id);
+              console.log(`🔗 Central ${center.name} (${center.id}) vinculada: ${isLinked}`);
+              return isLinked;
+            });
+            
+            console.log(`🏢 Centrais de compras vinculadas encontradas: ${userCenters.length}`);
+            console.log(`🏢 Nomes das centrais: ${userCenters.map(c => c.name).join(', ')}`);
+            
             setUserPurchasingCenters(userCenters);
             
             // Salvar centrais de compras do usuário para futuras sessões
             if (remember) {
               localStorage.setItem("sigre_user_purchasing_centers", JSON.stringify(userCenters));
+              console.log(`💾 Centrais salvas no localStorage: ${userCenters.length}`);
             }
+          } else {
+            console.log(`⚠️ Usuário não possui centrais de compras vinculadas`);
+            setUserPurchasingCenters([]);
           }
         }
       }
