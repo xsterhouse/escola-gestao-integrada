@@ -11,23 +11,26 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, FileDown, Check, X, Eye } from "lucide-react";
+import { Search, FileDown, Check, X, Eye, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Invoice } from "@/lib/types";
 import { format } from "date-fns";
 import { ViewInvoiceDialog } from "./ViewInvoiceDialog";
 import { ApproveInvoiceDialog } from "./ApproveInvoiceDialog";
+import { DeleteInvoiceDialog } from "./DeleteInvoiceDialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface InventoryTableProps {
   invoices: Invoice[];
   onUpdateInvoice: (invoice: Invoice) => void;
+  onDeleteInvoice: (invoiceId: string, reason: string, deletedBy: string) => void;
 }
 
-export function InventoryTable({ invoices, onUpdateInvoice }: InventoryTableProps) {
+export function InventoryTable({ invoices, onUpdateInvoice, onDeleteInvoice }: InventoryTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [approveInvoice, setApproveInvoice] = useState<Invoice | null>(null);
+  const [deleteInvoice, setDeleteInvoice] = useState<Invoice | null>(null);
   const { toast } = useToast();
   
   const filteredInvoices = invoices.filter(
@@ -251,6 +254,14 @@ export function InventoryTable({ invoices, onUpdateInvoice }: InventoryTableProp
                               <Check className="h-3 w-3" />
                             </Button>
                           )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDeleteInvoice(invoice)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -276,6 +287,13 @@ export function InventoryTable({ invoices, onUpdateInvoice }: InventoryTableProp
         onClose={() => setApproveInvoice(null)}
         onApprove={handleApproveInvoice}
         onReject={handleRejectInvoice}
+      />
+
+      <DeleteInvoiceDialog
+        invoice={deleteInvoice}
+        isOpen={!!deleteInvoice}
+        onClose={() => setDeleteInvoice(null)}
+        onDelete={onDeleteInvoice}
       />
     </Card>
   );

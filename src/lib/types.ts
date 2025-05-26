@@ -457,3 +457,16 @@ export interface ATATransferRecord {
   transferredBy: string;
   justificativa: string;
 }
+
+export interface DeletionHistory {
+  id: string;
+  danfeNumber: string;
+  supplierName: string;
+  supplierCnpj: string;
+  issueDate: Date;
+  totalValue: number;
+  items?: InvoiceItem[];
+  deletedBy: string;
+  deletedAt: Date;
+  reason: string;
+}
