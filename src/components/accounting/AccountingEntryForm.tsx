@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,20 +8,56 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Save } from "lucide-react";
 
+// Chart of accounts with masks and descriptions
+const chartOfAccounts = [
+  { mask: "1.01.01", description: "Caixa" },
+  { mask: "1.01.02", description: "Banco Conta Movimento" },
+  { mask: "1.01.03", description: "Banco Conta Aplicação" },
+  { mask: "1.02.01", description: "Contas a Receber" },
+  { mask: "1.02.02", description: "Estoque de Materiais" },
+  { mask: "1.02.03", description: "Adiantamentos a Fornecedores" },
+  { mask: "2.01.01", description: "Contas a Pagar" },
+  { mask: "2.01.02", description: "Salários a Pagar" },
+  { mask: "2.01.03", description: "Impostos a Recolher" },
+  { mask: "3.01.01", description: "Receitas de Vendas" },
+  { mask: "3.01.02", description: "Receitas Financeiras" },
+  { mask: "4.01.01", description: "Despesas com Alimentação" },
+  { mask: "4.01.02", description: "Despesas com Transporte" },
+  { mask: "4.01.03", description: "Despesas Administrativas" },
+  { mask: "4.01.04", description: "Despesas Financeiras" },
+];
+
 export function AccountingEntryForm() {
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
-    debitValue: "",
+    debitAccount: "",
     debitDescription: "",
-    creditValue: "",
+    debitValue: "",
+    creditAccount: "",
     creditDescription: "",
+    creditValue: "",
     history: "",
     totalValue: ""
   });
   const { toast } = useToast();
 
+  // Auto-fill description when account mask is entered
+  useEffect(() => {
+    const debitAccount = chartOfAccounts.find(acc => acc.mask === formData.debitAccount);
+    if (debitAccount) {
+      setFormData(prev => ({ ...prev, debitDescription: debitAccount.description }));
+    }
+  }, [formData.debitAccount]);
+
+  useEffect(() => {
+    const creditAccount = chartOfAccounts.find(acc => acc.mask === formData.creditAccount);
+    if (creditAccount) {
+      setFormData(prev => ({ ...prev, creditDescription: creditAccount.description }));
+    }
+  }, [formData.creditAccount]);
+
   const handleSave = () => {
-    if (!formData.date || !formData.totalValue || !formData.history) {
+    if (!formData.date || !formData.totalValue || !formData.history || !formData.debitAccount || !formData.creditAccount) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos obrigatórios.",
@@ -35,10 +71,12 @@ export function AccountingEntryForm() {
     const newEntry = {
       id: Date.now().toString(),
       date: formData.date,
-      debitValue: parseFloat(formData.debitValue.replace(/\D/g, '')) / 100 || 0,
+      debitAccount: formData.debitAccount,
       debitDescription: formData.debitDescription,
-      creditValue: parseFloat(formData.creditValue.replace(/\D/g, '')) / 100 || 0,
+      debitValue: parseFloat(formData.debitValue.replace(/\D/g, '')) / 100 || 0,
+      creditAccount: formData.creditAccount,
       creditDescription: formData.creditDescription,
+      creditValue: parseFloat(formData.creditValue.replace(/\D/g, '')) / 100 || 0,
       history: formData.history,
       totalValue: parseFloat(formData.totalValue.replace(/\D/g, '')) / 100,
       createdAt: new Date().toISOString()
@@ -55,10 +93,12 @@ export function AccountingEntryForm() {
     // Reset form
     setFormData({
       date: new Date().toISOString().split('T')[0],
-      debitValue: "",
+      debitAccount: "",
       debitDescription: "",
-      creditValue: "",
+      debitValue: "",
+      creditAccount: "",
       creditDescription: "",
+      creditValue: "",
       history: "",
       totalValue: ""
     });
@@ -120,20 +160,29 @@ export function AccountingEntryForm() {
             <h3 className="font-semibold text-red-800 text-lg">Débito</h3>
             <div className="space-y-4">
               <div>
-                <Label className="text-sm font-medium text-gray-700">Valor Débito</Label>
+                <Label className="text-sm font-medium text-gray-700">Conta Contábil *</Label>
                 <Input
-                  placeholder="R$ 0,00"
-                  value={formData.debitValue ? formatCurrency(formData.debitValue) : ""}
-                  onChange={handleCurrencyChange('debitValue')}
+                  placeholder="Ex: 4.01.01"
+                  value={formData.debitAccount}
+                  onChange={(e) => setFormData(prev => ({ ...prev, debitAccount: e.target.value }))}
                   className="h-10 mt-1 rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
                 />
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Descrição da Conta</Label>
                 <Input
-                  placeholder="Ex: Despesas com Alimentação"
+                  placeholder="Descrição será preenchida automaticamente"
                   value={formData.debitDescription}
                   onChange={(e) => setFormData(prev => ({ ...prev, debitDescription: e.target.value }))}
+                  className="h-10 mt-1 rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Valor Débito</Label>
+                <Input
+                  placeholder="R$ 0,00"
+                  value={formData.debitValue ? formatCurrency(formData.debitValue) : ""}
+                  onChange={handleCurrencyChange('debitValue')}
                   className="h-10 mt-1 rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
                 />
               </div>
@@ -145,20 +194,29 @@ export function AccountingEntryForm() {
             <h3 className="font-semibold text-green-800 text-lg">Crédito</h3>
             <div className="space-y-4">
               <div>
-                <Label className="text-sm font-medium text-gray-700">Valor Crédito</Label>
+                <Label className="text-sm font-medium text-gray-700">Conta Contábil *</Label>
                 <Input
-                  placeholder="R$ 0,00"
-                  value={formData.creditValue ? formatCurrency(formData.creditValue) : ""}
-                  onChange={handleCurrencyChange('creditValue')}
+                  placeholder="Ex: 1.01.02"
+                  value={formData.creditAccount}
+                  onChange={(e) => setFormData(prev => ({ ...prev, creditAccount: e.target.value }))}
                   className="h-10 mt-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
                 />
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Descrição da Conta</Label>
                 <Input
-                  placeholder="Ex: Banco Conta Movimento"
+                  placeholder="Descrição será preenchida automaticamente"
                   value={formData.creditDescription}
                   onChange={(e) => setFormData(prev => ({ ...prev, creditDescription: e.target.value }))}
+                  className="h-10 mt-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Valor Crédito</Label>
+                <Input
+                  placeholder="R$ 0,00"
+                  value={formData.creditValue ? formatCurrency(formData.creditValue) : ""}
+                  onChange={handleCurrencyChange('creditValue')}
                   className="h-10 mt-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
                 />
               </div>

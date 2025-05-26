@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -93,6 +92,28 @@ export function BankReconciliation({
   const exportTransactions = () => {
     // This functionality is already implemented in the component
     toast.success("Exportando transações...");
+  };
+  
+  const handleSearchAccountingEntries = () => {
+    // Get accounting entries from localStorage
+    const accountingEntries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
+    
+    // Filter entries that match bank transactions
+    const matchingEntries = accountingEntries.filter((entry: any) => {
+      return entry.debitDescription.toLowerCase().includes('banco') ||
+             entry.creditDescription.toLowerCase().includes('banco') ||
+             entry.debitAccount.startsWith('1.01') ||
+             entry.creditAccount.startsWith('1.01');
+    });
+
+    console.log("Found matching accounting entries:", matchingEntries);
+    
+    // Show results in console for now - in a real app this would open a modal or navigate
+    if (matchingEntries.length > 0) {
+      toast.success(`Encontrados ${matchingEntries.length} lançamentos contábeis relacionados!`);
+    } else {
+      toast.info("Nenhum lançamento contábil relacionado encontrado.");
+    }
   };
   
   // Filter transactions based on selected filters
@@ -303,6 +324,10 @@ export function BankReconciliation({
           <Button onClick={() => setIsNewTransactionModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Incluir
+          </Button>
+          <Button onClick={handleSearchAccountingEntries} variant="outline">
+            <Search className="mr-2 h-4 w-4" />
+            Buscar Lançamentos
           </Button>
           <Button onClick={() => setIsGenerateReportModalOpen(true)}>
             <FileText className="mr-2 h-4 w-4" />
