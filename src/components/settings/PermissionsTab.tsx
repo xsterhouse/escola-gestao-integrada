@@ -323,7 +323,7 @@ export function PermissionsTab() {
       id: Date.now().toString(),
       name: `${role.name} (Cópia)`,
       description: `${role.description} (Cópia)`,
-      detailedPermissions: [...role.detailedPermissions]
+      detailedPermissions: role.detailedPermissions ? [...role.detailedPermissions] : []
     };
     
     setUserRoles([...userRoles, clonedRole]);

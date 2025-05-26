@@ -28,6 +28,7 @@ export interface User {
   matricula: string; // Número de matrícula para login
   email: string;
   role: string;
+  profileId?: string; // Added profileId to link to user profile
   schoolId: string | null;
   permissions: Permission[];
   status?: "active" | "inactive";
@@ -59,6 +60,15 @@ export interface UserRole {
   id: string;
   name: string;
   description: string;
+  detailedPermissions?: Array<{
+    moduleId: string;
+    moduleName: string;
+    view: boolean;
+    create: boolean;
+    edit: boolean;
+    delete: boolean;
+    read: boolean;
+  }>; // Added detailedPermissions to match the user.ts interface
 }
 
 export interface PurchasingCenter {
