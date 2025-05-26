@@ -61,23 +61,14 @@ export function SystemUserForm({
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availablePurchasingCenters, setAvailablePurchasingCenters] = useState<PurchasingCenter[]>([]);
+  const [allPurchasingCenters, setAllPurchasingCenters] = useState<PurchasingCenter[]>([]);
   const { toast } = useToast();
   const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasingCenters', []);
 
-  // Filter purchasing centers based on selected school
+  // Carregar todas as centrais de compras
   useEffect(() => {
-    if (formData.schoolId && formData.schoolId !== "none") {
-      const filtered = purchasingCenters.filter(pc => 
-        pc.schoolIds.includes(formData.schoolId)
-      );
-      setAvailablePurchasingCenters(filtered);
-    } else {
-      setAvailablePurchasingCenters([]);
-    }
-    // Reset selected purchasing centers when school changes
-    setFormData(prev => ({ ...prev, purchasingCenterIds: [] }));
-  }, [formData.schoolId, purchasingCenters]);
+    setAllPurchasingCenters(purchasingCenters);
+  }, [purchasingCenters]);
 
   const generatePassword = () => {
     const password = Math.floor(100000 + Math.random() * 900000).toString();
@@ -158,7 +149,7 @@ export function SystemUserForm({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
@@ -187,11 +178,15 @@ export function SystemUserForm({
             </Select>
           </div>
 
-          {availablePurchasingCenters.length > 0 && (
-            <div className="space-y-2">
-              <Label>Centrais de Compras</Label>
-              <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
-                {availablePurchasingCenters.map((center) => (
+          <div className="space-y-2">
+            <Label>Centrais de Compras</Label>
+            <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-3 bg-gray-50">
+              {allPurchasingCenters.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-2">
+                  Nenhuma central de compras cadastrada
+                </p>
+              ) : (
+                allPurchasingCenters.map((center) => (
                   <div key={center.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`center-${center.id}`}
@@ -200,17 +195,17 @@ export function SystemUserForm({
                         handlePurchasingCenterToggle(center.id, checked as boolean)
                       }
                     />
-                    <Label htmlFor={`center-${center.id}`} className="text-sm">
+                    <Label htmlFor={`center-${center.id}`} className="text-sm flex-1">
                       {center.name}
                     </Label>
                   </div>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500">
-                Selecione as centrais de compras que este usuário terá acesso
-              </p>
+                ))
+              )}
             </div>
-          )}
+            <p className="text-xs text-gray-500">
+              Selecione as centrais de compras que este usuário terá acesso
+            </p>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="name">Nome do Usuário *</Label>

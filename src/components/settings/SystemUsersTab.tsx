@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { SystemUserForm } from "@/components/settings/SystemUserForm";
 import { SystemUserEditModal } from "@/components/settings/SystemUserEditModal";
+import { SystemUserDetailsModal } from "@/components/settings/SystemUserDetailsModal";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { saveUserPassword } from "@/contexts/AuthContext";
@@ -39,6 +40,7 @@ export function SystemUsersTab() {
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
   
   const { data: systemUsers, saveData: setSystemUsers } = useLocalStorageSync<SystemUser>('systemUsers', []);
@@ -131,19 +133,8 @@ export function SystemUsersTab() {
   };
 
   const handleViewUser = (user: SystemUser) => {
-    const school = schools.find(s => s.id === user.schoolId);
-    const schoolName = school ? school.name : "Nenhuma escola vinculada";
-    
-    const userCenters = user.purchasingCenterIds ? 
-      purchasingCenters
-        .filter(pc => user.purchasingCenterIds!.includes(pc.id))
-        .map(pc => pc.name)
-        .join(", ") : "Nenhuma";
-    
-    toast({
-      title: "Detalhes do Usuário",
-      description: `Nome: ${user.name}, Matrícula: ${user.matricula}, Escola: ${schoolName}, Centrais: ${userCenters}`,
-    });
+    setSelectedUser(user);
+    setIsDetailsModalOpen(true);
   };
 
   const handleEditClick = (user: SystemUser) => {
@@ -287,16 +278,29 @@ export function SystemUsersTab() {
         />
 
         {selectedUser && (
-          <SystemUserEditModal
-            isOpen={isEditModalOpen}
-            onClose={() => {
-              setIsEditModalOpen(false);
-              setSelectedUser(null);
-            }}
-            onSave={handleEditUser}
-            user={selectedUser}
-            schools={schools}
-          />
+          <>
+            <SystemUserEditModal
+              isOpen={isEditModalOpen}
+              onClose={() => {
+                setIsEditModalOpen(false);
+                setSelectedUser(null);
+              }}
+              onSave={handleEditUser}
+              user={selectedUser}
+              schools={schools}
+            />
+
+            <SystemUserDetailsModal
+              isOpen={isDetailsModalOpen}
+              onClose={() => {
+                setIsDetailsModalOpen(false);
+                setSelectedUser(null);
+              }}
+              user={selectedUser}
+              schools={schools}
+              purchasingCenters={purchasingCenters}
+            />
+          </>
         )}
       </CardContent>
     </Card>
