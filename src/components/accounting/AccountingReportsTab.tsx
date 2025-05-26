@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,8 @@ export function AccountingReportsTab() {
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
-    accountType: "",
-    resourceType: ""
+    accountType: "all",
+    resourceType: "all"
   });
   
   const [reportData, setReportData] = useState<any[]>([]);
@@ -21,7 +22,7 @@ export function AccountingReportsTab() {
   const { toast } = useToast();
 
   const accountTypes = [
-    { value: "", label: "Todos os tipos" },
+    { value: "all", label: "Todos os tipos" },
     { value: "ativo", label: "Ativo" },
     { value: "passivo", label: "Passivo" },
     { value: "receita", label: "Receita" },
@@ -30,7 +31,7 @@ export function AccountingReportsTab() {
   ];
 
   const resourceTypes = [
-    { value: "", label: "Todos os recursos" },
+    { value: "all", label: "Todos os recursos" },
     { value: "fundeb", label: "FUNDEB" },
     { value: "pnate", label: "PNATE" },
     { value: "pnae", label: "PNAE" },
