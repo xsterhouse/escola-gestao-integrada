@@ -14,7 +14,7 @@ const Accounting = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6 p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -31,11 +31,11 @@ const Accounting = () => {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-4xl grid-cols-4">
-            <TabsTrigger value="entries">Lançamentos</TabsTrigger>
-            <TabsTrigger value="accounts">Configuração de Contas</TabsTrigger>
-            <TabsTrigger value="reports">Relatórios</TabsTrigger>
-            <TabsTrigger value="close">Encerrar Exercício</TabsTrigger>
+          <TabsList className="grid w-full max-w-4xl grid-cols-4 mb-6">
+            <TabsTrigger value="entries" className="text-sm font-medium">Lançamentos</TabsTrigger>
+            <TabsTrigger value="accounts" className="text-sm font-medium">Configuração de Contas</TabsTrigger>
+            <TabsTrigger value="reports" className="text-sm font-medium">Relatórios</TabsTrigger>
+            <TabsTrigger value="close" className="text-sm font-medium">Encerrar Exercício</TabsTrigger>
           </TabsList>
 
           <TabsContent value="entries" className="mt-6">
@@ -56,17 +56,17 @@ const Accounting = () => {
         </Tabs>
 
         {/* Footer */}
-        <div className="flex justify-center gap-4 pt-8 border-t">
+        <div className="flex justify-center gap-4 pt-8 border-t border-gray-200">
           <a 
             href="#" 
-            className="text-sm text-gray-500 hover:text-purple-600 transition-colors"
+            className="text-sm text-gray-500 hover:text-purple-600 transition-colors font-medium"
           >
             Ajuda
           </a>
           <span className="text-gray-300">|</span>
           <a 
             href="#" 
-            className="text-sm text-gray-500 hover:text-purple-600 transition-colors"
+            className="text-sm text-gray-500 hover:text-purple-600 transition-colors font-medium"
           >
             Sair
           </a>
