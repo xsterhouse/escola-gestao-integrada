@@ -2,6 +2,12 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { User, School } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
+interface PurchasingCenter {
+  id: string;
+  name: string;
+  schoolIds: string[];
+}
+
 type AuthContextType = {
   user: User | null;
   currentSchool: School | null;
@@ -11,6 +17,7 @@ type AuthContextType = {
   logout: () => void;
   setCurrentSchool: (school: School) => void;
   availableSchools: School[];
+  userPurchasingCenters: PurchasingCenter[];
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -108,6 +115,19 @@ const getStoredSchools = (): School[] => {
   return defaultSchools;
 };
 
+// Function to get purchasing centers from localStorage
+const getStoredPurchasingCenters = (): PurchasingCenter[] => {
+  const stored = localStorage.getItem("purchasingCenters");
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (error) {
+      console.error("Error parsing stored purchasing centers:", error);
+    }
+  }
+  return [];
+};
+
 // Function to get users from localStorage or initialize with mock data
 const getStoredUsers = (): User[] => {
   const stored = localStorage.getItem("users");
@@ -178,11 +198,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentSchool, setCurrentSchool] = useState<School | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [availableSchools, setAvailableSchools] = useState<School[]>([]);
+  const [userPurchasingCenters, setUserPurchasingCenters] = useState<PurchasingCenter[]>([]);
 
   // Check for saved authentication on mount
   useEffect(() => {
     const savedUser = localStorage.getItem("sigre_user");
     const savedSchool = localStorage.getItem("sigre_school");
+    const savedPurchasingCenters = localStorage.getItem("sigre_user_purchasing_centers");
     
     // Initialize schools and users in localStorage if they don't exist
     getStoredSchools();
@@ -202,6 +224,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userSchool = currentSchools.find(school => school.id === parsedUser.schoolId);
         if (userSchool) {
           setAvailableSchools([userSchool]);
+        }
+      }
+      
+      // Restore user's purchasing centers if they exist
+      if (savedPurchasingCenters) {
+        try {
+          const purchasingCenters = JSON.parse(savedPurchasingCenters);
+          setUserPurchasingCenters(purchasingCenters);
+          console.log(`🏢 Centrais de compras do usuário carregadas: ${purchasingCenters.length}`);
+        } catch (error) {
+          console.error("Error parsing saved purchasing centers:", error);
         }
       }
       
@@ -288,6 +321,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             createdAt: new Date(systemUser.createdAt),
             updatedAt: new Date(systemUser.updatedAt),
           };
+
+          // Carregar centrais de compras vinculadas ao usuário do sistema
+          if (systemUser.purchasingCenterIds && systemUser.purchasingCenterIds.length > 0) {
+            const allPurchasingCenters = getStoredPurchasingCenters();
+            const userCenters = allPurchasingCenters.filter(center => 
+              systemUser.purchasingCenterIds.includes(center.id)
+            );
+            
+            console.log(`🏢 Centrais de compras vinculadas ao usuário: ${userCenters.length}`);
+            setUserPurchasingCenters(userCenters);
+            
+            // Salvar centrais de compras do usuário para futuras sessões
+            if (remember) {
+              localStorage.setItem("sigre_user_purchasing_centers", JSON.stringify(userCenters));
+            }
+          }
         }
       }
       
@@ -350,8 +399,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setCurrentSchool(null);
     setAvailableSchools([]);
+    setUserPurchasingCenters([]);
     localStorage.removeItem("sigre_user");
     localStorage.removeItem("sigre_school");
+    localStorage.removeItem("sigre_user_purchasing_centers");
     toast({
       title: "Logout realizado",
       description: "Você saiu do sistema com sucesso."
@@ -376,6 +427,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     setCurrentSchool: handleSetCurrentSchool,
     availableSchools,
+    userPurchasingCenters,
   };
 
   return (
