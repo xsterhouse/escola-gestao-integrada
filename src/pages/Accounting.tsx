@@ -1,9 +1,10 @@
-
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccountingHeader } from "@/components/accounting/AccountingHeader";
 import { AccountingEntryForm } from "@/components/accounting/AccountingEntryForm";
+import { AccountingEntriesTab } from "@/components/accounting/AccountingEntriesTab";
+import { BankReconciliationTab } from "@/components/accounting/BankReconciliationTab";
 import { AccountConfigTab } from "@/components/accounting/AccountConfigTab";
 import { AccountingReportsTab } from "@/components/accounting/AccountingReportsTab";
 import { CloseExerciseTab } from "@/components/accounting/CloseExerciseTab";
@@ -25,8 +26,10 @@ const Accounting = () => {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-4xl grid-cols-4 mb-6">
+          <TabsList className="grid w-full max-w-6xl grid-cols-6 mb-6">
             <TabsTrigger value="entries" className="text-sm font-medium">Lançamentos</TabsTrigger>
+            <TabsTrigger value="entries-list" className="text-sm font-medium">Visualizar Lançamentos</TabsTrigger>
+            <TabsTrigger value="reconciliation" className="text-sm font-medium">Conciliação Bancária</TabsTrigger>
             <TabsTrigger value="accounts" className="text-sm font-medium">Configuração de Contas</TabsTrigger>
             <TabsTrigger value="reports" className="text-sm font-medium">Relatórios</TabsTrigger>
             <TabsTrigger value="close" className="text-sm font-medium">Encerrar Exercício</TabsTrigger>
@@ -34,6 +37,14 @@ const Accounting = () => {
 
           <TabsContent value="entries" className="mt-6">
             <AccountingEntryForm />
+          </TabsContent>
+
+          <TabsContent value="entries-list" className="mt-6">
+            <AccountingEntriesTab />
+          </TabsContent>
+
+          <TabsContent value="reconciliation" className="mt-6">
+            <BankReconciliationTab />
           </TabsContent>
 
           <TabsContent value="accounts" className="mt-6">

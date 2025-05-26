@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,10 @@ import { Save } from "lucide-react";
 export function AccountingEntryForm() {
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
+    debitAccount: "",
     debitValue: "",
     debitDescription: "",
+    creditAccount: "",
     creditValue: "",
     creditDescription: "",
     history: "",
@@ -20,8 +22,35 @@ export function AccountingEntryForm() {
   });
   const { toast } = useToast();
 
+  // Função para buscar descrição da conta automaticamente
+  const getAccountDescription = (accountCode: string) => {
+    const accounts = JSON.parse(localStorage.getItem('accountingAccounts') || '[]');
+    const account = accounts.find((acc: any) => acc.code === accountCode);
+    return account ? account.description : "";
+  };
+
+  // Effect para atualizar descrição do débito automaticamente
+  useEffect(() => {
+    if (formData.debitAccount) {
+      const description = getAccountDescription(formData.debitAccount);
+      if (description && description !== formData.debitDescription) {
+        setFormData(prev => ({ ...prev, debitDescription: description }));
+      }
+    }
+  }, [formData.debitAccount]);
+
+  // Effect para atualizar descrição do crédito automaticamente
+  useEffect(() => {
+    if (formData.creditAccount) {
+      const description = getAccountDescription(formData.creditAccount);
+      if (description && description !== formData.creditDescription) {
+        setFormData(prev => ({ ...prev, creditDescription: description }));
+      }
+    }
+  }, [formData.creditAccount]);
+
   const handleSave = () => {
-    if (!formData.date || !formData.totalValue || !formData.history) {
+    if (!formData.date || !formData.totalValue || !formData.history || !formData.debitAccount || !formData.creditAccount) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos obrigatórios.",
@@ -35,8 +64,10 @@ export function AccountingEntryForm() {
     const newEntry = {
       id: Date.now().toString(),
       date: formData.date,
+      debitAccount: formData.debitAccount,
       debitValue: parseFloat(formData.debitValue.replace(/\D/g, '')) / 100 || 0,
       debitDescription: formData.debitDescription,
+      creditAccount: formData.creditAccount,
       creditValue: parseFloat(formData.creditValue.replace(/\D/g, '')) / 100 || 0,
       creditDescription: formData.creditDescription,
       history: formData.history,
@@ -55,8 +86,10 @@ export function AccountingEntryForm() {
     // Reset form
     setFormData({
       date: new Date().toISOString().split('T')[0],
+      debitAccount: "",
       debitValue: "",
       debitDescription: "",
+      creditAccount: "",
       creditValue: "",
       creditDescription: "",
       history: "",
@@ -76,6 +109,27 @@ export function AccountingEntryForm() {
   const handleCurrencyChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value.replace(/\D/g, "");
     setFormData(prev => ({ ...prev, [field]: inputValue }));
+  };
+
+  const formatAccountMask = (value: string) => {
+    // Remove todos os caracteres não numéricos
+    const numbers = value.replace(/\D/g, '');
+    
+    // Aplica a máscara: X.X.X.XX.XX
+    let formatted = '';
+    for (let i = 0; i < numbers.length && i < 8; i++) {
+      if (i === 1 || i === 2 || i === 4 || i === 6) {
+        formatted += '.';
+      }
+      formatted += numbers[i];
+    }
+    
+    return formatted;
+  };
+
+  const handleAccountChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatAccountMask(e.target.value);
+    setFormData(prev => ({ ...prev, [field]: formatted }));
   };
 
   return (
@@ -120,6 +174,16 @@ export function AccountingEntryForm() {
             <h3 className="font-semibold text-red-800 text-lg">Débito</h3>
             <div className="space-y-4">
               <div>
+                <Label className="text-sm font-medium text-gray-700">Conta Contábil *</Label>
+                <Input
+                  placeholder="X.X.X.XX.XX"
+                  value={formData.debitAccount}
+                  onChange={handleAccountChange('debitAccount')}
+                  className="h-10 mt-1 rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
+                  maxLength={11}
+                />
+              </div>
+              <div>
                 <Label className="text-sm font-medium text-gray-700">Valor Débito</Label>
                 <Input
                   placeholder="R$ 0,00"
@@ -131,7 +195,7 @@ export function AccountingEntryForm() {
               <div>
                 <Label className="text-sm font-medium text-gray-700">Descrição da Conta</Label>
                 <Input
-                  placeholder="Ex: Despesas com Alimentação"
+                  placeholder="Descrição será preenchida automaticamente"
                   value={formData.debitDescription}
                   onChange={(e) => setFormData(prev => ({ ...prev, debitDescription: e.target.value }))}
                   className="h-10 mt-1 rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
@@ -145,6 +209,16 @@ export function AccountingEntryForm() {
             <h3 className="font-semibold text-green-800 text-lg">Crédito</h3>
             <div className="space-y-4">
               <div>
+                <Label className="text-sm font-medium text-gray-700">Conta Contábil *</Label>
+                <Input
+                  placeholder="X.X.X.XX.XX"
+                  value={formData.creditAccount}
+                  onChange={handleAccountChange('creditAccount')}
+                  className="h-10 mt-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
+                  maxLength={11}
+                />
+              </div>
+              <div>
                 <Label className="text-sm font-medium text-gray-700">Valor Crédito</Label>
                 <Input
                   placeholder="R$ 0,00"
@@ -156,7 +230,7 @@ export function AccountingEntryForm() {
               <div>
                 <Label className="text-sm font-medium text-gray-700">Descrição da Conta</Label>
                 <Input
-                  placeholder="Ex: Banco Conta Movimento"
+                  placeholder="Descrição será preenchida automaticamente"
                   value={formData.creditDescription}
                   onChange={(e) => setFormData(prev => ({ ...prev, creditDescription: e.target.value }))}
                   className="h-10 mt-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
