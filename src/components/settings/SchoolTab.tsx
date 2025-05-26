@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +28,7 @@ export function SchoolTab() {
   const { data: schools, saveData: setSchools } = useLocalStorageSync<School>('schools', []);
 
   const handleOpenModal = (school?: School) => {
+    console.log('Abrindo modal para escola:', school);
     if (school) {
       setCurrentSchool(school);
       setIsEditMode(true);
@@ -37,6 +37,12 @@ export function SchoolTab() {
       setIsEditMode(false);
     }
     setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setCurrentSchool(null);
+    setIsEditMode(false);
   };
 
   const handleSaveSchool = (schoolData: Omit<School, "id" | "createdAt" | "updatedAt" | "status">) => {
@@ -68,7 +74,7 @@ export function SchoolTab() {
       console.log(`✅ Nova escola criada: ${schoolData.name} - Total: ${updatedSchools.length}`);
     }
     
-    setIsModalOpen(false);
+    handleCloseModal();
     
     toast({
       title: isEditMode ? "Escola atualizada" : "Escola cadastrada",
@@ -257,12 +263,10 @@ export function SchoolTab() {
 
       <ModernSchoolForm 
         isOpen={isModalOpen} 
-        onClose={() => {
-          setIsModalOpen(false);
-          setCurrentSchool(null);
-        }}
+        onClose={handleCloseModal}
         onSave={handleSaveSchool}
         initialData={currentSchool || undefined}
+        key={currentSchool?.id || 'new'} // Force re-render when school changes
       />
 
       {/* Modal de Visualização */}

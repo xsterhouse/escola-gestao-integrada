@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { 
   Dialog, 
   DialogTitle, 
@@ -28,21 +29,56 @@ export function ModernSchoolForm({
   initialData,
 }: ModernSchoolFormProps) {
   const [formData, setFormData] = useState({
-    name: initialData?.name || "",
-    tradingName: initialData?.tradingName || "",
-    cnpj: initialData?.cnpj || "",
-    director: initialData?.director || "",
-    responsibleName: initialData?.responsibleName || "",
-    email: initialData?.email || "",
-    phone: initialData?.phone || "",
-    address: initialData?.address || "",
-    cityState: initialData?.cityState || "",
-    logo: initialData?.logo || "",
-    purchasingCenterId: initialData?.purchasingCenterId || "",
+    name: "",
+    tradingName: "",
+    cnpj: "",
+    director: "",
+    responsibleName: "",
+    email: "",
+    phone: "",
+    address: "",
+    cityState: "",
+    logo: "",
+    purchasingCenterId: "",
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+
+  // Effect to populate form data when initialData changes
+  useEffect(() => {
+    console.log('InitialData changed:', initialData);
+    if (initialData) {
+      setFormData({
+        name: initialData.name || "",
+        tradingName: initialData.tradingName || "",
+        cnpj: initialData.cnpj || "",
+        director: initialData.director || "",
+        responsibleName: initialData.responsibleName || "",
+        email: initialData.email || "",
+        phone: initialData.phone || "",
+        address: initialData.address || "",
+        cityState: initialData.cityState || "",
+        logo: initialData.logo || "",
+        purchasingCenterId: initialData.purchasingCenterId || "",
+      });
+    } else {
+      // Reset form for new school
+      setFormData({
+        name: "",
+        tradingName: "",
+        cnpj: "",
+        director: "",
+        responsibleName: "",
+        email: "",
+        phone: "",
+        address: "",
+        cityState: "",
+        logo: "",
+        purchasingCenterId: "",
+      });
+    }
+  }, [initialData]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
