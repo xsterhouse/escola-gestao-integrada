@@ -123,52 +123,67 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
       throw new Error("Valor total da nota inválido");
     }
 
-    // Extract ALL items (det elements)
-    const detElements = xmlDoc.querySelectorAll('det');
+    // Extract ALL items (det elements) - CORRECTED ITERATION
+    const detElements = Array.from(xmlDoc.querySelectorAll('det'));
     const items: InvoiceItem[] = [];
     
-    console.log(`Processando ${detElements.length} itens encontrados no XML da NF-e`);
+    console.log(`Processando ${detElements.length} elementos <det> encontrados no XML da NF-e`);
     
     if (detElements.length === 0) {
       throw new Error("Nenhum item encontrado no XML da NF-e");
     }
 
+    // Iterate through ALL <det> elements
     detElements.forEach((detElement, index) => {
-      // Get prod element within each det
-      const prodElement = getElementByTagName('prod', detElement);
+      console.log(`Processando item ${index + 1} de ${detElements.length}`);
+      
+      // Get prod element within this specific det element
+      const prodElement = detElement.querySelector('prod');
       
       if (!prodElement) {
-        console.warn(`Item ${index + 1}: elemento 'prod' não encontrado`);
+        console.warn(`Item ${index + 1}: elemento 'prod' não encontrado dentro de <det>`);
         return;
       }
 
-      // Extract product information from prod element
-      const description = getTextContent('xProd', prodElement);
-      const quantityStr = getTextContent('qCom', prodElement); // Quantidade comercial
-      const unitPriceStr = getTextContent('vUnCom', prodElement); // Valor unitário comercial
-      const totalPriceStr = getTextContent('vProd', prodElement); // Valor total do produto
-      const unitOfMeasure = getTextContent('uCom', prodElement) || "Un"; // Unidade comercial
+      // Extract product information from prod element using direct child queries
+      const xProdElement = prodElement.querySelector('xProd');
+      const qComElement = prodElement.querySelector('qCom');
+      const vUnComElement = prodElement.querySelector('vUnCom');
+      const vProdElement = prodElement.querySelector('vProd');
+      const uComElement = prodElement.querySelector('uCom');
+
+      const description = xProdElement?.textContent?.trim() || "";
+      const quantityStr = qComElement?.textContent?.trim() || "0";
+      const unitPriceStr = vUnComElement?.textContent?.trim() || "0";
+      const totalPriceStr = vProdElement?.textContent?.trim() || "0";
+      const unitOfMeasure = uComElement?.textContent?.trim() || "Un";
 
       // Convert values, handling Brazilian decimal format
       const quantity = parseFloat(quantityStr.replace(',', '.')) || 0;
       const unitPrice = parseFloat(unitPriceStr.replace(',', '.')) || 0;
       const totalPrice = parseFloat(totalPriceStr.replace(',', '.')) || 0;
 
-      console.log(`Item ${index + 1}: ${description} - Qtd: ${quantity} - Preço Unit: ${unitPrice} - Total: ${totalPrice}`);
+      console.log(`Item ${index + 1}:`);
+      console.log(`  - Descrição: ${description}`);
+      console.log(`  - Quantidade (qCom): ${quantity}`);
+      console.log(`  - Preço Unit (vUnCom): ${unitPrice}`);
+      console.log(`  - Total (vProd): ${totalPrice}`);
+      console.log(`  - Unidade (uCom): ${unitOfMeasure}`);
 
       // Only add items with valid description and quantity
       if (description && quantity > 0) {
         items.push({
           id: uuidv4(),
-          description: description.trim(),
+          description: description,
           quantity,
           unitPrice,
           totalPrice,
-          unitOfMeasure: unitOfMeasure.trim(),
+          unitOfMeasure,
           invoiceId: "" // Will be set later when creating the invoice
         });
+        console.log(`  ✓ Item ${index + 1} adicionado com sucesso`);
       } else {
-        console.warn(`Item ${index + 1} ignorado por dados inválidos: descrição="${description}", quantidade=${quantity}`);
+        console.warn(`  ⚠ Item ${index + 1} ignorado por dados inválidos: descrição="${description}", quantidade=${quantity}`);
       }
     });
 
