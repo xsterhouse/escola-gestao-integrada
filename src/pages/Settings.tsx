@@ -35,8 +35,8 @@ const Settings = () => {
         >
           <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full md:w-auto">
             <TabsTrigger value="schools">Escolas</TabsTrigger>
-            <TabsTrigger value="purchasing">Central de Compras</TabsTrigger>
             <TabsTrigger value="users">Usuários do Sistema</TabsTrigger>
+            <TabsTrigger value="purchasing">Central de Compras</TabsTrigger>
             <TabsTrigger value="permissions">Permissões do Sistema</TabsTrigger>
           </TabsList>
           
@@ -44,12 +44,12 @@ const Settings = () => {
             <SchoolTab />
           </TabsContent>
           
-          <TabsContent value="purchasing">
-            <PurchasingCenterTab />
-          </TabsContent>
-          
           <TabsContent value="users">
             <SystemUsersTab />
+          </TabsContent>
+          
+          <TabsContent value="purchasing">
+            <PurchasingCenterTab />
           </TabsContent>
           
           <TabsContent value="permissions">

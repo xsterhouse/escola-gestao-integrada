@@ -1,18 +1,82 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Package, Users, Building2, TrendingUp, AlertTriangle } from "lucide-react";
+import { useEffect, useState } from "react";
+
+interface DashboardData {
+  totalContracts: number;
+  activeContracts: number;
+  totalProducts: number;
+  lowStockProducts: number;
+  totalUsers: number;
+  totalSchools: number;
+  pendingPayments: number;
+  monthlyRevenue: number;
+}
 
 export function DashboardCards() {
-  // Dados mockados para o dashboard como estava originalmente
-  const data = {
-    totalContracts: 145,
-    activeContracts: 127,
-    totalProducts: 2340,
-    lowStockProducts: 23,
-    totalUsers: 89,
-    totalSchools: 12,
-    pendingPayments: 34,
-    monthlyRevenue: 125670.50
+  const [data, setData] = useState<DashboardData>({
+    totalContracts: 0,
+    activeContracts: 0,
+    totalProducts: 0,
+    lowStockProducts: 0,
+    totalUsers: 0,
+    totalSchools: 0,
+    pendingPayments: 0,
+    monthlyRevenue: 0
+  });
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = () => {
+    // Load real data from localStorage instead of mock data
+    const contracts = JSON.parse(localStorage.getItem('contracts') || '[]');
+    const products = JSON.parse(localStorage.getItem('products') || '[]');
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const schools = JSON.parse(localStorage.getItem('schools') || '[]');
+    const paymentAccounts = JSON.parse(localStorage.getItem('paymentAccounts') || '[]');
+    const receivableAccounts = JSON.parse(localStorage.getItem('receivableAccounts') || '[]');
+
+    // Calculate active contracts (not expired)
+    const now = new Date();
+    const activeContracts = contracts.filter((contract: any) => {
+      const endDate = new Date(contract.endDate || contract.validityEnd);
+      return endDate > now;
+    });
+
+    // Calculate low stock products
+    const lowStockProducts = products.filter((product: any) => 
+      product.currentStock <= (product.minimumStock || 10)
+    );
+
+    // Calculate pending payments
+    const pendingPayments = paymentAccounts.filter((payment: any) => 
+      payment.status === 'a_pagar'
+    ).length;
+
+    // Calculate monthly revenue (current month)
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const monthlyRevenue = receivableAccounts
+      .filter((receivable: any) => {
+        if (receivable.status !== 'recebido' || !receivable.receivedDate) return false;
+        const receivedDate = new Date(receivable.receivedDate);
+        return receivedDate.getMonth() === currentMonth && receivedDate.getFullYear() === currentYear;
+      })
+      .reduce((sum: number, receivable: any) => sum + (receivable.value || 0), 0);
+
+    setData({
+      totalContracts: contracts.length,
+      activeContracts: activeContracts.length,
+      totalProducts: products.length,
+      lowStockProducts: lowStockProducts.length,
+      totalUsers: users.length,
+      totalSchools: schools.length,
+      pendingPayments,
+      monthlyRevenue
+    });
   };
 
   const formatCurrency = (value: number) => {
@@ -51,6 +115,7 @@ export function DashboardCards() {
                 {data.lowStockProducts} com estoque baixo
               </span>
             )}
+            {data.lowStockProducts === 0 && "Todos com estoque adequado"}
           </p>
         </CardContent>
       </Card>
