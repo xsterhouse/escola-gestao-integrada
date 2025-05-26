@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,7 +9,7 @@ import { SystemUserEditModal } from "@/components/settings/SystemUserEditModal";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { saveUserPassword } from "@/contexts/AuthContext";
-import { Eye, Pencil, Ban, ShieldCheck, Plus, User } from "lucide-react";
+import { Eye, Pencil, Ban, ShieldCheck, Plus, User, Trash2 } from "lucide-react";
 
 interface SystemUser {
   id: string;
@@ -87,6 +88,23 @@ export function SystemUsersTab() {
       title: "Usuário atualizado",
       description: "Os dados do usuário foram atualizados com sucesso.",
     });
+  };
+
+  const handleDeleteUser = (id: string) => {
+    if (window.confirm("Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.")) {
+      const updatedUsers = systemUsers.filter(user => user.id !== id);
+      setSystemUsers(updatedUsers);
+      
+      // Remover também a senha do sistema de autenticação
+      const passwords = JSON.parse(localStorage.getItem("userPasswords") || "{}");
+      delete passwords[id];
+      localStorage.setItem("userPasswords", JSON.stringify(passwords));
+      
+      toast({
+        title: "Usuário excluído",
+        description: "O usuário foi excluído com sucesso.",
+      });
+    }
   };
 
   const handleToggleStatus = (id: string, newStatus: "active" | "blocked") => {
@@ -202,6 +220,15 @@ export function SystemUsersTab() {
                       title="Editar"
                     >
                       <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleDeleteUser(user.id)}
+                      className="text-red-600 hover:text-red-700"
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                     {user.status === "active" ? (
                       <Button 

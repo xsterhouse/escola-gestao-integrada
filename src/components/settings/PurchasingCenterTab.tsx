@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, Pencil, Trash2, Plus, School as SchoolIcon, Ban, ShieldCheck } from "lucide-react";
 import { PurchasingCenter, School } from "@/lib/types";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 
 export function PurchasingCenterTab() {
   const { toast } = useToast();
@@ -17,70 +19,8 @@ export function PurchasingCenterTab() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentCenter, setCurrentCenter] = useState<PurchasingCenter | null>(null);
   
-  const [purchasingCenters, setPurchasingCenters] = useState<PurchasingCenter[]>([
-    {
-      id: "1",
-      name: "POLO Regional Leste",
-      description: "Polo de compras para escolas da região leste",
-      schoolIds: ["1", "2"],
-      status: "active",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "2",
-      name: "POLO Regional Sul",
-      description: "Polo de compras para escolas da região sul",
-      schoolIds: ["3"],
-      status: "inactive",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-  ]);
-  
-  // Get schools from the system (same data as Schools page)
-  const [schools, setSchools] = useState<School[]>([]);
-
-  // Load schools from the system when component mounts
-  useEffect(() => {
-    // Mock data that matches the Schools page data
-    const systemSchools: School[] = [
-      {
-        id: "1",
-        name: "Escola Municipal João da Silva",
-        cnpj: "12.345.678/0001-90",
-        responsibleName: "Maria Oliveira",
-        email: "contato@joaodasilva.edu.br",
-        status: "active",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: "2",
-        name: "Colégio Estadual Paulo Freire",
-        cnpj: "98.765.432/0001-10",
-        responsibleName: "Carlos Santos",
-        email: "contato@paulofreire.edu.br",
-        status: "active",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: "3",
-        name: "Escola Municipal Maria José",
-        cnpj: "34.567.890/0001-23",
-        responsibleName: "Carlos Eduardo",
-        email: "contato@mariajose.edu.br",
-        status: "active",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-    ];
-    
-    // Filter only active schools
-    const activeSchools = systemSchools.filter(school => school.status === "active");
-    setSchools(activeSchools);
-  }, []);
+  const { data: purchasingCenters, saveData: setPurchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasingCenters', []);
+  const { data: schools } = useLocalStorageSync<School>('schools', []);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -176,7 +116,7 @@ export function PurchasingCenterTab() {
     } else {
       // Create new center
       const newCenter: PurchasingCenter = {
-        id: `${purchasingCenters.length + 1}`,
+        id: Date.now().toString(),
         name: formData.name,
         description: formData.description,
         schoolIds: formData.schoolIds,
@@ -208,11 +148,14 @@ export function PurchasingCenterTab() {
   };
 
   const handleDeleteCenter = (id: string) => {
-    setPurchasingCenters(prev => prev.filter(center => center.id !== id));
-    toast({
-      title: "Central de Compras excluída",
-      description: "A Central de Compras foi excluída com sucesso."
-    });
+    if (window.confirm("Tem certeza que deseja excluir esta Central de Compras? Esta ação não pode ser desfeita.")) {
+      const updatedCenters = purchasingCenters.filter(center => center.id !== id);
+      setPurchasingCenters(updatedCenters);
+      toast({
+        title: "Central de Compras excluída",
+        description: "A Central de Compras foi excluída com sucesso."
+      });
+    }
   };
 
   const getSchoolNames = (schoolIds: string[]) => {
@@ -292,6 +235,7 @@ export function PurchasingCenterTab() {
                       size="sm" 
                       variant="ghost"
                       onClick={() => handleDeleteCenter(center.id)}
+                      className="text-red-600 hover:text-red-700"
                       title="Excluir"
                     >
                       <Trash2 className="h-4 w-4" />

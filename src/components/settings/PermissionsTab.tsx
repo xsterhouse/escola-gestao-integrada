@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModulePermission, UserRole } from "@/lib/types";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 
 export function PermissionsTab() {
   const { toast } = useToast();
@@ -18,8 +19,8 @@ export function PermissionsTab() {
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<UserRole | null>(null);
 
-  // Mock data for module permissions
-  const [modulePermissions, setModulePermissions] = useState<ModulePermission[]>([
+  // Use localStorage for persistence
+  const { data: modulePermissions, saveData: setModulePermissions } = useLocalStorageSync<ModulePermission>('modulePermissions', [
     {
       id: "1",
       name: "Dashboard",
@@ -85,8 +86,7 @@ export function PermissionsTab() {
     }
   ]);
 
-  // Mock data for user roles
-  const [userRoles, setUserRoles] = useState<UserRole[]>([
+  const { data: userRoles, saveData: setUserRoles } = useLocalStorageSync<UserRole>('userRoles', [
     {
       id: "1",
       name: "Administrador",
@@ -114,26 +114,56 @@ export function PermissionsTab() {
     description: ""
   });
 
-  // Store role permissions (combination of roles and modules)
+  // Store role permissions (combination of roles and modules) in localStorage
   const [rolePermissions, setRolePermissions] = useState<{
     [roleId: string]: {
       [moduleId: string]: boolean;
     }
-  }>({
-    "1": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": true },
-    "2": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": false },
-    "3": { "1": true, "2": true, "3": true, "4": false, "5": false, "6": false, "7": false },
-    "4": { "1": true, "2": false, "3": false, "4": false, "5": false, "6": false, "7": false }
-  });
+  }>({});
+
+  // Load role permissions from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('rolePermissions');
+    if (stored) {
+      try {
+        setRolePermissions(JSON.parse(stored));
+      } catch (error) {
+        console.error("Erro ao carregar permissões dos perfis:", error);
+        // Initialize with default values
+        const defaultPermissions = {
+          "1": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": true },
+          "2": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": false },
+          "3": { "1": true, "2": true, "3": true, "4": false, "5": false, "6": false, "7": false },
+          "4": { "1": true, "2": false, "3": false, "4": false, "5": false, "6": false, "7": false }
+        };
+        setRolePermissions(defaultPermissions);
+        localStorage.setItem('rolePermissions', JSON.stringify(defaultPermissions));
+      }
+    } else {
+      // Initialize with default values
+      const defaultPermissions = {
+        "1": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": true },
+        "2": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": false },
+        "3": { "1": true, "2": true, "3": true, "4": false, "5": false, "6": false, "7": false },
+        "4": { "1": true, "2": false, "3": false, "4": false, "5": false, "6": false, "7": false }
+      };
+      setRolePermissions(defaultPermissions);
+      localStorage.setItem('rolePermissions', JSON.stringify(defaultPermissions));
+    }
+  }, []);
+
+  // Save role permissions to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('rolePermissions', JSON.stringify(rolePermissions));
+  }, [rolePermissions]);
 
   const handleTogglePermission = (moduleId: string, permission: "create" | "read" | "update" | "delete") => {
-    setModulePermissions(prevPermissions => 
-      prevPermissions.map(module => 
-        module.id === moduleId
-          ? { ...module, [permission]: !module[permission] }
-          : module
-      )
+    const updatedPermissions = modulePermissions.map(module => 
+      module.id === moduleId
+        ? { ...module, [permission]: !module[permission] }
+        : module
     );
+    setModulePermissions(updatedPermissions);
   };
 
   const handleSavePermissions = () => {
@@ -187,20 +217,19 @@ export function PermissionsTab() {
     } else {
       // Create new role
       const newRole: UserRole = {
-        id: `${userRoles.length + 1}`,
+        id: Date.now().toString(),
         name: roleForm.name,
         description: roleForm.description
       };
       setUserRoles([...userRoles, newRole]);
       
       // Initialize permissions for the new role
-      setRolePermissions(prev => ({
-        ...prev,
-        [newRole.id]: modulePermissions.reduce((acc, module) => {
-          acc[module.id] = false;
-          return acc;
-        }, {} as { [key: string]: boolean })
-      }));
+      const newPermissions = { ...rolePermissions };
+      newPermissions[newRole.id] = modulePermissions.reduce((acc, module) => {
+        acc[module.id] = false;
+        return acc;
+      }, {} as { [key: string]: boolean });
+      setRolePermissions(newPermissions);
       
       toast({
         title: "Perfil criado",
@@ -212,27 +241,38 @@ export function PermissionsTab() {
   };
 
   const handleDeleteRole = (roleId: string) => {
-    setUserRoles(prev => prev.filter(role => role.id !== roleId));
-    
-    // Clean up role permissions
-    const newRolePermissions = { ...rolePermissions };
-    delete newRolePermissions[roleId];
-    setRolePermissions(newRolePermissions);
-    
-    toast({
-      title: "Perfil excluído",
-      description: "O perfil foi excluído com sucesso."
-    });
+    if (window.confirm("Tem certeza que deseja excluir este perfil? Esta ação não pode ser desfeita.")) {
+      const updatedRoles = userRoles.filter(role => role.id !== roleId);
+      setUserRoles(updatedRoles);
+      
+      // Clean up role permissions
+      const newRolePermissions = { ...rolePermissions };
+      delete newRolePermissions[roleId];
+      setRolePermissions(newRolePermissions);
+      
+      toast({
+        title: "Perfil excluído",
+        description: "O perfil foi excluído com sucesso."
+      });
+    }
   };
 
   const handleToggleRolePermission = (roleId: string, moduleId: string) => {
-    setRolePermissions(prev => ({
-      ...prev,
+    const newRolePermissions = {
+      ...rolePermissions,
       [roleId]: {
-        ...prev[roleId],
-        [moduleId]: !prev[roleId]?.[moduleId]
+        ...rolePermissions[roleId],
+        [moduleId]: !rolePermissions[roleId]?.[moduleId]
       }
-    }));
+    };
+    setRolePermissions(newRolePermissions);
+  };
+
+  const handleSaveRolePermissions = (roleId: string) => {
+    toast({ 
+      title: "Permissões salvas", 
+      description: `Perfil ${userRoles.find(r => r.id === roleId)?.name} atualizado.` 
+    });
   };
 
   return (
@@ -373,10 +413,7 @@ export function PermissionsTab() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => toast({ 
-                            title: "Permissões salvas", 
-                            description: `Perfil ${role.name} atualizado.` 
-                          })}
+                          onClick={() => handleSaveRolePermissions(role.id)}
                         >
                           Salvar
                         </Button>
