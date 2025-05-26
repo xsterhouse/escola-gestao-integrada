@@ -230,7 +230,7 @@ export function BankReconciliationTab() {
                 <Checkbox
                   id="show-reconciled"
                   checked={showReconciled}
-                  onCheckedChange={setShowReconciled}
+                  onCheckedChange={(checked) => setShowReconciled(checked === true)}
                 />
                 <Label htmlFor="show-reconciled" className="text-sm">
                   Mostrar conciliadas
