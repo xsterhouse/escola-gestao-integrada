@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileExport, Filter } from "lucide-react";
+import { FileText, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export function AccountingReportsTab() {
@@ -206,7 +205,7 @@ export function AccountingReportsTab() {
                 variant="outline"
                 className="h-10 px-6"
               >
-                <FileExport className="mr-2 h-4 w-4" />
+                <FileText className="mr-2 h-4 w-4" />
                 Exportar CSV
               </Button>
             )}

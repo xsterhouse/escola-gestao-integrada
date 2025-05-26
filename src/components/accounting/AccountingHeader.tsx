@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Printer, FileExport } from "lucide-react";
+import { Printer, FileText } from "lucide-react";
 
 export function AccountingHeader() {
   const handlePrint = () => {
@@ -29,7 +29,7 @@ export function AccountingHeader() {
         onClick={handleExport}
         className="flex items-center gap-2"
       >
-        <FileExport className="h-4 w-4" />
+        <FileText className="h-4 w-4" />
         Exportar
       </Button>
     </div>

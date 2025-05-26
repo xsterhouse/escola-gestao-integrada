@@ -49,7 +49,7 @@ export function CloseExerciseTab() {
       totalRevenues,
       totalExpenses,
       result: Math.abs(result),
-      type: result >= 0 ? 'superavit' : 'deficit'
+      type: (result >= 0 ? 'superavit' : 'deficit') as 'superavit' | 'deficit'
     };
   };
 
