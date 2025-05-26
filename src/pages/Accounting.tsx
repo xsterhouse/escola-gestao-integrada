@@ -1,13 +1,14 @@
+
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccountingHeader } from "@/components/accounting/AccountingHeader";
 import { AccountingEntryForm } from "@/components/accounting/AccountingEntryForm";
 import { AccountingEntriesTab } from "@/components/accounting/AccountingEntriesTab";
-import { BankReconciliationTab } from "@/components/accounting/BankReconciliationTab";
 import { AccountConfigTab } from "@/components/accounting/AccountConfigTab";
 import { AccountingReportsTab } from "@/components/accounting/AccountingReportsTab";
 import { CloseExerciseTab } from "@/components/accounting/CloseExerciseTab";
+import { FinancialTransactionsSearchTab } from "@/components/accounting/FinancialTransactionsSearchTab";
 
 const Accounting = () => {
   const [activeTab, setActiveTab] = useState("entries");
@@ -29,7 +30,7 @@ const Accounting = () => {
           <TabsList className="grid w-full max-w-6xl grid-cols-6 mb-6">
             <TabsTrigger value="entries" className="text-sm font-medium">Lançamentos</TabsTrigger>
             <TabsTrigger value="entries-list" className="text-sm font-medium">Visualizar Lançamentos</TabsTrigger>
-            <TabsTrigger value="reconciliation" className="text-sm font-medium">Conciliação Bancária</TabsTrigger>
+            <TabsTrigger value="financial-search" className="text-sm font-medium">Buscar Lançamentos Financeiros</TabsTrigger>
             <TabsTrigger value="accounts" className="text-sm font-medium">Configuração de Contas</TabsTrigger>
             <TabsTrigger value="reports" className="text-sm font-medium">Relatórios</TabsTrigger>
             <TabsTrigger value="close" className="text-sm font-medium">Encerrar Exercício</TabsTrigger>
@@ -43,8 +44,8 @@ const Accounting = () => {
             <AccountingEntriesTab />
           </TabsContent>
 
-          <TabsContent value="reconciliation" className="mt-6">
-            <BankReconciliationTab />
+          <TabsContent value="financial-search" className="mt-6">
+            <FinancialTransactionsSearchTab />
           </TabsContent>
 
           <TabsContent value="accounts" className="mt-6">

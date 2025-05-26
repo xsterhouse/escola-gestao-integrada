@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { 
   Dialog, 
   DialogTitle, 
@@ -58,74 +59,54 @@ export function ModernUserForm({
     { id: "1", name: "Dashboard", description: "Painel principal", create: true, read: true, update: false, delete: false },
     { id: "2", name: "Produtos", description: "Gestão de produtos", create: false, read: true, update: false, delete: false },
     { id: "3", name: "Estoque", description: "Controle de estoque", create: false, read: true, update: false, delete: false },
-    { id: "4", name: "Financeiro", description: "Gestão financeira", create: false, read: false, update: false, delete: false },
-    { id: "5", name: "Planejamento", description: "Planejamento escolar", create: false, read: false, update: false, delete: false },
-    { id: "6", name: "Contratos", description: "Gestão de contratos", create: false, read: false, update: false, delete: false },
-    { id: "7", name: "Configurações", description: "Configurações do sistema", create: false, read: false, update: false, delete: false },
   ]);
 
-  // Filter schools to ensure no empty values
-  const validSchools = schools.filter(school => school.id && school.id.trim() !== "");
+  const generatePassword = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+    let password = "";
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setFormData(prev => ({ ...prev, password, confirmPassword: password }));
+    calculatePasswordStrength(password);
+  };
 
-  const validatePassword = (password: string) => {
+  const calculatePasswordStrength = (password: string) => {
     let strength = 0;
-    if (password.length >= 8) strength++;
-    if (/[A-Z]/.test(password)) strength++;
-    if (/[a-z]/.test(password)) strength++;
-    if (/[0-9]/.test(password)) strength++;
-    if (/[^A-Za-z0-9]/.test(password)) strength++;
-    
+    if (password.length >= 8) strength += 1;
+    if (/[a-z]/.test(password)) strength += 1;
+    if (/[A-Z]/.test(password)) strength += 1;
+    if (/[0-9]/.test(password)) strength += 1;
+    if (/[^A-Za-z0-9]/.test(password)) strength += 1;
     setPasswordStrength(strength);
-    return strength >= 3;
   };
 
   const handlePasswordChange = (password: string) => {
     setFormData(prev => ({ ...prev, password }));
-    validatePassword(password);
+    calculatePasswordStrength(password);
   };
 
-  const handleProfileChange = (profileId: string) => {
-    setFormData(prev => ({ ...prev, profileId }));
-    
-    // Update permissions based on selected profile
-    const selectedProfile = userRoles.find(role => role.id === profileId);
-    if (selectedProfile && selectedProfile.detailedPermissions) {
-      const updatedPermissions = permissions.map(permission => {
-        const profilePermission = selectedProfile.detailedPermissions.find(
-          p => p.moduleId === permission.id
-        );
-        
-        if (profilePermission) {
-          return {
-            ...permission,
-            create: profilePermission.create,
-            read: profilePermission.read || profilePermission.view,
-            update: profilePermission.edit,
-            delete: profilePermission.delete
-          };
-        }
-        
-        return permission;
-      });
-      
-      setPermissions(updatedPermissions);
+  const getSelectedProfile = () => {
+    return userRoles.find(role => role.id === formData.profileId);
+  };
+
+  const getProfilePermissionsSummary = () => {
+    const profile = getSelectedProfile();
+    if (!profile || !profile.detailedPermissions) {
+      return "Nenhuma permissão configurada";
     }
-  };
-
-  const handlePermissionToggle = (permissionId: string, type: "create" | "read" | "update" | "delete") => {
-    setPermissions(prev => 
-      prev.map(permission => 
-        permission.id === permissionId
-          ? { ...permission, [type]: !permission[type] }
-          : permission
-      )
-    );
+    
+    const activeModules = profile.detailedPermissions.filter(p => 
+      p.view || p.create || p.edit || p.delete || p.read
+    ).length;
+    
+    return `${activeModules} módulos com permissões configuradas`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.matricula || !formData.email || !formData.role) {
+    if (!formData.name || !formData.matricula || !formData.email) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -142,43 +123,20 @@ export function ModernUserForm({
       });
       return;
     }
-
-    if (!initialData) { // Novo usuário
-      if (!formData.password) {
-        toast({
-          title: "Senha obrigatória",
-          description: "Por favor, defina uma senha para o usuário.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (formData.password !== formData.confirmPassword) {
-        toast({
-          title: "Senhas não coincidem",
-          description: "A confirmação da senha deve ser igual à senha.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!validatePassword(formData.password)) {
-        toast({
-          title: "Senha fraca",
-          description: "A senha deve ter pelo menos 8 caracteres e incluir maiúscula, minúscula e número.",
-          variant: "destructive",
-        });
-        return;
-      }
+    
+    if (formData.password && formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Senhas não conferem",
+        description: "A senha e a confirmação devem ser iguais.",
+        variant: "destructive",
+      });
+      return;
     }
     
     setIsSubmitting(true);
     
     try {
-      const userId = initialData?.id || Date.now().toString();
-      
       const userData: Partial<User> = {
-        id: userId,
         name: formData.name,
         matricula: formData.matricula,
         email: formData.email,
@@ -187,30 +145,45 @@ export function ModernUserForm({
         schoolId: formData.schoolId || null,
         permissions: permissions.map(p => ({ 
           id: p.id, 
-          name: p.name.toLowerCase(), 
+          name: p.name, 
           hasAccess: p.read || p.create || p.update || p.delete 
         })),
+        status: "active",
       };
 
-      // Salvar senha do usuário se for novo usuário
-      if (!initialData && formData.password) {
-        saveUserPassword(userId, formData.password);
-        console.log(`🔐 Senha salva para usuário: ${formData.name} (ID: ${userId})`);
+      if (!initialData) {
+        userData.createdAt = new Date();
+      }
+      userData.updatedAt = new Date();
+
+      // Save password if provided
+      if (formData.password) {
+        await saveUserPassword(formData.matricula, formData.password);
       }
 
       onSave(userData);
       
+      // Reset form
+      setFormData({
+        name: "",
+        matricula: "",
+        email: "",
+        role: "user",
+        profileId: "",
+        schoolId: "",
+        password: "",
+        confirmPassword: "",
+      });
+      
       toast({
-        title: initialData ? "Usuário atualizado" : "Usuário cadastrado",
-        description: initialData 
-          ? "O usuário foi atualizado com sucesso." 
-          : "O usuário foi cadastrado com sucesso e já pode fazer login no sistema.",
+        title: initialData ? "Usuário atualizado" : "Usuário criado",
+        description: `O usuário foi ${initialData ? "atualizado" : "criado"} com sucesso.`,
       });
       
       onClose();
     } catch (error) {
       toast({
-        title: "Erro ao salvar",
+        title: "Erro ao salvar usuário",
         description: "Ocorreu um erro ao salvar o usuário.",
         variant: "destructive",
       });
@@ -221,124 +194,116 @@ export function ModernUserForm({
 
   const getPasswordStrengthColor = () => {
     if (passwordStrength <= 2) return "bg-red-500";
-    if (passwordStrength <= 3) return "bg-yellow-500";
+    if (passwordStrength === 3) return "bg-yellow-500";
+    if (passwordStrength === 4) return "bg-blue-500";
     return "bg-green-500";
   };
 
   const getPasswordStrengthText = () => {
     if (passwordStrength <= 2) return "Fraca";
-    if (passwordStrength <= 3) return "Média";
-    return "Forte";
-  };
-
-  const getSelectedProfileName = () => {
-    const profile = userRoles.find(role => role.id === formData.profileId);
-    return profile ? profile.name : "";
+    if (passwordStrength === 3) return "Média";
+    if (passwordStrength === 4) return "Forte";
+    return "Muito Forte";
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
+            <Users className="h-5 w-5" />
             {initialData ? "Editar Usuário" : "Novo Usuário"}
           </DialogTitle>
           <DialogDescription>
             {initialData 
-              ? "Atualize os dados do usuário no sistema." 
-              : "Cadastre um novo usuário no sistema com senha para acesso."}
+              ? "Edite as informações do usuário e suas permissões." 
+              : "Cadastre um novo usuário no sistema."}
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-6">
-            {/* Dados Básicos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Informações Básicas */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Informações Básicas
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome Completo *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Nome completo do usuário"
+                  placeholder="Digite o nome completo"
                   required
                 />
               </div>
-
+              
               <div className="space-y-2">
-                <Label htmlFor="matricula">Número de Matrícula *</Label>
+                <Label htmlFor="matricula">Matrícula *</Label>
                 <Input
                   id="matricula"
                   value={formData.matricula}
                   onChange={(e) => setFormData(prev => ({ ...prev, matricula: e.target.value }))}
-                  placeholder="Número de matrícula para login"
+                  placeholder="Digite a matrícula"
                   required
                 />
               </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="Digite o e-mail"
+                required
+              />
+            </div>
+          </div>
 
+          {/* Perfil e Escola */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Perfil e Acesso
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="email">E-mail *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="email@exemplo.com"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="role">Perfil *</Label>
-                <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}>
+                <Label htmlFor="profileId">Perfil do Usuário *</Label>
+                <Select value={formData.profileId} onValueChange={(value) => setFormData(prev => ({ ...prev, profileId: value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o perfil" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">Usuário</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
-                    <SelectItem value="master">Master</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="profileId">Perfil de Permissões *</Label>
-                <Select value={formData.profileId} onValueChange={handleProfileChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o perfil de permissões" />
-                  </SelectTrigger>
-                  <SelectContent>
                     {userRoles.map((role) => (
                       <SelectItem key={role.id} value={role.id}>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4" />
-                          <div>
-                            <div className="font-medium">{role.name}</div>
-                            <div className="text-xs text-gray-500">{role.description}</div>
-                          </div>
-                        </div>
+                        {role.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {formData.profileId && (
                   <p className="text-xs text-gray-600">
-                    Perfil selecionado: <strong>{getSelectedProfileName()}</strong>
+                    {getProfilePermissionsSummary()}
                   </p>
                 )}
               </div>
-
-              <div className="space-y-2 md:col-span-2">
+              
+              <div className="space-y-2">
                 <Label htmlFor="school">Escola</Label>
-                <Select value={formData.schoolId} onValueChange={(value) => setFormData(prev => ({ ...prev, schoolId: value === "none" ? "" : value }))}>
+                <Select value={formData.schoolId} onValueChange={(value) => setFormData(prev => ({ ...prev, schoolId: value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a escola" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Nenhuma escola específica</SelectItem>
-                    {validSchools.map((school) => (
+                    <SelectItem value="">Todas as escolas</SelectItem>
+                    {schools.map((school) => (
                       <SelectItem key={school.id} value={school.id}>
                         {school.name}
                       </SelectItem>
@@ -348,19 +313,33 @@ export function ModernUserForm({
               </div>
             </div>
 
-            {/* Senha (apenas para novos usuários) */}
-            {!initialData && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {getSelectedProfile() && (
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="h-4 w-4 text-blue-600" />
+                  <span className="font-medium text-blue-900">Perfil Selecionado: {getSelectedProfile()?.name}</span>
+                </div>
+                <p className="text-sm text-blue-700">{getSelectedProfile()?.description}</p>
+                <p className="text-xs text-blue-600 mt-1">{getProfilePermissionsSummary()}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Senha */}
+          {!initialData && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">Senha de Acesso</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="password">Senha *</Label>
+                  <Label htmlFor="password">Senha</Label>
                   <div className="relative">
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
                       value={formData.password}
                       onChange={(e) => handlePasswordChange(e.target.value)}
-                      placeholder="Senha do usuário"
-                      required
+                      placeholder="Digite a senha"
                     />
                     <Button
                       type="button"
@@ -372,93 +351,53 @@ export function ModernUserForm({
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
-                  {formData.password && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-full bg-gray-200 rounded">
-                          <div 
-                            className={`h-full rounded transition-all ${getPasswordStrengthColor()}`}
-                            style={{ width: `${(passwordStrength / 5) * 100}%` }}
-                          />
-                        </div>
-                        <span className="text-xs text-gray-600">{getPasswordStrengthText()}</span>
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        A senha deve ter pelo menos 8 caracteres, incluindo maiúscula, minúscula e número.
-                      </p>
-                    </div>
-                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={generatePassword}
+                    className="w-full"
+                  >
+                    Gerar Senha Automática
+                  </Button>
                 </div>
-
+                
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
+                  <Label htmlFor="confirmPassword">Confirmar Senha</Label>
                   <Input
                     id="confirmPassword"
                     type="password"
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                     placeholder="Confirme a senha"
-                    required
                   />
                 </div>
               </div>
-            )}
-
-            {/* Permissões Preview */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                <Label className="text-base font-medium">Preview das Permissões</Label>
-                <span className="text-xs text-gray-500">(Baseadas no perfil selecionado)</span>
-              </div>
               
-              <div className="grid grid-cols-1 gap-4">
-                {permissions.map((permission) => (
-                  <div key={permission.id} className="border rounded-lg p-4 bg-gray-50">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h4 className="font-medium">{permission.name}</h4>
-                        <p className="text-sm text-gray-600">{permission.description}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Switch 
-                          checked={permission.read}
-                          onCheckedChange={() => handlePermissionToggle(permission.id, "read")}
-                        />
-                        <Label className="text-sm">Visualizar</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch 
-                          checked={permission.create}
-                          onCheckedChange={() => handlePermissionToggle(permission.id, "create")}
-                        />
-                        <Label className="text-sm">Criar</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch 
-                          checked={permission.update}
-                          onCheckedChange={() => handlePermissionToggle(permission.id, "update")}
-                        />
-                        <Label className="text-sm">Editar</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch 
-                          checked={permission.delete}
-                          onCheckedChange={() => handlePermissionToggle(permission.id, "delete")}
-                        />
-                        <Label className="text-sm">Excluir</Label>
-                      </div>
-                    </div>
+              {formData.password && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Força da senha:</span>
+                    <span className={`text-sm font-medium ${
+                      passwordStrength <= 2 ? 'text-red-600' : 
+                      passwordStrength === 3 ? 'text-yellow-600' : 
+                      passwordStrength === 4 ? 'text-blue-600' : 'text-green-600'
+                    }`}>
+                      {getPasswordStrengthText()}
+                    </span>
                   </div>
-                ))}
-              </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthColor()}`}
+                      style={{ width: `${(passwordStrength / 5) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+          )}
           
-          <DialogFooter className="mt-6">
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
@@ -477,7 +416,7 @@ export function ModernUserForm({
                 }
               }}
             >
-              {isSubmitting ? "Salvando..." : initialData ? "Atualizar" : "Cadastrar"}
+              {isSubmitting ? "Salvando..." : (initialData ? "Atualizar Usuário" : "Criar Usuário")}
             </Button>
           </DialogFooter>
         </form>
