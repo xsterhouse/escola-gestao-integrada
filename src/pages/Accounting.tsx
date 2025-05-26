@@ -8,7 +8,6 @@ import { AccountingEntriesTab } from "@/components/accounting/AccountingEntriesT
 import { AccountConfigTab } from "@/components/accounting/AccountConfigTab";
 import { AccountingReportsTab } from "@/components/accounting/AccountingReportsTab";
 import { CloseExerciseTab } from "@/components/accounting/CloseExerciseTab";
-import { FinancialTransactionsSearchTab } from "@/components/accounting/FinancialTransactionsSearchTab";
 
 const Accounting = () => {
   const [activeTab, setActiveTab] = useState("entries");
@@ -27,10 +26,9 @@ const Accounting = () => {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-6xl grid-cols-6 mb-6">
+          <TabsList className="grid w-full max-w-5xl grid-cols-5 mb-6">
             <TabsTrigger value="entries" className="text-sm font-medium">Lançamentos</TabsTrigger>
             <TabsTrigger value="entries-list" className="text-sm font-medium">Visualizar Lançamentos</TabsTrigger>
-            <TabsTrigger value="financial-search" className="text-sm font-medium">Buscar Lançamentos Financeiros</TabsTrigger>
             <TabsTrigger value="accounts" className="text-sm font-medium">Configuração de Contas</TabsTrigger>
             <TabsTrigger value="reports" className="text-sm font-medium">Relatórios</TabsTrigger>
             <TabsTrigger value="close" className="text-sm font-medium">Encerrar Exercício</TabsTrigger>
@@ -42,10 +40,6 @@ const Accounting = () => {
 
           <TabsContent value="entries-list" className="mt-6">
             <AccountingEntriesTab />
-          </TabsContent>
-
-          <TabsContent value="financial-search" className="mt-6">
-            <FinancialTransactionsSearchTab />
           </TabsContent>
 
           <TabsContent value="accounts" className="mt-6">
