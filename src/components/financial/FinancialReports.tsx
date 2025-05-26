@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,16 +46,27 @@ import {
   BankAccount, 
   BankTransaction, 
   PaymentAccount, 
-  ReceivableAccount, 
-  FinancialReportFilter 
+  ReceivableAccount 
 } from "@/lib/types";
-import { exportToCsv, generatePDF } from "@/lib/pdf-utils";
+import { exportToCsv } from "@/lib/pdf-utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface FinancialReportsProps {
   bankAccounts: BankAccount[];
   transactions: BankTransaction[];
   payables: PaymentAccount[];
   receivables: ReceivableAccount[];
+}
+
+interface SavedReport {
+  id: string;
+  title: string;
+  resourceType: string;
+  period: string;
+  createdAt: Date;
+  createdBy: string;
+  status: string;
+  data: any;
 }
 
 export function FinancialReports({
@@ -73,38 +84,59 @@ export function FinancialReports({
   const [isViewReportOpen, setIsViewReportOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [selectedReportId, setSelectedReportId] = useState("");
-  
-  // Sample reports data - would be fetched from API in real implementation
-  const [reports] = useState([
-    {
-      id: "report-1",
-      title: "Prestação de Contas PNAE - Março 2025",
-      resourceType: "PNAE",
-      period: "01/03/2025 - 31/03/2025",
-      createdAt: new Date(2025, 2, 31),
-      createdBy: "João Silva",
-      status: "finalizado"
-    },
-    {
-      id: "report-2",
-      title: "Prestação de Contas PNATE - 1º Trimestre 2025",
-      resourceType: "PNATE",
-      period: "01/01/2025 - 31/03/2025",
-      createdAt: new Date(2025, 3, 5),
-      createdBy: "Maria Oliveira",
-      status: "finalizado"
-    },
-    {
-      id: "report-3",
-      title: "Relatório de Pagamentos - Fevereiro 2025",
-      resourceType: "Todos",
-      period: "01/02/2025 - 28/02/2025",
-      createdAt: new Date(2025, 2, 3),
-      createdBy: "Carlos Santos",
-      status: "finalizado"
-    },
-  ]);
-  
+  const [selectedReport, setSelectedReport] = useState<SavedReport | null>(null);
+  const [reports, setReports] = useState<SavedReport[]>([]);
+  const { toast } = useToast();
+
+  // Load reports from localStorage on component mount
+  useEffect(() => {
+    loadReports();
+  }, []);
+
+  const loadReports = () => {
+    const savedReports = localStorage.getItem('financialReports');
+    if (savedReports) {
+      const parsedReports = JSON.parse(savedReports).map((report: any) => ({
+        ...report,
+        createdAt: new Date(report.createdAt)
+      }));
+      setReports(parsedReports);
+    }
+  };
+
+  const saveReport = (title: string, resourceType: string, period: string, data: any) => {
+    const newReport: SavedReport = {
+      id: crypto.randomUUID(),
+      title,
+      resourceType,
+      period,
+      createdAt: new Date(),
+      createdBy: "Usuário Atual", // Would come from auth context in real app
+      status: "finalizado",
+      data
+    };
+
+    const updatedReports = [...reports, newReport];
+    setReports(updatedReports);
+    localStorage.setItem('financialReports', JSON.stringify(updatedReports));
+
+    toast({
+      title: "Relatório salvo",
+      description: "O relatório foi salvo com sucesso.",
+    });
+  };
+
+  const deleteReport = (reportId: string) => {
+    const updatedReports = reports.filter(r => r.id !== reportId);
+    setReports(updatedReports);
+    localStorage.setItem('financialReports', JSON.stringify(updatedReports));
+
+    toast({
+      title: "Relatório excluído",
+      description: "O relatório foi excluído com sucesso.",
+    });
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -113,8 +145,12 @@ export function FinancialReports({
   };
   
   const handleViewReport = (reportId: string) => {
-    setSelectedReportId(reportId);
-    setIsViewReportOpen(true);
+    const report = reports.find(r => r.id === reportId);
+    if (report) {
+      setSelectedReport(report);
+      setSelectedReportId(reportId);
+      setIsViewReportOpen(true);
+    }
   };
   
   const handleDeleteReport = (reportId: string) => {
@@ -123,10 +159,17 @@ export function FinancialReports({
   };
   
   const confirmDeleteReport = () => {
-    // In a real app, you would verify password and delete the report
-    // Here we're just closing the dialog
-    setIsDeleteDialogOpen(false);
-    setPassword("");
+    if (password === "123456") { // Simple password check - would use proper auth in real app
+      deleteReport(selectedReportId);
+      setIsDeleteDialogOpen(false);
+      setPassword("");
+    } else {
+      toast({
+        title: "Senha incorreta",
+        description: "Digite a senha correta para excluir o relatório.",
+        variant: "destructive"
+      });
+    }
   };
   
   // Function to generate a resource report (PNAE, PNATE, etc.)
@@ -202,6 +245,9 @@ export function FinancialReports({
     
     // Combine data
     const reportData = [...receiptsData, ...paymentsData];
+    
+    // Save report to localStorage
+    saveReport(reportTitle, resourceTypeFilter, reportPeriod, reportData);
     
     // Export to CSV
     exportToCsv(reportData, `prestacao_contas_${resourceTypeFilter}`, [
@@ -299,6 +345,14 @@ export function FinancialReports({
     
     // Combine data
     const reportData = [...receiptsData, ...paymentsData];
+    
+    const reportTitle = "Relatório de Pagamentos e Recebimentos";
+    const reportPeriod = startDate && endDate 
+      ? `${format(startDate, 'dd/MM/yyyy')} - ${format(endDate, 'dd/MM/yyyy')}`
+      : "Período completo";
+    
+    // Save report to localStorage
+    saveReport(reportTitle, "Todos", reportPeriod, reportData);
     
     // Export to CSV
     exportToCsv(reportData, 'pagamentos_recebimentos', [
@@ -407,56 +461,75 @@ export function FinancialReports({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Tipo de Recurso</TableHead>
-                    <TableHead>Período</TableHead>
-                    <TableHead>Data de Criação</TableHead>
-                    <TableHead>Criado Por</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reports.filter(r => r.resourceType !== "Todos").map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell className="font-medium">{report.title}</TableCell>
-                      <TableCell>{report.resourceType}</TableCell>
-                      <TableCell>{report.period}</TableCell>
-                      <TableCell>{format(new Date(report.createdAt), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>{report.createdBy}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewReport(report.id)}
-                            title="Visualizar"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Download"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteReport(report.id)}
-                            title="Excluir"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              {reports.filter(r => r.resourceType !== "Todos").length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <p className="text-gray-500">Nenhum relatório de prestação de contas salvo.</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Gere um relatório acima para vê-lo aqui.
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Título</TableHead>
+                      <TableHead>Tipo de Recurso</TableHead>
+                      <TableHead>Período</TableHead>
+                      <TableHead>Data de Criação</TableHead>
+                      <TableHead>Criado Por</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {reports.filter(r => r.resourceType !== "Todos").map((report) => (
+                      <TableRow key={report.id}>
+                        <TableCell className="font-medium">{report.title}</TableCell>
+                        <TableCell>{report.resourceType}</TableCell>
+                        <TableCell>{report.period}</TableCell>
+                        <TableCell>{format(new Date(report.createdAt), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>{report.createdBy}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewReport(report.id)}
+                              title="Visualizar"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => exportToCsv(report.data, report.title.replace(/\s+/g, '_'), [
+                                { header: 'Tipo', key: 'tipo' },
+                                { header: 'Descrição', key: 'descricao' },
+                                { header: 'Fornecedor/Origem', key: 'fornecedor' },
+                                { header: 'Categoria', key: 'categoria' },
+                                { header: 'Data', key: 'data' },
+                                { header: 'Valor', key: 'valor' },
+                                { header: 'Status', key: 'status' }
+                              ])}
+                              title="Download"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteReport(report.id)}
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -558,54 +631,72 @@ export function FinancialReports({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Período</TableHead>
-                    <TableHead>Data de Criação</TableHead>
-                    <TableHead>Criado Por</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reports.filter(r => r.resourceType === "Todos").map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell className="font-medium">{report.title}</TableCell>
-                      <TableCell>{report.period}</TableCell>
-                      <TableCell>{format(new Date(report.createdAt), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>{report.createdBy}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewReport(report.id)}
-                            title="Visualizar"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Download"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteReport(report.id)}
-                            title="Excluir"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              {reports.filter(r => r.resourceType === "Todos").length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <p className="text-gray-500">Nenhum relatório de pagamentos e recebimentos salvo.</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Gere um relatório acima para vê-lo aqui.
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Título</TableHead>
+                      <TableHead>Período</TableHead>
+                      <TableHead>Data de Criação</TableHead>
+                      <TableHead>Criado Por</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {reports.filter(r => r.resourceType === "Todos").map((report) => (
+                      <TableRow key={report.id}>
+                        <TableCell className="font-medium">{report.title}</TableCell>
+                        <TableCell>{report.period}</TableCell>
+                        <TableCell>{format(new Date(report.createdAt), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>{report.createdBy}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewReport(report.id)}
+                              title="Visualizar"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => exportToCsv(report.data, report.title.replace(/\s+/g, '_'), [
+                                { header: 'Tipo', key: 'tipo' },
+                                { header: 'Descrição', key: 'descricao' },
+                                { header: 'Fornecedor/Origem', key: 'fornecedor_origem' },
+                                { header: 'Data', key: 'data' },
+                                { header: 'Valor', key: 'valor' },
+                                { header: 'Situação', key: 'situacao' }
+                              ])}
+                              title="Download"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteReport(report.id)}
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -632,11 +723,6 @@ export function FinancialReports({
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            
-            <div>
-              <Label htmlFor="reason">Motivo da exclusão</Label>
-              <Input id="reason" placeholder="Informe o motivo da exclusão" />
-            </div>
           </div>
           
           <DialogFooter>
@@ -660,127 +746,129 @@ export function FinancialReports({
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6">
-            <div className="border-b pb-4">
-              <h3 className="text-xl font-semibold">
-                {reports.find(r => r.id === selectedReportId)?.title || "Relatório"}
-              </h3>
-              <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted-foreground">
-                <div>
-                  <span className="font-medium">Período:</span>{" "}
-                  {reports.find(r => r.id === selectedReportId)?.period}
+          {selectedReport && (
+            <div className="space-y-6">
+              <div className="border-b pb-4">
+                <h3 className="text-xl font-semibold">{selectedReport.title}</h3>
+                <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted-foreground">
+                  <div>
+                    <span className="font-medium">Período:</span> {selectedReport.period}
+                  </div>
+                  <div>
+                    <span className="font-medium">Gerado por:</span> {selectedReport.createdBy}
+                  </div>
+                  <div>
+                    <span className="font-medium">Data de criação:</span>{" "}
+                    {format(new Date(selectedReport.createdAt), 'dd/MM/yyyy')}
+                  </div>
                 </div>
-                <div>
-                  <span className="font-medium">Gerado por:</span>{" "}
-                  {reports.find(r => r.id === selectedReportId)?.createdBy}
-                </div>
-                <div>
-                  <span className="font-medium">Data de criação:</span>{" "}
-                  {reports.find(r => r.id === selectedReportId)?.createdAt && 
-                   format(new Date(reports.find(r => r.id === selectedReportId)!.createdAt), 'dd/MM/yyyy')}
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <h4 className="font-semibold">Resumo Financeiro</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Total Receitas</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-xl font-bold text-green-600">{formatCurrency(35000)}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Total Despesas</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-xl font-bold text-red-600">{formatCurrency(29500)}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Saldo</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-xl font-bold">{formatCurrency(5500)}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Itens</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-xl font-bold">26</p>
-                  </CardContent>
-                </Card>
               </div>
               
-              <div className="space-y-2 pt-4">
-                <h4 className="font-semibold">Detalhes do Relatório</h4>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Valor</TableHead>
-                      <TableHead>Tipo</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>Recebimento PNAE - Março 2025</TableCell>
-                      <TableCell>PNAE</TableCell>
-                      <TableCell>05/03/2025</TableCell>
-                      <TableCell className="text-green-600">{formatCurrency(35000)}</TableCell>
-                      <TableCell>Receita</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Compra de alimentos - Fornecedor XYZ</TableCell>
-                      <TableCell>Alimentação</TableCell>
-                      <TableCell>10/03/2025</TableCell>
-                      <TableCell className="text-red-600">{formatCurrency(12500)}</TableCell>
-                      <TableCell>Despesa</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Compra de frutas e legumes</TableCell>
-                      <TableCell>Alimentação</TableCell>
-                      <TableCell>15/03/2025</TableCell>
-                      <TableCell className="text-red-600">{formatCurrency(8700)}</TableCell>
-                      <TableCell>Despesa</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Compra de carnes</TableCell>
-                      <TableCell>Alimentação</TableCell>
-                      <TableCell>20/03/2025</TableCell>
-                      <TableCell className="text-red-600">{formatCurrency(8300)}</TableCell>
-                      <TableCell>Despesa</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+              <div className="space-y-4">
+                <h4 className="font-semibold">Resumo Financeiro</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Total de Itens</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xl font-bold">{selectedReport.data?.length || 0}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Receitas</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xl font-bold text-green-600">
+                        {selectedReport.data?.filter((item: any) => item.tipo === 'Receita' || item.tipo === 'Recebimento').length || 0}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Despesas</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xl font-bold text-red-600">
+                        {selectedReport.data?.filter((item: any) => item.tipo === 'Despesa' || item.tipo === 'Pagamento').length || 0}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                <div className="space-y-2 pt-4">
+                  <h4 className="font-semibold">Detalhes do Relatório</h4>
+                  {selectedReport.data && selectedReport.data.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead>Fornecedor/Origem</TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Valor</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedReport.data.slice(0, 10).map((item: any, index: number) => (
+                          <TableRow key={index}>
+                            <TableCell>{item.tipo}</TableCell>
+                            <TableCell>{item.descricao}</TableCell>
+                            <TableCell>{item.fornecedor || item.fornecedor_origem}</TableCell>
+                            <TableCell>{item.data}</TableCell>
+                            <TableCell>{item.valor}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-gray-500">Nenhum dado disponível para este relatório.</p>
+                  )}
+                  {selectedReport.data && selectedReport.data.length > 10 && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      Mostrando 10 de {selectedReport.data.length} itens. Baixe o relatório completo para ver todos os dados.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
           
           <DialogFooter className="pt-4">
             <div className="flex gap-2 w-full justify-between">
               <Button variant="outline" onClick={() => setIsViewReportOpen(false)}>
                 Fechar
               </Button>
-              <div className="flex gap-2">
-                <Button variant="outline">
+              {selectedReport && (
+                <Button 
+                  onClick={() => {
+                    if (selectedReport.resourceType === "Todos") {
+                      exportToCsv(selectedReport.data, selectedReport.title.replace(/\s+/g, '_'), [
+                        { header: 'Tipo', key: 'tipo' },
+                        { header: 'Descrição', key: 'descricao' },
+                        { header: 'Fornecedor/Origem', key: 'fornecedor_origem' },
+                        { header: 'Data', key: 'data' },
+                        { header: 'Valor', key: 'valor' },
+                        { header: 'Situação', key: 'situacao' }
+                      ]);
+                    } else {
+                      exportToCsv(selectedReport.data, selectedReport.title.replace(/\s+/g, '_'), [
+                        { header: 'Tipo', key: 'tipo' },
+                        { header: 'Descrição', key: 'descricao' },
+                        { header: 'Fornecedor/Origem', key: 'fornecedor' },
+                        { header: 'Categoria', key: 'categoria' },
+                        { header: 'Data', key: 'data' },
+                        { header: 'Valor', key: 'valor' },
+                        { header: 'Status', key: 'status' }
+                      ]);
+                    }
+                  }}
+                >
                   <Download className="mr-2 h-4 w-4" />
-                  Exportar PDF
+                  Exportar CSV
                 </Button>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Exportar Excel
-                </Button>
-              </div>
+              )}
             </div>
           </DialogFooter>
         </DialogContent>
