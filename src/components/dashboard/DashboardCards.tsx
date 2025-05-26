@@ -1,115 +1,78 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Package, Users, Building2, TrendingUp, AlertTriangle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { DashboardMetric } from "@/lib/types";
+import { FileText, Package, Receipt, DollarSign } from "lucide-react";
 
-interface DashboardData {
-  totalContracts: number;
-  activeContracts: number;
-  totalProducts: number;
-  lowStockProducts: number;
-  totalUsers: number;
-  totalSchools: number;
-  pendingPayments: number;
-  monthlyRevenue: number;
-}
+type DashboardCardsProps = {
+  metrics: DashboardMetric[];
+};
 
-export function DashboardCards() {
-  const [data, setData] = useState<DashboardData>({
-    totalContracts: 0,
-    activeContracts: 0,
-    totalProducts: 0,
-    lowStockProducts: 0,
-    totalUsers: 0,
-    totalSchools: 0,
-    pendingPayments: 0,
-    monthlyRevenue: 0
-  });
+const getIconComponent = (icon: string) => {
+  switch (icon) {
+    case "contracts":
+      return <FileText className="h-5 w-5 text-[#012340]" />;
+    case "stock":
+      return <Package className="h-5 w-5 text-[#012340]" />;
+    case "receipt":
+      return <Receipt className="h-5 w-5 text-[#012340]" />;
+    case "finance":
+      return <DollarSign className="h-5 w-5 text-[#012340]" />;
+    default:
+      return <FileText className="h-5 w-5 text-[#012340]" />;
+  }
+};
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+const getBackgroundColor = () => {
+  return "bg-[#012340]/10";
+};
 
-  const loadDashboardData = () => {
-    // Simular dados para demonstração
-    setData({
-      totalContracts: 24,
-      activeContracts: 18,
-      totalProducts: 156,
-      lowStockProducts: 12,
-      totalUsers: 8,
-      totalSchools: 3,
-      pendingPayments: 7,
-      monthlyRevenue: 45250.80
-    });
-  };
+const getBorderColor = () => {
+  return "border-t-[#012340]";
+};
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
+const getTextColor = (color: string) => {
+  switch (color) {
+    case "blue":
+      return "text-[#012340]";
+    case "amber":
+      return "text-amber-600";
+    case "orange":
+      return "text-orange-600";
+    case "green":
+      return "text-green-600";
+    default:
+      return "text-[#012340]";
+  }
+};
 
+export function DashboardCards({ metrics }: DashboardCardsProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Contratos Ativos</CardTitle>
-          <FileText className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{data.activeContracts}</div>
-          <p className="text-xs text-muted-foreground">
-            de {data.totalContracts} contratos totais
-          </p>
-        </CardContent>
-      </Card>
-      
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Produtos em Estoque</CardTitle>
-          <Package className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{data.totalProducts}</div>
-          <p className="text-xs text-muted-foreground">
-            {data.lowStockProducts > 0 && (
-              <span className="text-amber-600 flex items-center">
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                {data.lowStockProducts} com estoque baixo
-              </span>
+      {metrics.map((metric) => (
+        <Card 
+          key={metric.id} 
+          className={`border-t-4 ${getBorderColor()}`}
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">{metric.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="text-3xl font-bold">{metric.value}</div>
+              <div className={`${getBackgroundColor()} p-2 rounded-lg`}>
+                {getIconComponent(metric.icon)}
+              </div>
+            </div>
+            {metric.additionalInfo && (
+              <div className={`text-xs ${getTextColor(metric.color)} mt-2`}>
+                <span className="flex items-center">
+                  {metric.additionalInfo}
+                </span>
+              </div>
             )}
-            {data.lowStockProducts === 0 && "Todos com estoque adequado"}
-          </p>
-        </CardContent>
-      </Card>
-      
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Pagamentos Pendentes</CardTitle>
-          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{data.pendingPayments}</div>
-          <p className="text-xs text-muted-foreground">
-            contas a pagar
-          </p>
-        </CardContent>
-      </Card>
-      
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Receita Mensal</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(data.monthlyRevenue)}</div>
-          <p className="text-xs text-muted-foreground">
-            no mês atual
-          </p>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }
