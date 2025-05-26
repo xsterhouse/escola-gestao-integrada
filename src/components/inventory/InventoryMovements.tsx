@@ -1,3 +1,4 @@
+
 import {
   Table,
   TableBody,
@@ -9,19 +10,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, FileDown, Minus, Eye, Plus, AlertTriangle, Trash2, Edit } from "lucide-react";
-import { useState } from "react";
+import { Search, FileDown, Plus, Eye, Edit, Trash2, AlertTriangle } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Invoice, InventoryMovement } from "@/lib/types";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { ViewMovementDialog } from "./ViewMovementDialog";
 import { AddManualMovementDialog } from "./AddManualMovementDialog";
 import { ProductAutocomplete } from "./ProductAutocomplete";
-import { 
-  generateInventoryPDF,
-  generateInventoryMovementsPDF, 
-  exportToCsv 
-} from "@/lib/pdf-utils";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 
 interface InventoryMovementsProps {
   invoices: Invoice[];
@@ -31,63 +28,31 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMovement, setSelectedMovement] = useState<InventoryMovement | null>(null);
   const [isAddManualMovementOpen, setIsAddManualMovementOpen] = useState(false);
-  const [editingMovement, setEditingMovement] = useState<string | null>(null);
   
-  // Create movements from invoices
-  const entriesFromInvoices: InventoryMovement[] = invoices.flatMap(invoice => 
-    invoice.items.map(item => ({
-      id: `movement-${item.id}`,
-      type: 'entrada' as const,
-      date: invoice.issueDate,
-      productDescription: item.description,
-      quantity: item.quantity,
-      unitOfMeasure: item.unitOfMeasure,
-      unitPrice: item.unitPrice,
-      totalCost: item.totalPrice,
-      invoiceId: invoice.id,
-      source: 'invoice' as const,
-      createdAt: invoice.createdAt,
-      updatedAt: invoice.updatedAt,
-    }))
-  );
+  const { data: manualMovements, saveData: setManualMovements } = useLocalStorageSync<InventoryMovement>('inventory-movements', []);
   
-  // Mock some outgoing inventory movements with editable flag
-  const mockOutgoingMovements: InventoryMovement[] = [
-    {
-      id: "out-1",
-      type: 'saida',
-      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      productDescription: "Caneta Esferográfica Azul",
-      quantity: 10,
-      unitOfMeasure: "Un",
-      unitPrice: 2.5,
-      totalCost: 25,
-      requestId: "req-001",
-      source: 'system',
-      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    },
-    {
-      id: "out-2",
-      type: 'saida',
-      date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      productDescription: "Papel Sulfite A4",
-      quantity: 3,
-      unitOfMeasure: "Pct",
-      unitPrice: 20,
-      totalCost: 60,
-      requestId: "req-002",
-      source: 'system',
-      createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    }
-  ];
+  // Create movements from approved invoices only
+  const entriesFromInvoices: InventoryMovement[] = invoices
+    .filter(invoice => invoice.status === 'aprovada' && invoice.isActive)
+    .flatMap(invoice => 
+      invoice.items.map(item => ({
+        id: `movement-${item.id}`,
+        type: 'entrada' as const,
+        date: invoice.issueDate,
+        productDescription: item.description,
+        quantity: item.quantity,
+        unitOfMeasure: item.unitOfMeasure,
+        unitPrice: item.unitPrice,
+        totalCost: item.totalPrice,
+        invoiceId: invoice.id,
+        source: 'invoice' as const,
+        createdAt: invoice.createdAt,
+        updatedAt: invoice.updatedAt,
+      }))
+    );
   
-  // Combine all movements
-  const [allMovements, setAllMovements] = useState<InventoryMovement[]>([
-    ...entriesFromInvoices,
-    ...mockOutgoingMovements
-  ]);
+  // Combine all movements (entries from invoices + manual movements)
+  const allMovements = [...entriesFromInvoices, ...manualMovements];
   
   // Filter movements based on search term
   const filteredMovements = allMovements.filter(
@@ -101,24 +66,23 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
   
   const handleDeleteMovement = (movementId: string) => {
     const movement = allMovements.find(m => m.id === movementId);
-    if (movement?.type === 'saida') {
-      setAllMovements(allMovements.filter(m => m.id !== movementId));
+    if (movement?.source === 'manual' || movement?.type === 'saida') {
+      const updatedManualMovements = manualMovements.filter(m => m.id !== movementId);
+      setManualMovements(updatedManualMovements);
       toast({
         title: "Movimento excluído",
-        description: "O lançamento de saída foi excluído com sucesso.",
+        description: "O movimento foi excluído com sucesso.",
       });
     } else {
       toast({
         title: "Não é possível excluir",
-        description: "Apenas movimentos de saída podem ser excluídos.",
+        description: "Apenas movimentos manuais ou de saída podem ser excluídos.",
         variant: "destructive"
       });
     }
   };
   
   const handleEditMovement = (movementId: string) => {
-    setEditingMovement(movementId);
-    // In a real implementation, this would open an edit dialog
     toast({
       title: "Funcionalidade em desenvolvimento",
       description: "A edição de movimentos será implementada em breve.",
@@ -126,7 +90,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
   };
   
   const handleAddManualMovement = (movement: Omit<InventoryMovement, "id" | "createdAt" | "updatedAt">) => {
-    // Validate that the product exists in inventory and cost matches
+    // Validate that the product exists in inventory for outgoing movements
     const productExists = entriesFromInvoices.some(entry => 
       entry.productDescription === movement.productDescription &&
       entry.unitOfMeasure === movement.unitOfMeasure
@@ -141,16 +105,22 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       return;
     }
     
-    // Check if cost matches for outgoing movements
+    // Calculate available stock for outgoing movements
     if (movement.type === 'saida') {
-      const originalEntry = entriesFromInvoices.find(entry => 
-        entry.productDescription === movement.productDescription
-      );
+      const totalEntries = entriesFromInvoices
+        .filter(entry => entry.productDescription === movement.productDescription)
+        .reduce((sum, entry) => sum + entry.quantity, 0);
       
-      if (originalEntry && Math.abs(originalEntry.unitPrice - movement.unitPrice) > 0.01) {
+      const totalExits = manualMovements
+        .filter(mov => mov.productDescription === movement.productDescription && mov.type === 'saida')
+        .reduce((sum, mov) => sum + mov.quantity, 0);
+      
+      const availableStock = totalEntries - totalExits;
+      
+      if (movement.quantity > availableStock) {
         toast({
-          title: "Valor incorreto",
-          description: "O valor deve ser igual ao custo original do produto.",
+          title: "Estoque insuficiente",
+          description: `Estoque disponível: ${availableStock} ${movement.unitOfMeasure}`,
           variant: "destructive"
         });
         return;
@@ -165,7 +135,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       updatedAt: new Date()
     };
     
-    setAllMovements([...allMovements, newMovement]);
+    setManualMovements([...manualMovements, newMovement]);
     
     toast({
       title: "Movimentação registrada",
@@ -176,20 +146,54 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
   };
   
   const handleExportCsv = () => {
-    exportToCsv(filteredMovements, 'movimentacoes-estoque', [
-      { header: 'Tipo', key: 'type' },
-      { header: 'Data', key: 'date' },
-      { header: 'Produto', key: 'productDescription' },
-      { header: 'Quantidade', key: 'quantity' },
-      { header: 'Unidade', key: 'unitOfMeasure' },
-      { header: 'Valor Unitário', key: 'unitPrice' },
-      { header: 'Custo Total', key: 'totalCost' },
-      { header: 'Origem', key: 'source' }
+    const csvHeaders = [
+      'Tipo',
+      'Data',
+      'Produto',
+      'Quantidade',
+      'Unidade',
+      'Valor Unitário',
+      'Custo Total',
+      'Origem'
+    ];
+    
+    const csvData = filteredMovements.map(movement => [
+      movement.type === 'entrada' ? 'Entrada' : 'Saída',
+      format(movement.date, 'dd/MM/yyyy'),
+      movement.productDescription,
+      movement.quantity.toString(),
+      movement.unitOfMeasure,
+      movement.unitPrice.toFixed(2),
+      movement.totalCost.toFixed(2),
+      movement.source === 'manual' ? 'Manual' : 
+      movement.source === 'invoice' ? 'Nota Fiscal' : 'Sistema'
     ]);
+    
+    const csvContent = [csvHeaders, ...csvData]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `movimentacoes-estoque-${format(new Date(), 'dd-MM-yyyy')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Exportação concluída",
+      description: "Arquivo CSV gerado com sucesso.",
+    });
   };
   
   const handleExportPdf = () => {
-    generateInventoryMovementsPDF(filteredMovements);
+    toast({
+      title: "Funcionalidade em desenvolvimento",
+      description: "A exportação em PDF será implementada em breve.",
+    });
   };
 
   return (
@@ -293,7 +297,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {movement.type === 'saida' && (
+                        {(movement.source === 'manual' || movement.type === 'saida') && (
                           <>
                             <Button 
                               size="sm" 

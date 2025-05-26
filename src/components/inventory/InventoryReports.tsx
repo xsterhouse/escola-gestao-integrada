@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -14,17 +14,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Search, FileDown, CalendarIcon, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
-import { InventoryReport, PurchaseReport, Invoice } from "@/lib/types";
+import { InventoryReport, PurchaseReport, Invoice, InventoryMovement } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { ViewReportDialog } from "./ViewReportDialog";
 import { DeleteReportDialog } from "./DeleteReportDialog";
-import { 
-  generateInventoryReportPDF, 
-  generatePurchaseReportPDF,
-  exportToCsv
-} from "@/lib/pdf-utils";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
+import { toast } from "@/hooks/use-toast";
 
 interface InventoryReportsProps {
   invoices: Invoice[];
@@ -40,75 +37,104 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
   const [reportType, setReportType] = useState<'inventory' | 'purchases'>('inventory');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // Mock data for inventory report
-  const inventoryReports: InventoryReport[] = [
-    {
-      productCode: "P001",
-      productName: "Caneta Esferográfica Azul",
-      lastEntryDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-      supplierCode: "S001",
-      supplierName: "Papelaria Central",
-      currentQuantity: 200,
-      unitCost: 2.5,
-      totalCost: 500,
-    },
-    {
-      productCode: "P002",
-      productName: "Papel Sulfite A4",
-      lastEntryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      supplierCode: "S001",
-      supplierName: "Papelaria Central",
-      currentQuantity: 20,
-      unitCost: 20,
-      totalCost: 400,
-    },
-    {
-      productCode: "P003",
-      productName: "Grampeador",
-      lastEntryDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
-      supplierCode: "S002",
-      supplierName: "Office Supplies",
-      currentQuantity: 50,
-      unitCost: 15,
-      totalCost: 750,
-    },
-  ];
+  const { data: manualMovements } = useLocalStorageSync<InventoryMovement>('inventory-movements', []);
 
-  // Mock data for purchase report
-  const purchaseReports: PurchaseReport[] = [
-    {
-      productCode: "P001",
-      description: "Caneta Esferográfica Azul",
-      supplier: "Papelaria Central",
-      entryDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-      quantity: 250,
-      unitOfMeasure: "Un",
-      value: 625,
-      currentBalance: 200,
-    },
-    {
-      productCode: "P002",
-      description: "Papel Sulfite A4",
-      supplier: "Papelaria Central",
-      entryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      quantity: 25,
-      unitOfMeasure: "Pct",
-      value: 500,
-      currentBalance: 20,
-    },
-    {
-      productCode: "P003",
-      description: "Grampeador",
-      supplier: "Office Supplies",
-      entryDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
-      quantity: 60,
-      unitOfMeasure: "Un",
-      value: 900,
-      currentBalance: 50,
-    },
-  ];
+  // Generate real inventory reports based on approved invoices
+  const inventoryReports: InventoryReport[] = useMemo(() => {
+    const approvedInvoices = invoices.filter(invoice => invoice.status === 'aprovada' && invoice.isActive);
+    const productGroups = new Map<string, {
+      productName: string;
+      lastEntryDate: Date;
+      supplier: string;
+      supplierCode: string;
+      entries: { quantity: number; unitCost: number; totalCost: number }[];
+      exits: number;
+    }>();
 
-  // Filter reports based on date range
+    // Process entries from invoices
+    approvedInvoices.forEach(invoice => {
+      invoice.items.forEach(item => {
+        const key = `${item.description}-${item.unitOfMeasure}`;
+        const existing = productGroups.get(key);
+        
+        if (!existing) {
+          productGroups.set(key, {
+            productName: item.description,
+            lastEntryDate: invoice.issueDate,
+            supplier: invoice.supplier.name,
+            supplierCode: invoice.supplier.id,
+            entries: [{ quantity: item.quantity, unitCost: item.unitPrice, totalCost: item.totalPrice }],
+            exits: 0
+          });
+        } else {
+          existing.entries.push({ quantity: item.quantity, unitCost: item.unitPrice, totalCost: item.totalPrice });
+          if (invoice.issueDate > existing.lastEntryDate) {
+            existing.lastEntryDate = invoice.issueDate;
+            existing.supplier = invoice.supplier.name;
+            existing.supplierCode = invoice.supplier.id;
+          }
+        }
+      });
+    });
+
+    // Process exits from manual movements
+    manualMovements.filter(mov => mov.type === 'saida').forEach(movement => {
+      const key = `${movement.productDescription}-${movement.unitOfMeasure}`;
+      const existing = productGroups.get(key);
+      if (existing) {
+        existing.exits += movement.quantity;
+      }
+    });
+
+    // Convert to report format
+    return Array.from(productGroups.entries()).map(([key, data], index) => {
+      const totalEntries = data.entries.reduce((sum, entry) => sum + entry.quantity, 0);
+      const totalCost = data.entries.reduce((sum, entry) => sum + entry.totalCost, 0);
+      const avgUnitCost = totalCost / totalEntries;
+      const currentQuantity = totalEntries - data.exits;
+      
+      return {
+        productCode: `P${String(index + 1).padStart(3, '0')}`,
+        productName: data.productName,
+        lastEntryDate: data.lastEntryDate,
+        supplierCode: data.supplierCode,
+        supplierName: data.supplier,
+        currentQuantity,
+        unitCost: avgUnitCost,
+        totalCost: currentQuantity * avgUnitCost,
+      };
+    });
+  }, [invoices, manualMovements]);
+
+  // Generate real purchase reports based on approved invoices
+  const purchaseReports: PurchaseReport[] = useMemo(() => {
+    const approvedInvoices = invoices.filter(invoice => invoice.status === 'aprovada' && invoice.isActive);
+    const reports: PurchaseReport[] = [];
+
+    approvedInvoices.forEach(invoice => {
+      invoice.items.forEach((item, index) => {
+        // Calculate current balance by subtracting exits
+        const exits = manualMovements
+          .filter(mov => mov.type === 'saida' && mov.productDescription === item.description)
+          .reduce((sum, mov) => sum + mov.quantity, 0);
+        
+        reports.push({
+          productCode: `P${String(reports.length + 1).padStart(3, '0')}`,
+          description: item.description,
+          supplier: invoice.supplier.name,
+          entryDate: invoice.issueDate,
+          quantity: item.quantity,
+          unitOfMeasure: item.unitOfMeasure,
+          value: item.totalPrice,
+          currentBalance: Math.max(0, item.quantity - exits),
+        });
+      });
+    });
+
+    return reports;
+  }, [invoices, manualMovements]);
+
+  // Filter reports based on date range and search term
   const filteredInventoryReports = inventoryReports.filter(report => {
     if (fromDate && report.lastEntryDate < fromDate) return false;
     if (toDate && report.lastEntryDate > toDate) return false;
@@ -137,47 +163,73 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
   };
 
   const handleDeleteReport = (password: string, reason: string) => {
-    // In a real application, validate the password against the user's password
-    
-    // Log the deletion for audit trails
     console.log(`Report deleted: ${selectedReport?.productCode} by User. Reason: ${reason}`);
-    
-    // Close the dialog
+    toast({
+      title: "Relatório excluído",
+      description: "O relatório foi excluído com sucesso.",
+    });
     setIsDeleteDialogOpen(false);
     setSelectedReport(null);
   };
 
   const handleExportCsv = () => {
-    if (reportType === 'inventory') {
-      exportToCsv(filteredInventoryReports, 'produtos-em-estoque', [
-        { header: 'Código', key: 'productCode' },
-        { header: 'Produto', key: 'productName' },
-        { header: 'Última Entrada', key: 'lastEntryDate' },
-        { header: 'Fornecedor', key: 'supplierName' },
-        { header: 'Quantidade', key: 'currentQuantity' },
-        { header: 'Custo Unit.', key: 'unitCost' },
-        { header: 'Custo Total', key: 'totalCost' }
-      ]);
-    } else {
-      exportToCsv(filteredPurchaseReports, 'compras', [
-        { header: 'Código', key: 'productCode' },
-        { header: 'Descrição', key: 'description' },
-        { header: 'Fornecedor', key: 'supplier' },
-        { header: 'Data Entrada', key: 'entryDate' },
-        { header: 'Quantidade', key: 'quantity' },
-        { header: 'Unidade', key: 'unitOfMeasure' },
-        { header: 'Valor', key: 'value' },
-        { header: 'Saldo', key: 'currentBalance' }
-      ]);
-    }
+    const data = reportType === 'inventory' ? filteredInventoryReports : filteredPurchaseReports;
+    const headers = reportType === 'inventory' 
+      ? ['Código', 'Produto', 'Última Entrada', 'Fornecedor', 'Quantidade', 'Custo Unit.', 'Custo Total']
+      : ['Código', 'Descrição', 'Fornecedor', 'Data Entrada', 'Quantidade', 'Unidade', 'Valor', 'Saldo'];
+    
+    const csvData = data.map(report => {
+      if (reportType === 'inventory') {
+        const invReport = report as InventoryReport;
+        return [
+          invReport.productCode,
+          invReport.productName,
+          format(invReport.lastEntryDate, 'dd/MM/yyyy'),
+          invReport.supplierName,
+          invReport.currentQuantity.toString(),
+          invReport.unitCost.toFixed(2),
+          invReport.totalCost.toFixed(2)
+        ];
+      } else {
+        const purchReport = report as PurchaseReport;
+        return [
+          purchReport.productCode,
+          purchReport.description,
+          purchReport.supplier,
+          format(purchReport.entryDate, 'dd/MM/yyyy'),
+          purchReport.quantity.toString(),
+          purchReport.unitOfMeasure,
+          purchReport.value.toFixed(2),
+          purchReport.currentBalance.toString()
+        ];
+      }
+    });
+    
+    const csvContent = [headers, ...csvData]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `relatorio-${reportType}-${format(new Date(), 'dd-MM-yyyy')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Exportação concluída",
+      description: "Arquivo CSV gerado com sucesso.",
+    });
   };
 
   const handleExportPdf = () => {
-    if (reportType === 'inventory') {
-      generateInventoryReportPDF(filteredInventoryReports);
-    } else {
-      generatePurchaseReportPDF(filteredPurchaseReports);
-    }
+    toast({
+      title: "Funcionalidade em desenvolvimento",
+      description: "A exportação em PDF será implementada em breve.",
+    });
   };
 
   return (
