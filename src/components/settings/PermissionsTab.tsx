@@ -1,11 +1,12 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Save, Plus, Trash2, Pencil } from "lucide-react";
+import { Shield, Save, Plus, Trash2, Pencil, Users, Settings, Filter } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,11 +14,55 @@ import { Label } from "@/components/ui/label";
 import { ModulePermission, UserRole } from "@/lib/types";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 
+interface SystemUser {
+  id: string;
+  name: string;
+  matricula: string;
+  schoolId: string | null;
+  purchasingCenterIds?: string[];
+  status: "active" | "blocked";
+}
+
+interface User {
+  id: string;
+  name: string;
+  matricula: string;
+  email: string;
+  role: string;
+  schoolId: string | null;
+  permissions: Array<{ id: string; name: string; hasAccess: boolean }>;
+  status?: "active" | "inactive";
+}
+
+interface School {
+  id: string;
+  name: string;
+}
+
+interface PurchasingCenter {
+  id: string;
+  name: string;
+  schoolIds: string[];
+}
+
+interface UserModulePermission {
+  userId: string;
+  moduleId: string;
+  hasAccess: boolean;
+  restrictions?: {
+    schoolOnly?: boolean;
+    purchasingCenterOnly?: boolean;
+    readOnly?: boolean;
+  };
+}
+
 export function PermissionsTab() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("modules");
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<UserRole | null>(null);
+  const [selectedUser, setSelectedUser] = useState<string>("");
+  const [filterBySchool, setFilterBySchool] = useState<string>("all");
 
   // Use localStorage for persistence
   const { data: modulePermissions, saveData: setModulePermissions } = useLocalStorageSync<ModulePermission>('modulePermissions', [
@@ -83,6 +128,15 @@ export function PermissionsTab() {
       read: true,
       update: true,
       delete: false
+    },
+    {
+      id: "8",
+      name: "Configurações",
+      description: "Configurações do sistema",
+      create: false,
+      read: true,
+      update: false,
+      delete: false
     }
   ]);
 
@@ -109,6 +163,15 @@ export function PermissionsTab() {
     }
   ]);
 
+  // Load system users and regular users
+  const { data: systemUsers } = useLocalStorageSync<SystemUser>('systemUsers', []);
+  const { data: users } = useLocalStorageSync<User>('users', []);
+  const { data: schools } = useLocalStorageSync<School>('schools', []);
+  const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasingCenters', []);
+
+  // User permissions state
+  const { data: userPermissions, saveData: setUserPermissions } = useLocalStorageSync<UserModulePermission>('userModulePermissions', []);
+
   const [roleForm, setRoleForm] = useState({
     name: "",
     description: ""
@@ -131,10 +194,10 @@ export function PermissionsTab() {
         console.error("Erro ao carregar permissões dos perfis:", error);
         // Initialize with default values
         const defaultPermissions = {
-          "1": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": true },
-          "2": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": false },
-          "3": { "1": true, "2": true, "3": true, "4": false, "5": false, "6": false, "7": false },
-          "4": { "1": true, "2": false, "3": false, "4": false, "5": false, "6": false, "7": false }
+          "1": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": true, "8": true },
+          "2": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": false, "8": false },
+          "3": { "1": true, "2": true, "3": true, "4": false, "5": false, "6": false, "7": false, "8": false },
+          "4": { "1": true, "2": false, "3": false, "4": false, "5": false, "6": false, "7": false, "8": false }
         };
         setRolePermissions(defaultPermissions);
         localStorage.setItem('rolePermissions', JSON.stringify(defaultPermissions));
@@ -142,10 +205,10 @@ export function PermissionsTab() {
     } else {
       // Initialize with default values
       const defaultPermissions = {
-        "1": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": true },
-        "2": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": false },
-        "3": { "1": true, "2": true, "3": true, "4": false, "5": false, "6": false, "7": false },
-        "4": { "1": true, "2": false, "3": false, "4": false, "5": false, "6": false, "7": false }
+        "1": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": true, "8": true },
+        "2": { "1": true, "2": true, "3": true, "4": true, "5": true, "6": true, "7": false, "8": false },
+        "3": { "1": true, "2": true, "3": true, "4": false, "5": false, "6": false, "7": false, "8": false },
+        "4": { "1": true, "2": false, "3": false, "4": false, "5": false, "6": false, "7": false, "8": false }
       };
       setRolePermissions(defaultPermissions);
       localStorage.setItem('rolePermissions', JSON.stringify(defaultPermissions));
@@ -156,6 +219,60 @@ export function PermissionsTab() {
   useEffect(() => {
     localStorage.setItem('rolePermissions', JSON.stringify(rolePermissions));
   }, [rolePermissions]);
+
+  // Combine all users (system users + regular users)
+  const allUsers = [
+    ...systemUsers.map(u => ({ ...u, type: 'system' as const })),
+    ...users.map(u => ({ ...u, type: 'regular' as const }))
+  ];
+
+  // Filter users by school if selected
+  const filteredUsers = filterBySchool === "all" 
+    ? allUsers 
+    : allUsers.filter(user => user.schoolId === filterBySchool);
+
+  const getSchoolName = (schoolId: string | null) => {
+    if (!schoolId) return "Todas as escolas";
+    const school = schools.find(s => s.id === schoolId);
+    return school ? school.name : "Escola não encontrada";
+  };
+
+  const getPurchasingCentersNames = (centerIds?: string[]) => {
+    if (!centerIds || centerIds.length === 0) return "Nenhuma";
+    
+    const centerNames = purchasingCenters
+      .filter(pc => centerIds.includes(pc.id))
+      .map(pc => pc.name);
+    
+    return centerNames.length > 0 ? centerNames.join(", ") : "Nenhuma";
+  };
+
+  const getUserPermission = (userId: string, moduleId: string) => {
+    return userPermissions.find(p => p.userId === userId && p.moduleId === moduleId);
+  };
+
+  const handleToggleUserPermission = (userId: string, moduleId: string) => {
+    const existingPermission = getUserPermission(userId, moduleId);
+    
+    if (existingPermission) {
+      // Update existing permission
+      const updatedPermissions = userPermissions.map(p => 
+        p.userId === userId && p.moduleId === moduleId
+          ? { ...p, hasAccess: !p.hasAccess }
+          : p
+      );
+      setUserPermissions(updatedPermissions);
+    } else {
+      // Create new permission
+      const newPermission: UserModulePermission = {
+        userId,
+        moduleId,
+        hasAccess: true,
+        restrictions: {}
+      };
+      setUserPermissions([...userPermissions, newPermission]);
+    }
+  };
 
   const handleTogglePermission = (moduleId: string, permission: "create" | "read" | "update" | "delete") => {
     const updatedPermissions = modulePermissions.map(module => 
@@ -173,21 +290,11 @@ export function PermissionsTab() {
     });
   };
 
-  const handleOpenRoleModal = (role?: UserRole) => {
-    if (role) {
-      setEditingRole(role);
-      setRoleForm({
-        name: role.name,
-        description: role.description
-      });
-    } else {
-      setEditingRole(null);
-      setRoleForm({
-        name: "",
-        description: ""
-      });
-    }
-    setIsRoleModalOpen(true);
+  const handleSaveUserPermissions = () => {
+    toast({
+      title: "Permissões de usuário salvas",
+      description: "As permissões específicas do usuário foram atualizadas com sucesso."
+    });
   };
 
   const handleSaveRole = (e: React.FormEvent) => {
@@ -280,13 +387,14 @@ export function PermissionsTab() {
       <CardHeader>
         <CardTitle>Permissões do Sistema</CardTitle>
         <CardDescription>
-          Configure as permissões de acesso aos módulos do sistema.
+          Configure as permissões de acesso aos módulos do sistema por usuário, perfil e afiliação.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid grid-cols-2 w-full md:w-auto">
+          <TabsList className="grid grid-cols-3 w-full md:w-auto">
             <TabsTrigger value="modules">Módulos do Sistema</TabsTrigger>
+            <TabsTrigger value="users">Permissões por Usuário</TabsTrigger>
             <TabsTrigger value="roles">Perfis de Usuário</TabsTrigger>
           </TabsList>
           
@@ -350,6 +458,110 @@ export function PermissionsTab() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="users">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    <span className="text-sm font-medium">
+                      Total de usuários: {allUsers.length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    <Select value={filterBySchool} onValueChange={setFilterBySchool}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Filtrar por escola" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as escolas</SelectItem>
+                        {schools.map(school => (
+                          <SelectItem key={school.id} value={school.id}>
+                            {school.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button onClick={handleSaveUserPermissions} className="flex items-center gap-2">
+                  <Save className="h-4 w-4" />
+                  Salvar Permissões
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Escola</TableHead>
+                      <TableHead>Central de Compras</TableHead>
+                      {modulePermissions.map(module => (
+                        <TableHead key={module.id} className="text-center min-w-[100px]">
+                          {module.name}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow key={`${user.type}-${user.id}`}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{user.name}</div>
+                            <div className="text-sm text-gray-500">{user.matricula}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={user.type === 'system' ? 'default' : 'secondary'}>
+                            {user.type === 'system' ? 'Sistema' : 'Regular'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {getSchoolName(user.schoolId)}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {user.type === 'system' && 'purchasingCenterIds' in user 
+                            ? getPurchasingCentersNames(user.purchasingCenterIds)
+                            : 'N/A'
+                          }
+                        </TableCell>
+                        {modulePermissions.map(module => {
+                          const permission = getUserPermission(user.id, module.id);
+                          const hasAccess = permission ? permission.hasAccess : false;
+                          
+                          return (
+                            <TableCell key={module.id} className="text-center">
+                              <Switch
+                                checked={hasAccess}
+                                onCheckedChange={() => handleToggleUserPermission(user.id, module.id)}
+                                disabled={
+                                  // Configurações só para master
+                                  (module.name === 'Configurações' && user.type !== 'system') ||
+                                  // Contabilidade restrita para alguns perfis
+                                  (module.name === 'Contabilidade' && user.type === 'system' && user.schoolId !== null)
+                                }
+                              />
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {filteredUsers.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  Nenhum usuário encontrado para o filtro selecionado.
+                </div>
+              )}
             </div>
           </TabsContent>
           
