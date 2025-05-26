@@ -11,7 +11,6 @@ export interface ParsedXMLData {
 }
 
 export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
-  // Parse XML content using DOMParser
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
   
@@ -22,53 +21,61 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
   }
 
   try {
-    // Define namespace resolver for NF-e XML
-    const nsResolver = (prefix: string) => {
-      const namespaces: { [key: string]: string } = {
-        'nfe': 'http://www.portalfiscal.inf.br/nfe'
-      };
-      return namespaces[prefix] || null;
-    };
-
-    // Function to get text content using XPath with namespace
-    const getXPathValue = (xpath: string, context: Node = xmlDoc): string => {
-      const result = xmlDoc.evaluate(xpath, context, nsResolver, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-      return result.singleNodeValue?.textContent?.trim() || "";
-    };
-
-    // Function to get all nodes using XPath
-    const getXPathNodes = (xpath: string, context: Node = xmlDoc): Node[] => {
-      const result = xmlDoc.evaluate(xpath, context, nsResolver, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-      const nodes: Node[] = [];
-      for (let i = 0; i < result.snapshotLength; i++) {
-        const node = result.snapshotItem(i);
-        if (node) nodes.push(node);
-      }
-      return nodes;
-    };
-
-    // Extract supplier information (emitente)
-    const supplierName = getXPathValue("//nfe:emit/nfe:xNome") || 
-                        getXPathValue("//emit/xNome");
+    // NFe namespace
+    const NFE_NAMESPACE = 'http://www.portalfiscal.inf.br/nfe';
     
-    const supplierCNPJ = getXPathValue("//nfe:emit/nfe:CNPJ") || 
-                        getXPathValue("//emit/CNPJ");
+    // Helper function to get element by tag name with namespace support
+    const getElementByTagName = (tagName: string, context: Document | Element = xmlDoc): Element | null => {
+      // Try with namespace first
+      let element = context.querySelector(`[xmlns="${NFE_NAMESPACE}"] ${tagName}`);
+      if (!element) {
+        // Try without namespace (fallback)
+        element = context.querySelector(tagName);
+      }
+      if (!element) {
+        // Try with different namespace prefixes
+        element = context.querySelector(`nfe\\:${tagName}`) || 
+                 context.querySelector(`ns2\\:${tagName}`) ||
+                 context.querySelector(`*[localName="${tagName}"]`);
+      }
+      return element;
+    };
 
-    // Build supplier address
-    const addressParts = [
-      getXPathValue("//nfe:emit/nfe:enderEmit/nfe:xLgr") || getXPathValue("//emit/enderEmit/xLgr"),
-      getXPathValue("//nfe:emit/nfe:enderEmit/nfe:nro") || getXPathValue("//emit/enderEmit/nro"),
-      getXPathValue("//nfe:emit/nfe:enderEmit/nfe:xBairro") || getXPathValue("//emit/enderEmit/xBairro"),
-      getXPathValue("//nfe:emit/nfe:enderEmit/nfe:xMun") || getXPathValue("//emit/enderEmit/xMun"),
-      getXPathValue("//nfe:emit/nfe:enderEmit/nfe:UF") || getXPathValue("//emit/enderEmit/UF")
-    ].filter(Boolean);
+    // Helper function to get text content safely
+    const getTextContent = (tagName: string, context: Document | Element = xmlDoc): string => {
+      const element = getElementByTagName(tagName, context);
+      return element?.textContent?.trim() || "";
+    };
 
-    const supplierAddress = addressParts.join(", ");
-    const supplierPhone = getXPathValue("//nfe:emit/nfe:enderEmit/nfe:fone") || 
-                         getXPathValue("//emit/enderEmit/fone");
+    // Extract supplier information (emit)
+    const emitElement = getElementByTagName('emit');
+    if (!emitElement) {
+      throw new Error("Dados do emitente (fornecedor) não encontrados no XML");
+    }
+
+    const supplierName = getTextContent('xNome', emitElement);
+    const supplierCNPJ = getTextContent('CNPJ', emitElement);
 
     if (!supplierName || !supplierCNPJ) {
-      throw new Error("Dados do emitente não encontrados ou incompletos no XML");
+      throw new Error("Nome ou CNPJ do fornecedor não encontrados no XML");
+    }
+
+    // Build supplier address
+    const enderEmitElement = getElementByTagName('enderEmit', emitElement);
+    let supplierAddress = "";
+    let supplierPhone = "";
+    
+    if (enderEmitElement) {
+      const addressParts = [
+        getTextContent('xLgr', enderEmitElement),
+        getTextContent('nro', enderEmitElement),
+        getTextContent('xBairro', enderEmitElement),
+        getTextContent('xMun', enderEmitElement),
+        getTextContent('UF', enderEmitElement)
+      ].filter(Boolean);
+      
+      supplierAddress = addressParts.join(", ");
+      supplierPhone = getTextContent('fone', enderEmitElement);
     }
 
     const supplier: Supplier = {
@@ -79,14 +86,14 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
       phone: supplierPhone
     };
 
-    // Extract invoice identification (identificação da nota)
-    const danfeNumber = getXPathValue("//nfe:ide/nfe:nNF") || 
-                       getXPathValue("//ide/nNF");
-    
-    const issueDateStr = getXPathValue("//nfe:ide/nfe:dhEmi") || 
-                        getXPathValue("//ide/dhEmi") ||
-                        getXPathValue("//nfe:ide/nfe:dEmi") || 
-                        getXPathValue("//ide/dEmi");
+    // Extract invoice identification (ide)
+    const ideElement = getElementByTagName('ide');
+    if (!ideElement) {
+      throw new Error("Dados de identificação da nota não encontrados no XML");
+    }
+
+    const danfeNumber = getTextContent('nNF', ideElement);
+    const issueDateStr = getTextContent('dhEmi', ideElement) || getTextContent('dEmi', ideElement);
 
     if (!danfeNumber) {
       throw new Error("Número da DANFE não encontrado no XML");
@@ -102,9 +109,10 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
       throw new Error("Data de emissão não encontrada no XML");
     }
 
-    // Extract total value (valor total da NF-e)
-    const totalValueStr = getXPathValue("//nfe:total/nfe:ICMSTot/nfe:vNF") || 
-                         getXPathValue("//total/ICMSTot/vNF");
+    // Extract total value (total > ICMSTot > vNF)
+    const totalElement = getElementByTagName('total');
+    const icmsTotElement = totalElement ? getElementByTagName('ICMSTot', totalElement) : null;
+    const totalValueStr = icmsTotElement ? getTextContent('vNF', icmsTotElement) : "";
     
     if (!totalValueStr) {
       throw new Error("Valor total da nota não encontrado no XML");
@@ -115,30 +123,33 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
       throw new Error("Valor total da nota inválido");
     }
 
-    // Extract ALL items (detalhes dos produtos/serviços)
-    const detailNodes = getXPathNodes("//nfe:det") || getXPathNodes("//det");
+    // Extract ALL items (det elements)
+    const detElements = xmlDoc.querySelectorAll('det');
     const items: InvoiceItem[] = [];
     
-    console.log(`Processando ${detailNodes.length} itens encontrados no XML da NF-e`);
+    console.log(`Processando ${detElements.length} itens encontrados no XML da NF-e`);
     
-    detailNodes.forEach((detNode, index) => {
-      // Extract product information from each detail node
-      const description = getXPathValue(".//nfe:prod/nfe:xProd", detNode) || 
-                         getXPathValue(".//prod/xProd", detNode);
-      
-      const quantityStr = getXPathValue(".//nfe:prod/nfe:qCom", detNode) || 
-                         getXPathValue(".//prod/qCom", detNode);
-      
-      const unitPriceStr = getXPathValue(".//nfe:prod/nfe:vUnCom", detNode) || 
-                          getXPathValue(".//prod/vUnCom", detNode);
-      
-      const unitOfMeasure = getXPathValue(".//nfe:prod/nfe:uCom", detNode) || 
-                           getXPathValue(".//prod/uCom", detNode) || "Un";
-      
-      const totalPriceStr = getXPathValue(".//nfe:prod/nfe:vProd", detNode) || 
-                           getXPathValue(".//prod/vProd", detNode);
+    if (detElements.length === 0) {
+      throw new Error("Nenhum item encontrado no XML da NF-e");
+    }
 
-      // Convert values, handling Brazilian decimal format (comma as decimal separator)
+    detElements.forEach((detElement, index) => {
+      // Get prod element within each det
+      const prodElement = getElementByTagName('prod', detElement);
+      
+      if (!prodElement) {
+        console.warn(`Item ${index + 1}: elemento 'prod' não encontrado`);
+        return;
+      }
+
+      // Extract product information from prod element
+      const description = getTextContent('xProd', prodElement);
+      const quantityStr = getTextContent('qCom', prodElement); // Quantidade comercial
+      const unitPriceStr = getTextContent('vUnCom', prodElement); // Valor unitário comercial
+      const totalPriceStr = getTextContent('vProd', prodElement); // Valor total do produto
+      const unitOfMeasure = getTextContent('uCom', prodElement) || "Un"; // Unidade comercial
+
+      // Convert values, handling Brazilian decimal format
       const quantity = parseFloat(quantityStr.replace(',', '.')) || 0;
       const unitPrice = parseFloat(unitPriceStr.replace(',', '.')) || 0;
       const totalPrice = parseFloat(totalPriceStr.replace(',', '.')) || 0;
