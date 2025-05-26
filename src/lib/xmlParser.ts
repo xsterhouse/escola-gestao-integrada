@@ -86,6 +86,8 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
       phone: supplierPhone
     };
 
+    console.log(`Fornecedor extraído: ${supplierName} (CNPJ: ${supplierCNPJ})`);
+
     // Extract invoice identification (ide)
     const ideElement = getElementByTagName('ide');
     if (!ideElement) {
@@ -109,6 +111,8 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
       throw new Error("Data de emissão não encontrada no XML");
     }
 
+    console.log(`DANFE: ${danfeNumber}, Data de emissão: ${issueDate.toLocaleDateString('pt-BR')}`);
+
     // Extract total value (total > ICMSTot > vNF)
     const totalElement = getElementByTagName('total');
     const icmsTotElement = totalElement ? getElementByTagName('ICMSTot', totalElement) : null;
@@ -123,7 +127,9 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
       throw new Error("Valor total da nota inválido");
     }
 
-    // Extract ALL items (det elements) - CORRECTED ITERATION
+    console.log(`Valor total da DANFE: R$ ${totalValue.toFixed(2)}`);
+
+    // Extract ALL items from det elements
     const detElements = Array.from(xmlDoc.querySelectorAll('det'));
     const items: InvoiceItem[] = [];
     
@@ -133,7 +139,7 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
       throw new Error("Nenhum item encontrado no XML da NF-e");
     }
 
-    // Iterate through ALL <det> elements
+    // Iterate through ALL <det> elements to extract product data
     detElements.forEach((detElement, index) => {
       console.log(`Processando item ${index + 1} de ${detElements.length}`);
       
@@ -164,10 +170,10 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
       const totalPrice = parseFloat(totalPriceStr.replace(',', '.')) || 0;
 
       console.log(`Item ${index + 1}:`);
-      console.log(`  - Descrição: ${description}`);
+      console.log(`  - Descrição (xProd): ${description}`);
       console.log(`  - Quantidade (qCom): ${quantity}`);
-      console.log(`  - Preço Unit (vUnCom): ${unitPrice}`);
-      console.log(`  - Total (vProd): ${totalPrice}`);
+      console.log(`  - Preço Unitário (vUnCom): R$ ${unitPrice.toFixed(2)}`);
+      console.log(`  - Total (vProd): R$ ${totalPrice.toFixed(2)}`);
       console.log(`  - Unidade (uCom): ${unitOfMeasure}`);
 
       // Only add items with valid description and quantity
