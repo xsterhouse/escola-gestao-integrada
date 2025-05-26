@@ -60,7 +60,7 @@ export interface UserRole {
   id: string;
   name: string;
   description: string;
-  detailedPermissions?: Array<{
+  detailedPermissions: Array<{
     moduleId: string;
     moduleName: string;
     view: boolean;
@@ -68,7 +68,7 @@ export interface UserRole {
     edit: boolean;
     delete: boolean;
     read: boolean;
-  }>; // Added detailedPermissions to match the user.ts interface
+  }>; // Made required to match the user.ts interface
 }
 
 export interface PurchasingCenter {
