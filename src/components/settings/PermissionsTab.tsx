@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,13 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Save, Plus, Trash2, Pencil, Users, Settings, Filter } from "lucide-react";
+import { Shield, Save, Plus, Trash2, Pencil, Users, Settings, Filter, Copy, ChevronDown, ChevronUp } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModulePermission, UserRole } from "@/lib/types";
+import { DetailedPermission } from "@/types/user";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
+import { RolePermissionsEditor } from "./RolePermissionsEditor";
 
 interface SystemUser {
   id: string;
@@ -64,6 +65,7 @@ export function PermissionsTab() {
   const [editingRole, setEditingRole] = useState<UserRole | null>(null);
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [filterBySchool, setFilterBySchool] = useState<string>("all");
+  const [expandedRole, setExpandedRole] = useState<string | null>(null);
 
   // Use localStorage for persistence
   const { data: modulePermissions, saveData: setModulePermissions } = useLocalStorageSync<ModulePermission>('modulePermissions', [
@@ -145,22 +147,26 @@ export function PermissionsTab() {
     {
       id: "1",
       name: "Administrador",
-      description: "Acesso total ao sistema"
+      description: "Acesso total ao sistema",
+      detailedPermissions: []
     },
     {
       id: "2",
       name: "Gerente",
-      description: "Acesso a todos os módulos sem permissão de exclusão"
+      description: "Acesso a todos os módulos sem permissão de exclusão",
+      detailedPermissions: []
     },
     {
       id: "3",
       name: "Operador",
-      description: "Acesso de leitura e escrita básica"
+      description: "Acesso de leitura e escrita básica",
+      detailedPermissions: []
     },
     {
       id: "4",
       name: "Visualizador",
-      description: "Acesso apenas de leitura"
+      description: "Acesso apenas de leitura",
+      detailedPermissions: []
     }
   ]);
 
@@ -298,6 +304,48 @@ export function PermissionsTab() {
     });
   };
 
+  const handleUpdateRolePermissions = (roleId: string, permissions: DetailedPermission[]) => {
+    const updatedRoles = userRoles.map(role => 
+      role.id === roleId
+        ? { ...role, detailedPermissions: permissions }
+        : role
+    );
+    setUserRoles(updatedRoles);
+    
+    toast({
+      title: "Permissões atualizadas",
+      description: `As permissões do perfil foram atualizadas com sucesso.`
+    });
+  };
+
+  const handleCloneRole = (role: UserRole) => {
+    const clonedRole: UserRole = {
+      id: Date.now().toString(),
+      name: `${role.name} (Cópia)`,
+      description: `${role.description} (Cópia)`,
+      detailedPermissions: [...role.detailedPermissions]
+    };
+    
+    setUserRoles([...userRoles, clonedRole]);
+    
+    toast({
+      title: "Perfil clonado",
+      description: "O perfil foi clonado com sucesso."
+    });
+  };
+
+  const getPermissionsSummary = (role: UserRole) => {
+    if (!role.detailedPermissions || role.detailedPermissions.length === 0) {
+      return "Nenhuma permissão configurada";
+    }
+    
+    const activeModules = role.detailedPermissions.filter(p => 
+      p.view || p.create || p.edit || p.delete || p.read
+    ).length;
+    
+    return `${activeModules} módulos com permissões configuradas`;
+  };
+
   const handleOpenRoleModal = (role?: UserRole) => {
     if (role) {
       setEditingRole(role);
@@ -344,17 +392,10 @@ export function PermissionsTab() {
       const newRole: UserRole = {
         id: Date.now().toString(),
         name: roleForm.name,
-        description: roleForm.description
+        description: roleForm.description,
+        detailedPermissions: []
       };
       setUserRoles([...userRoles, newRole]);
-      
-      // Initialize permissions for the new role
-      const newPermissions = { ...rolePermissions };
-      newPermissions[newRole.id] = modulePermissions.reduce((acc, module) => {
-        acc[module.id] = false;
-        return acc;
-      }, {} as { [key: string]: boolean });
-      setRolePermissions(newPermissions);
       
       toast({
         title: "Perfil criado",
@@ -597,59 +638,67 @@ export function PermissionsTab() {
               
               <div className="grid gap-4">
                 {userRoles.map((role) => (
-                  <Card key={role.id} className="bg-slate-50">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Shield className="h-5 w-5 text-[#012340]" />
-                          <CardTitle className="text-lg">{role.name}</CardTitle>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleOpenRoleModal(role)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleDeleteRole(role.id)}
-                            className="text-destructive hover:text-destructive/90"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <CardDescription>{role.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                        {modulePermissions.map((module) => (
-                          <div key={module.id} className="flex items-center space-x-2 bg-white p-2 rounded-md border">
-                            <Switch 
-                              id={`${role.id}-${module.id}`} 
-                              checked={!!rolePermissions[role.id]?.[module.id]}
-                              onCheckedChange={() => handleToggleRolePermission(role.id, module.id)}
-                            />
-                            <Label htmlFor={`${role.id}-${module.id}`} className="text-sm font-medium cursor-pointer">
-                              {module.name}
-                            </Label>
+                  <div key={role.id}>
+                    <Card className="bg-slate-50">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Shield className="h-5 w-5 text-[#012340]" />
+                            <CardTitle className="text-lg">{role.name}</CardTitle>
                           </div>
-                        ))}
-                      </div>
-                      <div className="mt-4 flex justify-end">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleSaveRolePermissions(role.id)}
-                        >
-                          Salvar
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleCloneRole(role)}
+                              title="Clonar perfil"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleOpenRoleModal(role)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleDeleteRole(role.id)}
+                              className="text-destructive hover:text-destructive/90"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setExpandedRole(expandedRole === role.id ? null : role.id)}
+                            >
+                              {expandedRole === role.id ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                        <CardDescription>{role.description}</CardDescription>
+                        <div className="mt-2">
+                          <Badge variant="outline">
+                            {getPermissionsSummary(role)}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                    
+                    {expandedRole === role.id && (
+                      <RolePermissionsEditor
+                        role={role}
+                        onUpdate={handleUpdateRolePermissions}
+                      />
+                    )}
+                  </div>
                 ))}
               </div>
             </div>

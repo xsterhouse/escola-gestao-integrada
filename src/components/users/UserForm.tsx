@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { 
   Dialog, 
@@ -20,6 +21,9 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { School, User, Permission } from "@/lib/types";
+import { UserRole } from "@/types/user";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
+import { Users } from "lucide-react";
 
 type UserFormProps = {
   isOpen: boolean;
@@ -34,12 +38,13 @@ export function UserForm({
   onClose,
   onSave,
   initialData,
-  schools = [], // Provide default empty array to prevent undefined errors
+  schools = [],
 }: UserFormProps) {
   const [name, setName] = useState(initialData?.name || "");
   const [matricula, setMatricula] = useState(initialData?.matricula || "");
   const [email, setEmail] = useState(initialData?.email || "");
   const [role, setRole] = useState(initialData?.role || "user");
+  const [profileId, setProfileId] = useState(initialData?.profileId || "");
   const [schoolId, setSchoolId] = useState(initialData?.schoolId || "");
   const [permissions, setPermissions] = useState<Permission[]>(
     initialData?.permissions || [
@@ -56,6 +61,9 @@ export function UserForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  // Load user roles from localStorage
+  const { data: userRoles } = useLocalStorageSync<UserRole>('userRoles', []);
+
   const handlePermissionChange = (permissionName: string, checked: boolean) => {
     setPermissions(
       permissions.map((permission) =>
@@ -66,6 +74,33 @@ export function UserForm({
     );
   };
 
+  const handleProfileChange = (newProfileId: string) => {
+    setProfileId(newProfileId);
+    
+    // Update permissions based on selected profile
+    const selectedProfile = userRoles.find(role => role.id === newProfileId);
+    if (selectedProfile && selectedProfile.detailedPermissions) {
+      const updatedPermissions = permissions.map(permission => {
+        const profilePermission = selectedProfile.detailedPermissions.find(
+          p => p.moduleId === permission.id
+        );
+        
+        if (profilePermission) {
+          return {
+            ...permission,
+            hasAccess: profilePermission.view || profilePermission.create || 
+                      profilePermission.edit || profilePermission.delete || 
+                      profilePermission.read
+          };
+        }
+        
+        return permission;
+      });
+      
+      setPermissions(updatedPermissions);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -73,6 +108,15 @@ export function UserForm({
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!profileId) {
+      toast({
+        title: "Perfil obrigatório",
+        description: "Por favor, selecione um perfil de permissões para o usuário.",
         variant: "destructive",
       });
       return;
@@ -95,6 +139,7 @@ export function UserForm({
         matricula,
         email,
         role,
+        profileId,
         schoolId: role === "master" ? null : schoolId,
         permissions,
       });
@@ -127,6 +172,11 @@ export function UserForm({
     contracts: "Contratos",
     accounting: "Contabilidade",
     settings: "Configurações",
+  };
+
+  const getSelectedProfileName = () => {
+    const profile = userRoles.find(role => role.id === profileId);
+    return profile ? profile.name : "";
   };
 
   return (
@@ -195,6 +245,33 @@ export function UserForm({
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="profileId">Perfil de Permissões *</Label>
+              <Select value={profileId} onValueChange={handleProfileChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o perfil de permissões" />
+                </SelectTrigger>
+                <SelectContent>
+                  {userRoles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        <div>
+                          <div className="font-medium">{role.name}</div>
+                          <div className="text-xs text-gray-500">{role.description}</div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {profileId && (
+                <p className="text-xs text-gray-600">
+                  Perfil selecionado: <strong>{getSelectedProfileName()}</strong>
+                </p>
+              )}
+            </div>
             
             {role !== "master" && (
               <div className="space-y-2">
@@ -218,7 +295,7 @@ export function UserForm({
             )}
             
             <div className="space-y-3">
-              <Label>Permissões de Acesso</Label>
+              <Label>Preview das Permissões (baseadas no perfil)</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {permissions.map((permission) => (
                   <div key={permission.id} className="flex items-center space-x-2">

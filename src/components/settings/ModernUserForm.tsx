@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Dialog, 
@@ -15,8 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { User, School, ModulePermission } from "@/lib/types";
+import { UserRole } from "@/types/user";
 import { saveUserPassword } from "@/contexts/AuthContext";
-import { Eye, EyeOff, Shield } from "lucide-react";
+import { Eye, EyeOff, Shield, Users } from "lucide-react";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 
 type ModernUserFormProps = {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export function ModernUserForm({
     matricula: initialData?.matricula || "",
     email: initialData?.email || "",
     role: initialData?.role || "user",
+    profileId: initialData?.profileId || "",
     schoolId: initialData?.schoolId || "",
     password: "",
     confirmPassword: "",
@@ -48,7 +50,10 @@ export function ModernUserForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  // Mock permissions
+  // Load user roles from localStorage
+  const { data: userRoles } = useLocalStorageSync<UserRole>('userRoles', []);
+
+  // Mock permissions - will be inherited from selected profile
   const [permissions, setPermissions] = useState<ModulePermission[]>([
     { id: "1", name: "Dashboard", description: "Painel principal", create: true, read: true, update: false, delete: false },
     { id: "2", name: "Produtos", description: "Gestão de produtos", create: false, read: true, update: false, delete: false },
@@ -79,6 +84,34 @@ export function ModernUserForm({
     validatePassword(password);
   };
 
+  const handleProfileChange = (profileId: string) => {
+    setFormData(prev => ({ ...prev, profileId }));
+    
+    // Update permissions based on selected profile
+    const selectedProfile = userRoles.find(role => role.id === profileId);
+    if (selectedProfile && selectedProfile.detailedPermissions) {
+      const updatedPermissions = permissions.map(permission => {
+        const profilePermission = selectedProfile.detailedPermissions.find(
+          p => p.moduleId === permission.id
+        );
+        
+        if (profilePermission) {
+          return {
+            ...permission,
+            create: profilePermission.create,
+            read: profilePermission.read || profilePermission.view,
+            update: profilePermission.edit,
+            delete: profilePermission.delete
+          };
+        }
+        
+        return permission;
+      });
+      
+      setPermissions(updatedPermissions);
+    }
+  };
+
   const handlePermissionToggle = (permissionId: string, type: "create" | "read" | "update" | "delete") => {
     setPermissions(prev => 
       prev.map(permission => 
@@ -96,6 +129,15 @@ export function ModernUserForm({
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.profileId) {
+      toast({
+        title: "Perfil obrigatório",
+        description: "Por favor, selecione um perfil para o usuário.",
         variant: "destructive",
       });
       return;
@@ -141,6 +183,7 @@ export function ModernUserForm({
         matricula: formData.matricula,
         email: formData.email,
         role: formData.role,
+        profileId: formData.profileId,
         schoolId: formData.schoolId || null,
         permissions: permissions.map(p => ({ 
           id: p.id, 
@@ -186,6 +229,11 @@ export function ModernUserForm({
     if (passwordStrength <= 2) return "Fraca";
     if (passwordStrength <= 3) return "Média";
     return "Forte";
+  };
+
+  const getSelectedProfileName = () => {
+    const profile = userRoles.find(role => role.id === formData.profileId);
+    return profile ? profile.name : "";
   };
 
   return (
@@ -253,6 +301,33 @@ export function ModernUserForm({
                     <SelectItem value="master">Master</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="profileId">Perfil de Permissões *</Label>
+                <Select value={formData.profileId} onValueChange={handleProfileChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o perfil de permissões" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {userRoles.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          <div>
+                            <div className="font-medium">{role.name}</div>
+                            <div className="text-xs text-gray-500">{role.description}</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.profileId && (
+                  <p className="text-xs text-gray-600">
+                    Perfil selecionado: <strong>{getSelectedProfileName()}</strong>
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -329,11 +404,12 @@ export function ModernUserForm({
               </div>
             )}
 
-            {/* Permissões */}
+            {/* Permissões Preview */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                <Label className="text-base font-medium">Permissões do Sistema</Label>
+                <Label className="text-base font-medium">Preview das Permissões</Label>
+                <span className="text-xs text-gray-500">(Baseadas no perfil selecionado)</span>
               </div>
               
               <div className="grid grid-cols-1 gap-4">

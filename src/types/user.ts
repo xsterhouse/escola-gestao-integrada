@@ -5,6 +5,16 @@ export interface Permission {
   hasAccess: boolean;
 }
 
+export interface DetailedPermission {
+  moduleId: string;
+  moduleName: string;
+  view: boolean;
+  create: boolean;
+  edit: boolean;
+  delete: boolean;
+  read: boolean;
+}
+
 export interface ModuleRestriction {
   schoolOnly?: boolean;
   purchasingCenterOnly?: boolean;
@@ -19,19 +29,20 @@ export interface UserModulePermission {
   moduleId: string;
   hasAccess: boolean;
   restrictions?: ModuleRestriction;
-  grantedBy?: string; // ID do usuário que concedeu a permissão
+  grantedBy?: string;
   grantedAt?: Date;
 }
 
 export interface User {
   id: string;
   name: string;
-  matricula: string; // Número de matrícula para login
+  matricula: string;
   email: string;
   role: string;
+  profileId?: string; // New field to link to user profile
   schoolId: string | null;
   permissions: Permission[];
-  modulePermissions?: UserModulePermission[]; // Novas permissões específicas por módulo
+  modulePermissions?: UserModulePermission[];
   status?: "active" | "inactive";
   createdAt: Date;
   updatedAt: Date;
@@ -41,6 +52,7 @@ export interface UserRole {
   id: string;
   name: string;
   description: string;
+  detailedPermissions: DetailedPermission[]; // New detailed permissions
   moduleAccess?: {
     [moduleId: string]: {
       hasAccess: boolean;
@@ -54,6 +66,7 @@ export interface SystemUser {
   name: string;
   matricula: string;
   password: string;
+  profileId?: string; // New field to link to user profile
   schoolId: string | null;
   purchasingCenterIds?: string[];
   isLinkedToPurchasing: boolean;
