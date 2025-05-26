@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,9 +40,12 @@ export function FinancialTransactionsSearchTab() {
     }
 
     if (dateFilter) {
-      filtered = filtered.filter(transaction => 
-        transaction.date.includes(dateFilter)
-      );
+      filtered = filtered.filter(transaction => {
+        const transactionDate = typeof transaction.date === 'string' 
+          ? transaction.date 
+          : format(new Date(transaction.date), 'yyyy-MM-dd');
+        return transactionDate.includes(dateFilter);
+      });
     }
 
     if (typeFilter !== "all") {

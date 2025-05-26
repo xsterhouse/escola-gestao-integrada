@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { User, School } from "@/lib/types";
 import { UserRole } from "@/types/user";
