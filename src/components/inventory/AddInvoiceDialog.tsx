@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -95,6 +94,8 @@ export function AddInvoiceDialog({ open, onOpenChange, onSubmit }: AddInvoiceDia
       totalValue,
       items,
       financialProgramming: values.financialProgramming,
+      status: 'pendente',
+      isActive: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
