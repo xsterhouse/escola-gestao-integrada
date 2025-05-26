@@ -7,7 +7,6 @@ import { AccountingEntryForm } from "@/components/accounting/AccountingEntryForm
 import { AccountConfigTab } from "@/components/accounting/AccountConfigTab";
 import { AccountingReportsTab } from "@/components/accounting/AccountingReportsTab";
 import { CloseExerciseTab } from "@/components/accounting/CloseExerciseTab";
-import { BookOpen } from "lucide-react";
 
 const Accounting = () => {
   const [activeTab, setActiveTab] = useState("entries");
@@ -17,14 +16,9 @@ const Accounting = () => {
       <div className="max-w-7xl mx-auto space-y-6 p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <BookOpen className="h-8 w-8 text-purple-600" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Módulo de Contabilidade</h1>
-              <p className="text-gray-600 mt-1">Gerencie lançamentos contábeis e controle financeiro</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Módulo de Contabilidade</h1>
+            <p className="text-gray-600 mt-1">Gerencie lançamentos contábeis e controle financeiro</p>
           </div>
           <AccountingHeader />
         </div>
@@ -54,23 +48,6 @@ const Accounting = () => {
             <CloseExerciseTab />
           </TabsContent>
         </Tabs>
-
-        {/* Footer */}
-        <div className="flex justify-center gap-4 pt-8 border-t border-gray-200">
-          <a 
-            href="#" 
-            className="text-sm text-gray-500 hover:text-purple-600 transition-colors font-medium"
-          >
-            Ajuda
-          </a>
-          <span className="text-gray-300">|</span>
-          <a 
-            href="#" 
-            className="text-sm text-gray-500 hover:text-purple-600 transition-colors font-medium"
-          >
-            Sair
-          </a>
-        </div>
       </div>
     </AppLayout>
   );
