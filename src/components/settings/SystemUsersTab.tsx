@@ -17,6 +17,7 @@ interface SystemUser {
   matricula: string;
   password: string;
   schoolId: string | null;
+  purchasingCenterIds?: string[];
   isLinkedToPurchasing: boolean;
   status: "active" | "blocked";
   createdAt: Date;
@@ -28,6 +29,12 @@ interface School {
   name: string;
 }
 
+interface PurchasingCenter {
+  id: string;
+  name: string;
+  schoolIds: string[];
+}
+
 export function SystemUsersTab() {
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,11 +43,13 @@ export function SystemUsersTab() {
   
   const { data: systemUsers, saveData: setSystemUsers } = useLocalStorageSync<SystemUser>('systemUsers', []);
   const { data: schools } = useLocalStorageSync<School>('schools', []);
+  const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasingCenters', []);
 
   const handleSaveUser = (userData: Omit<SystemUser, "id" | "createdAt" | "updatedAt">) => {
     const newUser: SystemUser = {
       id: Date.now().toString(),
       ...userData,
+      purchasingCenterIds: userData.purchasingCenterIds || [],
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -125,9 +134,15 @@ export function SystemUsersTab() {
     const school = schools.find(s => s.id === user.schoolId);
     const schoolName = school ? school.name : "Nenhuma escola vinculada";
     
+    const userCenters = user.purchasingCenterIds ? 
+      purchasingCenters
+        .filter(pc => user.purchasingCenterIds!.includes(pc.id))
+        .map(pc => pc.name)
+        .join(", ") : "Nenhuma";
+    
     toast({
       title: "Detalhes do Usuário",
-      description: `Nome: ${user.name}, Matrícula: ${user.matricula}, Escola: ${schoolName}, Central de Compras: ${user.isLinkedToPurchasing ? "Sim" : "Não"}`,
+      description: `Nome: ${user.name}, Matrícula: ${user.matricula}, Escola: ${schoolName}, Centrais: ${userCenters}`,
     });
   };
 
@@ -140,6 +155,16 @@ export function SystemUsersTab() {
     if (!schoolId) return "Nenhuma escola";
     const school = schools.find(s => s.id === schoolId);
     return school ? school.name : "Escola não encontrada";
+  };
+
+  const getPurchasingCentersNames = (centerIds?: string[]) => {
+    if (!centerIds || centerIds.length === 0) return "Nenhuma";
+    
+    const centerNames = purchasingCenters
+      .filter(pc => centerIds.includes(pc.id))
+      .map(pc => pc.name);
+    
+    return centerNames.length > 0 ? centerNames.join(", ") : "Nenhuma";
   };
 
   return (
@@ -176,7 +201,7 @@ export function SystemUsersTab() {
               <TableHead>Nome</TableHead>
               <TableHead>Matrícula</TableHead>
               <TableHead>Escola</TableHead>
-              <TableHead>Central de Compras</TableHead>
+              <TableHead>Centrais de Compras</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -194,11 +219,7 @@ export function SystemUsersTab() {
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell className="font-mono">{user.matricula}</TableCell>
                   <TableCell className="text-sm">{getSchoolName(user.schoolId)}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.isLinkedToPurchasing ? "default" : "outline"}>
-                      {user.isLinkedToPurchasing ? "Vinculado" : "Não vinculado"}
-                    </Badge>
-                  </TableCell>
+                  <TableCell className="text-sm">{getPurchasingCentersNames(user.purchasingCenterIds)}</TableCell>
                   <TableCell>
                     <Badge variant={user.status === "active" ? "default" : "destructive"}>
                       {user.status === "active" ? "Ativo" : "Bloqueado"}

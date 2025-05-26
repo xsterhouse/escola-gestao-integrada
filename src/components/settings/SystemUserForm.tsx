@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Dialog, 
   DialogTitle, 
@@ -15,10 +15,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus } from "lucide-react";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 
 interface School {
   id: string;
   name: string;
+}
+
+interface PurchasingCenter {
+  id: string;
+  name: string;
+  schoolIds: string[];
 }
 
 interface SystemUser {
@@ -26,6 +33,7 @@ interface SystemUser {
   matricula: string;
   password: string;
   schoolId: string | null;
+  purchasingCenterIds: string[];
   isLinkedToPurchasing: boolean;
   status: "active" | "blocked";
 }
@@ -48,15 +56,41 @@ export function SystemUserForm({
     matricula: "",
     password: "",
     schoolId: "",
+    purchasingCenterIds: [] as string[],
     isLinkedToPurchasing: false,
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [availablePurchasingCenters, setAvailablePurchasingCenters] = useState<PurchasingCenter[]>([]);
   const { toast } = useToast();
+  const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasingCenters', []);
+
+  // Filter purchasing centers based on selected school
+  useEffect(() => {
+    if (formData.schoolId && formData.schoolId !== "none") {
+      const filtered = purchasingCenters.filter(pc => 
+        pc.schoolIds.includes(formData.schoolId)
+      );
+      setAvailablePurchasingCenters(filtered);
+    } else {
+      setAvailablePurchasingCenters([]);
+    }
+    // Reset selected purchasing centers when school changes
+    setFormData(prev => ({ ...prev, purchasingCenterIds: [] }));
+  }, [formData.schoolId, purchasingCenters]);
 
   const generatePassword = () => {
     const password = Math.floor(100000 + Math.random() * 900000).toString();
     setFormData(prev => ({ ...prev, password }));
+  };
+
+  const handlePurchasingCenterToggle = (centerId: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      purchasingCenterIds: checked 
+        ? [...prev.purchasingCenterIds, centerId]
+        : prev.purchasingCenterIds.filter(id => id !== centerId)
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,6 +122,7 @@ export function SystemUserForm({
         matricula: formData.matricula,
         password: formData.password,
         schoolId: formData.schoolId === "none" ? null : formData.schoolId || null,
+        purchasingCenterIds: formData.purchasingCenterIds,
         isLinkedToPurchasing: formData.isLinkedToPurchasing,
         status: "active",
       };
@@ -100,6 +135,7 @@ export function SystemUserForm({
         matricula: "",
         password: "",
         schoolId: "",
+        purchasingCenterIds: [],
         isLinkedToPurchasing: false,
       });
       
@@ -135,10 +171,10 @@ export function SystemUserForm({
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="school">Escola</Label>
+            <Label htmlFor="school">Escola *</Label>
             <Select value={formData.schoolId} onValueChange={(value) => setFormData(prev => ({ ...prev, schoolId: value }))}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione a escola (opcional)" />
+                <SelectValue placeholder="Selecione a escola" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Nenhuma escola específica</SelectItem>
@@ -150,6 +186,31 @@ export function SystemUserForm({
               </SelectContent>
             </Select>
           </div>
+
+          {availablePurchasingCenters.length > 0 && (
+            <div className="space-y-2">
+              <Label>Centrais de Compras</Label>
+              <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
+                {availablePurchasingCenters.map((center) => (
+                  <div key={center.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`center-${center.id}`}
+                      checked={formData.purchasingCenterIds.includes(center.id)}
+                      onCheckedChange={(checked) => 
+                        handlePurchasingCenterToggle(center.id, checked as boolean)
+                      }
+                    />
+                    <Label htmlFor={`center-${center.id}`} className="text-sm">
+                      {center.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500">
+                Selecione as centrais de compras que este usuário terá acesso
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="name">Nome do Usuário *</Label>
