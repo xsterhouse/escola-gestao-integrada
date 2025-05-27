@@ -2,8 +2,7 @@
 import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/layout/AppSidebar";
+import { Sidebar } from "@/components/layout/Sidebar";
 import { OfflineIndicator } from "@/components/ui/offline-indicator";
 
 type AppLayoutProps = {
@@ -48,19 +47,17 @@ export function AppLayout({
   }
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <main className="flex-1 flex flex-col">
-          <div className="border-b bg-background p-4">
-            <SidebarTrigger />
-          </div>
-          <div className="flex-1 p-6 bg-gray-50">
-            {children}
-          </div>
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar />
+
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6">
+          {children}
         </main>
-        <OfflineIndicator />
       </div>
-    </SidebarProvider>
+      
+      {/* Indicador de status offline/online */}
+      <OfflineIndicator />
+    </div>
   );
 }
