@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +18,7 @@ import {
   ReceivableAccount,
   FinancialSummary
 } from "@/lib/types";
+import { v4 as uuidv4 } from "uuid";
 
 export default function Financial() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -165,6 +167,36 @@ export default function Financial() {
     calculateFinancialSummary();
   }, [bankAccounts, bankTransactions, paymentAccounts, receivableAccounts]);
   
+  // Function to create automatic bank transaction
+  const createAutomaticBankTransaction = (
+    type: 'payment' | 'receivable',
+    account: PaymentAccount | ReceivableAccount,
+    bankAccountId: string
+  ) => {
+    const bankAccount = bankAccounts.find(ba => ba.id === bankAccountId);
+    if (!bankAccount) return;
+
+    const newTransaction: BankTransaction = {
+      id: uuidv4(),
+      schoolId: "current-school-id",
+      bankAccountId,
+      date: new Date(),
+      description: type === 'payment' 
+        ? `Pagamento: ${account.description}` 
+        : `Recebimento: ${account.description}`,
+      value: account.value,
+      transactionType: type === 'payment' ? 'debito' : 'credito',
+      reconciliationStatus: 'conciliado',
+      category: type === 'payment' ? (account as PaymentAccount).expenseType : account.resourceType,
+      resourceType: bankAccount.managementType,
+      source: type,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    setBankTransactions(prev => [...prev, newTransaction]);
+  };
+  
   // Handlers for new transactions from header
   const handleAddTransaction = (transaction: BankTransaction) => {
     setBankTransactions([...bankTransactions, transaction]);
@@ -176,6 +208,40 @@ export default function Financial() {
   
   const handleAddReceivable = (receivable: ReceivableAccount) => {
     setReceivableAccounts([...receivableAccounts, receivable]);
+  };
+
+  // Enhanced handler for updating payment account with automatic transaction
+  const handleUpdatePaymentAccount = (updatedPayment: PaymentAccount) => {
+    const previousPayment = paymentAccounts.find(p => p.id === updatedPayment.id);
+    
+    // If payment was just marked as paid and has a bank account, create automatic transaction
+    if (previousPayment?.status === 'a_pagar' && 
+        updatedPayment.status === 'pago' && 
+        updatedPayment.bankAccountId) {
+      createAutomaticBankTransaction('payment', updatedPayment, updatedPayment.bankAccountId);
+    }
+
+    // Update payment accounts
+    setPaymentAccounts(prev => 
+      prev.map(p => p.id === updatedPayment.id ? updatedPayment : p)
+    );
+  };
+
+  // Enhanced handler for updating receivable account with automatic transaction
+  const handleUpdateReceivableAccount = (updatedReceivable: ReceivableAccount, bankAccountId?: string) => {
+    const previousReceivable = receivableAccounts.find(r => r.id === updatedReceivable.id);
+    
+    // If receivable was just marked as received and has a bank account, create automatic transaction
+    if (previousReceivable?.status === 'pendente' && 
+        updatedReceivable.status === 'recebido' && 
+        bankAccountId) {
+      createAutomaticBankTransaction('receivable', updatedReceivable, bankAccountId);
+    }
+
+    // Update receivable accounts
+    setReceivableAccounts(prev => 
+      prev.map(r => r.id === updatedReceivable.id ? updatedReceivable : r)
+    );
   };
 
   // Function to navigate to bank reconciliation tab
@@ -240,6 +306,7 @@ export default function Financial() {
               onNavigateToBankReconciliation={handleNavigateToBankReconciliation}
               resourceCategories={resourceCategories}
               expenseTypes={expenseTypes}
+              onUpdatePayment={handleUpdatePaymentAccount}
             />
           </TabsContent>
 
@@ -252,6 +319,7 @@ export default function Financial() {
               onNavigateToBankReconciliation={handleNavigateToBankReconciliation}
               bankTransactions={bankTransactions}
               setBankTransactions={setBankTransactions}
+              onUpdateReceivable={handleUpdateReceivableAccount}
             />
           </TabsContent>
           

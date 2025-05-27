@@ -26,6 +26,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
     accountNumber: "",
     accountType: "movimento" as "movimento" | "aplicacao",
     description: "",
+    managementType: "",
     initialBalance: ""
   });
 
@@ -50,13 +51,14 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
       accountNumber: "",
       accountType: "movimento",
       description: "",
+      managementType: "",
       initialBalance: ""
     });
     setEditingAccount(null);
   };
 
   const handleSave = () => {
-    if (!formData.bankName || !formData.agencyNumber || !formData.accountNumber || !formData.description) {
+    if (!formData.bankName || !formData.agencyNumber || !formData.accountNumber || !formData.description || !formData.managementType) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -74,6 +76,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
               accountNumber: formData.accountNumber,
               accountType: formData.accountType,
               description: formData.description,
+              managementType: formData.managementType,
               initialBalance,
               currentBalance: initialBalance,
               updatedAt: new Date()
@@ -92,6 +95,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
         accountNumber: formData.accountNumber,
         accountType: formData.accountType,
         description: formData.description,
+        managementType: formData.managementType,
         initialBalance,
         currentBalance: initialBalance,
         createdAt: new Date(),
@@ -99,6 +103,30 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
       };
 
       setBankAccounts([...bankAccounts, newAccount]);
+      
+      // Automatically create initial balance transaction
+      if (initialBalance !== 0) {
+        const initialTransaction = {
+          id: uuidv4(),
+          schoolId: "current-school-id",
+          bankAccountId: newAccount.id,
+          date: new Date(),
+          description: "Saldo inicial da conta",
+          value: Math.abs(initialBalance),
+          transactionType: initialBalance > 0 ? 'credito' : 'debito' as 'credito' | 'debito',
+          reconciliationStatus: 'conciliado' as 'conciliado' | 'nao_conciliado',
+          category: "Saldo Inicial",
+          resourceType: formData.managementType,
+          source: 'manual' as 'manual' | 'payment' | 'receivable',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+
+        // Save to bank transactions
+        const existingTransactions = JSON.parse(localStorage.getItem('bankTransactions') || '[]');
+        localStorage.setItem('bankTransactions', JSON.stringify([...existingTransactions, initialTransaction]));
+      }
+
       toast.success("Conta bancária cadastrada com sucesso!");
     }
 
@@ -113,6 +141,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
       accountNumber: account.accountNumber,
       accountType: account.accountType,
       description: account.description,
+      managementType: account.managementType || "",
       initialBalance: account.initialBalance.toString()
     });
     setEditingAccount(account);
@@ -205,6 +234,22 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="managementType">Tipo de Gestão *</Label>
+                <Select value={formData.managementType} onValueChange={(value) => setFormData({ ...formData, managementType: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo de gestão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PNAE">PNAE</SelectItem>
+                    <SelectItem value="PDDE">PDDE</SelectItem>
+                    <SelectItem value="PNATE">PNATE</SelectItem>
+                    <SelectItem value="Recursos Próprios">Recursos Próprios</SelectItem>
+                    <SelectItem value="Outros">Outros</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição *</Label>
@@ -260,6 +305,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
                   <TableHead>Agência</TableHead>
                   <TableHead>Número da Conta</TableHead>
                   <TableHead>Tipo</TableHead>
+                  <TableHead>Gestão</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead>Saldo Atual</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -278,6 +324,11 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
                           : 'bg-green-100 text-green-800'
                       }`}>
                         {account.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                        {account.managementType || 'Não informado'}
                       </span>
                     </TableCell>
                     <TableCell>{account.description}</TableCell>

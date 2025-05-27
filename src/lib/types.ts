@@ -201,6 +201,7 @@ export interface BankAccount {
   accountNumber: string;
   accountType: 'movimento' | 'aplicacao';
   description: string;
+  managementType?: string; // New field: Gestão, PDDE, etc.
   initialBalance: number;
   currentBalance: number;
   createdAt: Date;
@@ -219,6 +220,7 @@ export interface BankTransaction {
   category?: string;
   resourceType?: string;
   documentId?: string;
+  source?: 'manual' | 'payment' | 'receivable'; // Added to track transaction origin
   createdAt: Date;
   updatedAt: Date;
 }

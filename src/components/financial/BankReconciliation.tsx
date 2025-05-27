@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -153,8 +152,8 @@ export function BankReconciliation({
     .reduce((sum, t) => sum + t.value, 0);
   const displayedFinalBalance = displayedInitialBalance + displayedTotalRevenues - displayedTotalExpenses;
   
-  // Get selected account name for highlighting
-  const selectedAccountName = bankAccounts.find(a => a.id === selectedAccount)?.bankName || "";
+  // Get selected account information
+  const selectedAccountData = bankAccounts.find(a => a.id === selectedAccount);
   
   return (
     <div className="space-y-6">
@@ -207,13 +206,23 @@ export function BankReconciliation({
                 <SelectItem value="all">Todas as contas</SelectItem>
                 {bankAccounts.filter(account => account.id && account.id.trim() !== "").map(account => (
                   <SelectItem key={account.id} value={account.id}>
-                    {account.bankName} - {account.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}
+                    {account.bankName} - {account.accountType === 'movimento' ? 'Movimento' : 'Aplicação'} ({account.managementType || 'Sem gestão'})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {selectedAccountName && (
-              <p className="text-sm text-blue-600 font-medium mt-1">Conta selecionada: {selectedAccountName}</p>
+            {selectedAccountData && (
+              <div className="mt-1 p-2 bg-blue-50 rounded border">
+                <p className="text-sm font-medium text-blue-800">
+                  {selectedAccountData.bankName}
+                </p>
+                <p className="text-xs text-blue-600">
+                  Gestão: {selectedAccountData.managementType || 'Não informado'}
+                </p>
+                <p className="text-xs text-blue-600">
+                  {selectedAccountData.description}
+                </p>
+              </div>
             )}
           </div>
           
