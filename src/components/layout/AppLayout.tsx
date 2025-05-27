@@ -1,8 +1,9 @@
 
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/layout/AppSidebar";
 import { OfflineIndicator } from "@/components/ui/offline-indicator";
 
 type AppLayoutProps = {
@@ -17,7 +18,6 @@ export function AppLayout({
   requiredPermission 
 }: AppLayoutProps) {
   const { isAuthenticated, user, isLoading } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Check if user is authenticated when required
   if (requireAuth && !isLoading && !isAuthenticated) {
@@ -48,50 +48,19 @@ export function AppLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
-      />
-
-      {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header with hamburger menu */}
-        <header className="bg-white shadow-sm border-b border-gray-200 p-4 lg:hidden">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-          >
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
-          </button>
-        </header>
-
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6">
-          {children}
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <main className="flex-1 flex flex-col">
+          <div className="border-b bg-background p-4">
+            <SidebarTrigger />
+          </div>
+          <div className="flex-1 p-6 bg-gray-50">
+            {children}
+          </div>
         </main>
+        <OfflineIndicator />
       </div>
-      
-      {/* Indicador de status offline/online */}
-      <OfflineIndicator />
-    </div>
+    </SidebarProvider>
   );
 }
