@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ interface ReceivableAccountsProps {
   onNavigateToBankReconciliation?: () => void;
   bankTransactions?: BankTransaction[];
   setBankTransactions?: React.Dispatch<React.SetStateAction<BankTransaction[]>>;
+  onUpdateReceivable?: (updatedReceivable: ReceivableAccount, bankAccountId?: string) => void;
 }
 
 export function ReceivableAccounts({
@@ -54,6 +56,7 @@ export function ReceivableAccounts({
   onNavigateToBankReconciliation,
   bankTransactions = [],
   setBankTransactions,
+  onUpdateReceivable,
 }: ReceivableAccountsProps) {
   const [isAddReceivableOpen, setIsAddReceivableOpen] = useState(false);
   const [isReceiptConfirmOpen, setIsReceiptConfirmOpen] = useState(false);
@@ -163,39 +166,23 @@ export function ReceivableAccounts({
   
   const handleReceiptConfirm = (receiptData: any) => {
     if (selectedAccount) {
-      // Update the receivable account status
+      const updatedAccount = { 
+        ...selectedAccount, 
+        status: 'recebido' as const, 
+        receivedDate: new Date(), 
+        updatedAt: new Date(),
+        bankAccountId: receiptData.bankAccountId
+      };
+
+      // Update the receivable account
       const updatedAccounts = receivableAccounts.map(account => 
-        account.id === selectedAccount.id 
-          ? { 
-              ...account, 
-              status: 'recebido' as const, 
-              receivedDate: new Date(), 
-              updatedAt: new Date(),
-              bankAccountId: receiptData.bankAccountId
-            }
-          : account
+        account.id === selectedAccount.id ? updatedAccount : account
       );
       setReceivableAccounts(updatedAccounts);
 
-      // Create a corresponding bank transaction
-      if (setBankTransactions && bankTransactions) {
-        const newBankTransaction: BankTransaction = {
-          id: `transaction-${Date.now()}`,
-          schoolId: "current-school",
-          bankAccountId: receiptData.bankAccountId,
-          date: new Date(),
-          description: `Recebimento: ${selectedAccount.description} - ${selectedAccount.origin}`,
-          value: selectedAccount.value,
-          transactionType: 'credito',
-          reconciliationStatus: 'conciliado',
-          category: 'Receita',
-          resourceType: selectedAccount.resourceType,
-          documentId: selectedAccount.id,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        setBankTransactions([...bankTransactions, newBankTransaction]);
+      // Call the onUpdateReceivable callback to trigger automatic bank transaction
+      if (onUpdateReceivable) {
+        onUpdateReceivable(updatedAccount, receiptData.bankAccountId);
       }
 
       setIsReceiptConfirmOpen(false);
@@ -207,7 +194,7 @@ export function ReceivableAccounts({
         onNavigateToBankReconciliation();
       }
       
-      toast.success("Recebimento registrado e transação bancária criada com sucesso!");
+      toast.success("Recebimento registrado com sucesso! Lançamento automático criado na conciliação bancária.");
     }
   };
   
