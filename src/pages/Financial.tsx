@@ -175,6 +175,10 @@ export default function Financial() {
     const bankAccount = bankAccounts.find(ba => ba.id === bankAccountId);
     if (!bankAccount) return;
 
+    const resourceType = type === 'payment' 
+      ? (account as PaymentAccount).resourceCategory 
+      : (account as ReceivableAccount).resourceType;
+
     const newTransaction: BankTransaction = {
       id: uuidv4(),
       schoolId: "current-school-id",
@@ -186,7 +190,7 @@ export default function Financial() {
       value: account.value,
       transactionType: type === 'payment' ? 'debito' : 'credito',
       reconciliationStatus: 'conciliado',
-      category: type === 'payment' ? (account as PaymentAccount).expenseType : account.resourceType,
+      category: type === 'payment' ? (account as PaymentAccount).expenseType : resourceType,
       resourceType: bankAccount.managementType,
       source: type,
       createdAt: new Date(),
@@ -194,6 +198,21 @@ export default function Financial() {
     };
 
     setBankTransactions(prev => [...prev, newTransaction]);
+    
+    // Update bank account balance
+    setBankAccounts(prev => prev.map(ba => 
+      ba.id === bankAccountId 
+        ? { 
+            ...ba, 
+            currentBalance: type === 'payment' 
+              ? ba.currentBalance - account.value 
+              : ba.currentBalance + account.value,
+            updatedAt: new Date()
+          }
+        : ba
+    ));
+
+    return newTransaction;
   };
   
   // Handlers for new transactions from header
@@ -305,6 +324,7 @@ export default function Financial() {
               onNavigateToBankReconciliation={handleNavigateToBankReconciliation}
               resourceCategories={resourceCategories}
               expenseTypes={expenseTypes}
+              onUpdatePayment={handleUpdatePaymentAccount}
             />
           </TabsContent>
 
@@ -317,6 +337,7 @@ export default function Financial() {
               onNavigateToBankReconciliation={handleNavigateToBankReconciliation}
               bankTransactions={bankTransactions}
               setBankTransactions={setBankTransactions}
+              onUpdateReceivable={handleUpdateReceivableAccount}
             />
           </TabsContent>
           

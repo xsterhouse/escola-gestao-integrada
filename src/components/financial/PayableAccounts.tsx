@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +46,7 @@ interface PayableAccountsProps {
   onNavigateToBankReconciliation?: () => void;
   resourceCategories: string[];
   expenseTypes: string[];
+  onUpdatePayment?: (updatedPayment: PaymentAccount) => void;
 }
 
 export function PayableAccounts({
@@ -57,6 +57,7 @@ export function PayableAccounts({
   onNavigateToBankReconciliation,
   resourceCategories,
   expenseTypes,
+  onUpdatePayment,
 }: PayableAccountsProps) {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const [isPaymentConfirmOpen, setIsPaymentConfirmOpen] = useState(false);
@@ -160,18 +161,25 @@ export function PayableAccounts({
   
   const handlePaymentConfirm = (paymentData: any) => {
     if (selectedAccount) {
+      const updatedAccount = { 
+        ...selectedAccount, 
+        status: 'pago' as const, 
+        paymentDate: new Date(), 
+        updatedAt: new Date(),
+        bankAccountId: paymentData.bankAccountId
+      };
+
+      // Update the payment account
       const updatedAccounts = paymentAccounts.map(account => 
-        account.id === selectedAccount.id 
-          ? { 
-              ...account, 
-              status: 'pago' as const, 
-              paymentDate: new Date(), 
-              updatedAt: new Date(),
-              bankAccountId: paymentData.bankAccountId
-            }
-          : account
+        account.id === selectedAccount.id ? updatedAccount : account
       );
       setPaymentAccounts(updatedAccounts);
+      
+      // Call the onUpdatePayment callback to trigger automatic bank transaction
+      if (onUpdatePayment) {
+        onUpdatePayment(updatedAccount);
+      }
+      
       setIsPaymentConfirmOpen(false);
       setSelectedAccount(null);
       calculateFinancialSummary();
@@ -181,7 +189,7 @@ export function PayableAccounts({
         onNavigateToBankReconciliation();
       }
       
-      toast.success("Pagamento registrado com sucesso!");
+      toast.success("Pagamento registrado com sucesso! Lançamento automático criado na conciliação bancária.");
     }
   };
   

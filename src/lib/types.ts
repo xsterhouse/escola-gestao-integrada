@@ -233,7 +233,7 @@ export interface PaymentAccount {
   dueDate: Date;
   value: number;
   expenseType: string;
-  resourceCategory: string;
+  resourceCategory: string; // Added resourceCategory field
   status: 'a_pagar' | 'pago';
   paymentDate?: Date;
   documentUrl?: string;
