@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,8 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Filter, CheckCircle, AlertCircle, DollarSign } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Search, Filter, CheckCircle, AlertCircle, DollarSign, Eye, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BankTransaction {
   id: string;
@@ -19,6 +21,10 @@ interface BankTransaction {
   type: 'debit' | 'credit';
   reconciled: boolean;
   accountingEntryId?: string;
+  paymentRegistered?: boolean;
+  isDuplicate?: boolean;
+  registeredBy?: string;
+  registeredAt?: string;
 }
 
 interface AccountingEntry {
@@ -35,6 +41,16 @@ interface AccountingEntry {
   reconciled?: boolean;
 }
 
+interface DeleteModalData {
+  transaction: BankTransaction | null;
+  isOpen: boolean;
+}
+
+interface ViewModalData {
+  transaction: BankTransaction | null;
+  isOpen: boolean;
+}
+
 export function BankReconciliationTab() {
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
   const [accountingEntries, setAccountingEntries] = useState<AccountingEntry[]>([]);
@@ -42,7 +58,12 @@ export function BankReconciliationTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [showReconciled, setShowReconciled] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<DeleteModalData>({ transaction: null, isOpen: false });
+  const [viewModal, setViewModal] = useState<ViewModalData>({ transaction: null, isOpen: false });
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteReason, setDeleteReason] = useState("");
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Carregar dados do localStorage
   useEffect(() => {
@@ -79,6 +100,104 @@ export function BankReconciliationTab() {
       title: "Conciliação realizada",
       description: "A transação foi conciliada com sucesso.",
     });
+  };
+
+  const handleRegisterPayment = (transaction: BankTransaction) => {
+    const existingPayments = bankTransactions.filter(t => 
+      t.paymentRegistered && 
+      t.description === transaction.description && 
+      t.value === transaction.value &&
+      t.id !== transaction.id
+    );
+
+    const isDuplicate = existingPayments.length > 0;
+    
+    if (isDuplicate) {
+      toast({
+        title: "Aviso: Pagamento Duplicado",
+        description: "Este pagamento já foi registrado anteriormente. Registrando com alerta de duplicidade.",
+        variant: "destructive"
+      });
+    }
+
+    // Atualizar a transação bancária
+    const updatedTransactions = bankTransactions.map(t => 
+      t.id === transaction.id 
+        ? { 
+            ...t, 
+            paymentRegistered: true, 
+            isDuplicate,
+            registeredBy: user?.name || 'Sistema',
+            registeredAt: new Date().toISOString()
+          }
+        : t
+    );
+
+    setBankTransactions(updatedTransactions);
+    localStorage.setItem('bankTransactions', JSON.stringify(updatedTransactions));
+
+    // Registrar na tabela de contas a pagar
+    const payableAccounts = JSON.parse(localStorage.getItem('paymentAccounts') || '[]');
+    const newPayment = {
+      id: `payment_${Date.now()}`,
+      description: transaction.description,
+      value: transaction.value,
+      dueDate: transaction.date,
+      status: 'pago',
+      paymentDate: new Date().toISOString(),
+      bankAccountId: selectedBankAccount,
+      expenseType: 'Outros',
+      resourceCategory: 'Recursos Próprios',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    payableAccounts.push(newPayment);
+    localStorage.setItem('paymentAccounts', JSON.stringify(payableAccounts));
+
+    toast({
+      title: "Pagamento registrado",
+      description: isDuplicate ? "Pagamento registrado com alerta de duplicidade." : "Pagamento registrado com sucesso.",
+    });
+  };
+
+  const handleViewTransaction = (transaction: BankTransaction) => {
+    setViewModal({ transaction, isOpen: true });
+  };
+
+  const handleDeleteTransaction = (transaction: BankTransaction) => {
+    setDeleteModal({ transaction, isOpen: true });
+    setDeletePassword("");
+    setDeleteReason("");
+  };
+
+  const confirmDelete = () => {
+    if (!deletePassword || !deleteReason) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, insira a senha e o motivo da exclusão.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Aqui você pode validar a senha do usuário
+    // Para este exemplo, vamos assumir que a validação foi bem-sucedida
+
+    if (deleteModal.transaction) {
+      const updatedTransactions = bankTransactions.filter(t => t.id !== deleteModal.transaction!.id);
+      setBankTransactions(updatedTransactions);
+      localStorage.setItem('bankTransactions', JSON.stringify(updatedTransactions));
+
+      toast({
+        title: "Transação excluída",
+        description: `Transação excluída. Motivo: ${deleteReason}`,
+      });
+
+      setDeleteModal({ transaction: null, isOpen: false });
+      setDeletePassword("");
+      setDeleteReason("");
+    }
   };
 
   const getUnreconciledEntries = () => {
@@ -245,13 +364,21 @@ export function BankReconciliationTab() {
                 </TableRow>
               ) : (
                 getFilteredBankTransactions().map((transaction) => (
-                  <TableRow key={transaction.id}>
+                  <TableRow 
+                    key={transaction.id} 
+                    className={transaction.isDuplicate ? "bg-red-50 animate-pulse" : ""}
+                  >
                     <TableCell className="font-medium">
                       {new Date(transaction.date).toLocaleDateString('pt-BR')}
                     </TableCell>
                     <TableCell className="max-w-xs">
                       <div className="truncate" title={transaction.description}>
                         {transaction.description}
+                        {transaction.isDuplicate && (
+                          <Badge variant="destructive" className="ml-2 text-xs animate-pulse">
+                            DUPLICADO
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -278,23 +405,51 @@ export function BankReconciliationTab() {
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      {!transaction.reconciled && getUnreconciledEntries().length > 0 && (
-                        <Select onValueChange={(entryId) => handleReconciliation(transaction.id, entryId)}>
-                          <SelectTrigger className="w-40">
-                            <SelectValue placeholder="Vincular" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {getUnreconciledEntries().map((entry) => (
-                              <SelectItem key={entry.id} value={entry.id}>
-                                {entry.history.substring(0, 30)}...
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      {!transaction.reconciled && getUnreconciledEntries().length === 0 && (
-                        <span className="text-sm text-gray-400">Sem lançamentos</span>
-                      )}
+                      <div className="flex gap-1 justify-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewTransaction(transaction)}
+                          title="Visualizar"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        
+                        {!transaction.reconciled && getUnreconciledEntries().length > 0 && (
+                          <Select onValueChange={(entryId) => handleReconciliation(transaction.id, entryId)}>
+                            <SelectTrigger className="w-32">
+                              <SelectValue placeholder="Vincular" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getUnreconciledEntries().map((entry) => (
+                                <SelectItem key={entry.id} value={entry.id}>
+                                  {entry.history.substring(0, 20)}...
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+
+                        {!transaction.paymentRegistered && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRegisterPayment(transaction)}
+                          >
+                            Registrar Pagamento
+                          </Button>
+                        )}
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteTransaction(transaction)}
+                          className="text-red-600 hover:text-red-800"
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -303,6 +458,110 @@ export function BankReconciliationTab() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Modal de Visualização */}
+      <Dialog open={viewModal.isOpen} onOpenChange={(open) => setViewModal({ transaction: null, isOpen: open })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Transação</DialogTitle>
+          </DialogHeader>
+          
+          {viewModal.transaction && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Data</Label>
+                  <p className="text-sm">{new Date(viewModal.transaction.date).toLocaleDateString('pt-BR')}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Valor</Label>
+                  <p className={`text-sm font-semibold ${viewModal.transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                    {viewModal.transaction.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </p>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Descrição</Label>
+                <p className="text-sm">{viewModal.transaction.description}</p>
+              </div>
+              
+              {viewModal.transaction.registeredBy && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Registrado por</Label>
+                  <p className="text-sm">{viewModal.transaction.registeredBy}</p>
+                </div>
+              )}
+
+              {viewModal.transaction.registeredAt && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Data do Registro</Label>
+                  <p className="text-sm">{new Date(viewModal.transaction.registeredAt).toLocaleDateString('pt-BR')}</p>
+                </div>
+              )}
+
+              {viewModal.transaction.isDuplicate && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <Label className="text-sm font-medium text-red-800">⚠️ Pagamento em Duplicidade</Label>
+                  <p className="text-sm text-red-600">Este pagamento foi identificado como duplicado.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Exclusão */}
+      <Dialog open={deleteModal.isOpen} onOpenChange={(open) => setDeleteModal({ transaction: null, isOpen: open })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
+            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="delete-password">Senha de Acesso</Label>
+              <Input
+                id="delete-password"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Digite sua senha"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delete-reason">Motivo da Exclusão</Label>
+              <Textarea
+                id="delete-reason"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="Descreva o motivo da exclusão"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteModal({ transaction: null, isOpen: false })}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+              >
+                Confirmar Exclusão
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
