@@ -1,5 +1,5 @@
 
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -17,6 +17,7 @@ export function AppLayout({
   requiredPermission 
 }: AppLayoutProps) {
   const { isAuthenticated, user, isLoading } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Check if user is authenticated when required
   if (requireAuth && !isLoading && !isAuthenticated) {
@@ -48,9 +49,42 @@ export function AppLayout({
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar />
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+      />
+
+      {/* Overlay for mobile */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header with hamburger menu */}
+        <header className="bg-white shadow-sm border-b border-gray-200 p-4 lg:hidden">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          >
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
+          </button>
+        </header>
+
         <main className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6">
           {children}
         </main>
