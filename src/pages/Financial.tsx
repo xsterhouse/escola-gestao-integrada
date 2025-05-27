@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -306,7 +305,6 @@ export default function Financial() {
               onNavigateToBankReconciliation={handleNavigateToBankReconciliation}
               resourceCategories={resourceCategories}
               expenseTypes={expenseTypes}
-              onUpdatePayment={handleUpdatePaymentAccount}
             />
           </TabsContent>
 
@@ -319,7 +317,6 @@ export default function Financial() {
               onNavigateToBankReconciliation={handleNavigateToBankReconciliation}
               bankTransactions={bankTransactions}
               setBankTransactions={setBankTransactions}
-              onUpdateReceivable={handleUpdateReceivableAccount}
             />
           </TabsContent>
           
