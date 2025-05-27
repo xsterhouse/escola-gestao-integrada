@@ -1,483 +1,200 @@
-import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { 
-  Menu, 
-  X, 
-  ChevronDown, 
-  LayoutDashboard, 
+  Home, 
+  Users, 
+  GraduationCap, 
+  Settings, 
   Package, 
-  Store, 
-  DollarSign, 
+  Archive, 
   ClipboardList, 
   FileText, 
-  BookOpen, 
-  Settings, 
-  Building, 
-  Users, 
-  ShoppingCart, 
-  Shield, 
-  LogOut,
-  User,
-  Clock
-} from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
+  DollarSign, 
+  Calculator,
+  History,
+  ChevronDown,
+  ChevronRight 
+} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
-type SidebarProps = {
-  className?: string;
-};
-
-interface PurchasingCenter {
-  id: string;
+interface NavItem {
   name: string;
-  description: string;
-  schoolIds: string[];
-  status: "active" | "inactive";
-  createdAt: Date;
-  updatedAt: Date;
+  href: string;
+  icon: React.ComponentType<any>;
+  permission: string;
+  children?: NavItem[];
 }
 
-export function Sidebar({ className }: SidebarProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [sessionStart] = useState(new Date());
-  const [sessionTime, setSessionTime] = useState("00:00:00");
-  const [userPurchasingCenter, setUserPurchasingCenter] = useState<string | null>(null);
-  const { user, currentSchool, logout } = useAuth();
+const navigationItems: NavItem[] = [
+  { 
+    name: 'Dashboard', 
+    href: '/dashboard', 
+    icon: Home, 
+    permission: 'dashboard' 
+  },
+  { 
+    name: 'Escolas', 
+    href: '/schools', 
+    icon: GraduationCap, 
+    permission: 'schools' 
+  },
+  { 
+    name: 'Usuários', 
+    href: '/users', 
+    icon: Users, 
+    permission: 'users' 
+  },
+  { 
+    name: 'Produtos', 
+    href: '/products', 
+    icon: Package, 
+    permission: 'products' 
+  },
+  { 
+    name: 'Estoque', 
+    href: '/inventory', 
+    icon: Archive, 
+    permission: 'inventory' 
+  },
+  { 
+    name: 'Planejamento', 
+    href: '/planning', 
+    icon: ClipboardList, 
+    permission: 'planning' 
+  },
+  { 
+    name: 'Contratos', 
+    href: '/contracts', 
+    icon: FileText, 
+    permission: 'contracts' 
+  },
+  { 
+    name: 'Financeiro', 
+    href: '/financial', 
+    icon: DollarSign, 
+    permission: 'financial' 
+  },
+  { 
+    name: 'Contabilidade', 
+    href: '/accounting', 
+    icon: Calculator, 
+    permission: 'accounting' 
+  },
+  { 
+    name: 'Histórico', 
+    href: '/transaction-history', 
+    icon: History, 
+    permission: 'financial' 
+  },
+  { 
+    name: 'Configurações', 
+    href: '/settings', 
+    icon: Settings, 
+    permission: 'settings' 
+  },
+];
+
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
-  
-  // Carregar dados das centrais de compras
-  const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasingCenters', []);
-  
-  // Encontrar a central de compras do usuário/escola atual
-  useEffect(() => {
-    if (currentSchool && purchasingCenters.length > 0) {
-      const center = purchasingCenters.find(pc => 
-        pc.schoolIds.includes(currentSchool.id) && pc.status === "active"
-      );
-      setUserPurchasingCenter(center?.name || null);
-    } else {
-      setUserPurchasingCenter(null);
-    }
-  }, [currentSchool, purchasingCenters]);
-  
-  // Update session time every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      
-      // Calculate session time
-      const timeDiff = now.getTime() - sessionStart.getTime();
-      const hours = Math.floor(timeDiff / (1000 * 60 * 60));
-      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
-      
-      setSessionTime(
-        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-      );
-    }, 1000);
+  const { hasPermission } = useAuth();
+  const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
 
-    return () => clearInterval(timer);
-  }, [sessionStart]);
-
-  // Define the system modules with the new order
-  const modules = [
-    {
-      id: "dashboard",
-      name: "Painel",
-      icon: LayoutDashboard,
-      path: "/dashboard",
-      permission: "dashboard",
-    },
-    {
-      id: "products",
-      name: "Produtos",
-      icon: Package,
-      path: "/products",
-      permission: "products",
-    },
-    {
-      id: "inventory",
-      name: "Estoque",
-      icon: Store,
-      path: "/inventory",
-      permission: "inventory",
-    },
-    {
-      id: "financial",
-      name: "Financeiro",
-      icon: DollarSign,
-      path: "/financial",
-      permission: "financial",
-    },
-    {
-      id: "planning",
-      name: "Planejamento",
-      icon: ClipboardList,
-      path: "/planning",
-      permission: "planning",
-    },
-    {
-      id: "contracts",
-      name: "Contratos",
-      icon: FileText,
-      path: "/contracts",
-      permission: "contracts",
-    },
-  ];
-
-  // These routes are only visible to the master user - reordered
-  const adminRoutes = [
-    {
-      id: "settings",
-      name: "Configurações",
-      icon: Settings,
-      path: "/settings",
-      permission: "settings",
-    },
-    {
-      id: "accounting",
-      name: "Contabilidade",
-      icon: BookOpen,
-      path: "/accounting",
-      permission: "accounting",
-    },
-  ];
-
-  // Function to check if user has permission for a module
-  const hasPermission = (permission: string) => {
-    if (!user) return false;
-    if (user.role === "master") return true;
-    return user.permissions.some(p => p.name === permission && p.hasAccess);
+  const toggleSubMenu = (name: string) => {
+    setOpenSubMenu(openSubMenu === name ? null : name);
   };
 
-  // Filter modules based on permissions
-  const allowedModules = modules.filter(module => hasPermission(module.permission));
-  const allowedAdminRoutes = adminRoutes.filter(route => hasPermission(route.permission));
+  const renderNavItems = (items: NavItem[], isSubMenu = false) => {
+    return items.map((item) => {
+      if (!hasPermission(item.permission)) {
+        return null;
+      }
 
-  // Function to check if route is active
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
+      const isActive = location.pathname.startsWith(item.href);
+      const isSubMenuActive = openSubMenu === item.name;
 
-  // Mobile sidebar
-  const MobileSidebar = (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon"
-          className="md:hidden"
-        >
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle Menu</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-0" style={{ backgroundColor: '#012340' }}>
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="px-6 py-6 border-b border-white/10">
-            <div className="flex flex-col gap-4 mb-4">
-              <h2 className="text-xl font-bold text-white text-left">SIGRE</h2>
-              <div className="flex items-center gap-3 justify-center">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-blue-200 truncate text-center">
-                    {currentSchool?.name}
-                  </p>
-                  {userPurchasingCenter && (
-                    <p className="text-xs text-blue-300 truncate text-center mt-1">
-                      Central: {userPurchasingCenter}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            {/* User Profile */}
-            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-              <div className="bg-white/10 p-2 rounded-full">
-                <User className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-                <p className="text-xs text-blue-200 truncate">{user?.email}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Session Time */}
-          <div className="px-6 py-4 border-b border-white/10">
-            <div className="bg-white/5 p-4 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="h-4 w-4 text-blue-200" />
-                <span className="text-xs text-blue-200">Tempo de sessão</span>
-              </div>
-              <div className="text-lg font-mono font-bold text-white">
-                {sessionTime}
-              </div>
-            </div>
-          </div>
-
-          <ScrollArea className="flex-1 p-6">
-            <div className="space-y-8">
-              <div className="space-y-4">
-                <h3 className="text-xs font-medium text-blue-200 uppercase tracking-wider">Módulos</h3>
-                <nav className="space-y-3">
-                  {allowedModules.map((module) => (
-                    <Link
-                      key={module.id}
-                      to={module.path}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-4 py-3 text-sm transition-all duration-200",
-                        isActive(module.path)
-                          ? "bg-white/15 text-white font-medium shadow-lg"
-                          : "text-blue-100 hover:bg-white/10 hover:text-white"
-                      )}
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <module.icon className="h-5 w-5" />
-                      <span>{module.name}</span>
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-              {user?.role === "master" && allowedAdminRoutes.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-xs font-medium text-blue-200 uppercase tracking-wider">Administração</h3>
-                  <nav className="space-y-3">
-                    {allowedAdminRoutes.map((route) => (
-                      <Link
-                        key={route.id}
-                        to={route.path}
-                        className={cn(
-                          "flex items-center gap-3 rounded-lg px-4 py-3 text-sm transition-all duration-200",
-                          isActive(route.path)
-                            ? "bg-white/15 text-white font-medium shadow-lg"
-                            : "text-blue-100 hover:bg-white/10 hover:text-white"
-                        )}
-                        onClick={() => setIsOpen(false)}
-                      >
-                        <route.icon className="h-5 w-5" />
-                        <span>{route.name}</span>
-                      </Link>
-                    ))}
-                  </nav>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-          
-          <div className="px-6 py-4 border-t border-white/10">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                logout();
-                setIsOpen(false);
-              }}
-              className="h-8 w-8 text-white hover:bg-white/10"
+      if (item.children) {
+        return (
+          <li key={item.name}>
+            <button
+              onClick={() => toggleSubMenu(item.name)}
+              className={`flex items-center justify-between w-full p-2 text-sm font-medium transition duration-200 rounded-md hover:bg-gray-700 hover:text-white group ${
+                isActive || isSubMenuActive ? 'text-white bg-gray-800' : 'text-gray-400'
+              }`}
             >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-
-  // Desktop sidebar
-  const DesktopSidebar = (
-    <div
-      className={cn(
-        "hidden md:flex flex-col h-full border-r border-white/10 transition-all duration-300",
-        isCollapsed ? "w-20" : "w-80",
-        className
-      )}
-      style={{ backgroundColor: '#012340' }}
-    >
-      {/* Header */}
-      <div className={cn(
-        "flex h-16 items-center border-b border-white/10 transition-all duration-300",
-        isCollapsed ? "justify-center px-4" : "justify-between px-6"
-      )}>
-        {!isCollapsed ? (
-          <div className="flex flex-col items-start w-full">
-            <h2 className="text-lg font-bold text-white">SIGRE</h2>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="flex flex-col items-start">
-                <p className="text-xs text-blue-200 truncate">
-                  {currentSchool?.name}
-                </p>
-                {userPurchasingCenter && (
-                  <p className="text-xs text-blue-300 truncate">
-                    Central: {userPurchasingCenter}
-                  </p>
-                )}
+              <div className="flex items-center">
+                <item.icon className="w-4 h-4 mr-2" />
+                {item.name}
               </div>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white/10 p-2 rounded-full">
-            <Building className="h-5 w-5 text-white" />
-          </div>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          title={isCollapsed ? "Expandir" : "Recolher"}
-          className="h-9 w-9 text-white hover:bg-white/10 absolute top-4 right-4"
-        >
-          {isCollapsed ? <ChevronDown className="h-5 w-5 rotate-90" /> : <ChevronDown className="h-5 w-5 -rotate-90" />}
-        </Button>
-      </div>
-
-      {/* User Profile Section */}
-      {!isCollapsed && (
-        <div className="px-6 py-6 border-b border-white/10">
-          <div className="flex items-center gap-3 p-4 bg-white/5 rounded-lg">
-            <div className="bg-white/10 p-3 rounded-full">
-              <User className="h-6 w-6 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-lg font-medium text-white truncate">{user?.name}</p>
-              <p className="text-sm text-blue-200 truncate">{user?.email}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Session Time Section */}
-      {!isCollapsed && (
-        <div className="px-6 py-4 border-b border-white/10">
-          <div className="bg-white/5 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="h-5 w-5 text-blue-200" />
-              <span className="text-xs text-blue-200">Tempo de sessão</span>
-            </div>
-            <div className="text-xl font-mono font-bold text-white">
-              {sessionTime}
-            </div>
-          </div>
-        </div>
-      )}
-      
-      <ScrollArea className="flex-1 py-6">
-        <div className="space-y-8 px-6">
-          <TooltipProvider delayDuration={0}>
-            <div className="space-y-4">
-              {!isCollapsed && (
-                <h3 className="text-xs font-medium text-blue-200 uppercase tracking-wider">
-                  Módulos
-                </h3>
+              {isSubMenuActive ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
               )}
-              <nav className="space-y-3">
-                {allowedModules.map((module) => (
-                  <Tooltip key={module.id} delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <Link
-                        to={module.path}
-                        className={cn(
-                          "flex items-center rounded-lg px-4 py-3 text-sm transition-all duration-200",
-                          isActive(module.path)
-                            ? "bg-white/15 text-white font-medium shadow-lg"
-                            : "text-blue-100 hover:bg-white/10 hover:text-white",
-                          isCollapsed ? "justify-center" : "gap-3"
-                        )}
-                      >
-                        <module.icon className="h-5 w-5 flex-shrink-0" />
-                        {!isCollapsed && <span className="truncate">{module.name}</span>}
-                      </Link>
-                    </TooltipTrigger>
-                    {isCollapsed && (
-                      <TooltipContent side="right">
-                        {module.name}
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                ))}
-              </nav>
-            </div>
-            
-            {user?.role === "master" && allowedAdminRoutes.length > 0 && (
-              <div className="space-y-4">
-                {!isCollapsed && (
-                  <h3 className="text-xs font-medium text-blue-200 uppercase tracking-wider">
-                    Administração
-                  </h3>
-                )}
-                <nav className="space-y-3">
-                  {allowedAdminRoutes.map((route) => (
-                    <Tooltip key={route.id} delayDuration={0}>
-                      <TooltipTrigger asChild>
-                        <Link
-                          to={route.path}
-                          className={cn(
-                            "flex items-center rounded-lg px-4 py-3 text-sm transition-all duration-200",
-                            isActive(route.path)
-                              ? "bg-white/15 text-white font-medium shadow-lg"
-                              : "text-blue-100 hover:bg-white/10 hover:text-white",
-                            isCollapsed ? "justify-center" : "gap-3"
-                          )}
-                        >
-                          <route.icon className="h-5 w-5 flex-shrink-0" />
-                          {!isCollapsed && <span className="truncate">{route.name}</span>}
-                        </Link>
-                      </TooltipTrigger>
-                      {isCollapsed && (
-                        <TooltipContent side="right">
-                          {route.name}
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  ))}
-                </nav>
-              </div>
+            </button>
+            {isSubMenuActive && (
+              <ul className="pl-4">
+                {renderNavItems(item.children, true)}
+              </ul>
             )}
-          </TooltipProvider>
-        </div>
-      </ScrollArea>
-      
-      <div className="border-t border-white/10 p-6">
-        {!isCollapsed ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={logout}
-            className="h-8 w-8 text-white hover:bg-white/10"
+          </li>
+        );
+      }
+
+      return (
+        <li key={item.name}>
+          <Link
+            to={item.href}
+            className={`flex items-center p-2 text-sm font-medium transition duration-200 rounded-md hover:bg-gray-700 hover:text-white group ${
+              isActive ? 'text-white bg-gray-800' : 'text-gray-400'
+            }`}
           >
-            <LogOut className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={logout}
-                className="h-8 w-8 text-white hover:bg-white/10"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              Sair
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-    </div>
-  );
+            <item.icon className="w-4 h-4 mr-2" />
+            {item.name}
+          </Link>
+        </li>
+      );
+    });
+  };
 
   return (
-    <>
-      {MobileSidebar}
-      {DesktopSidebar}
-    </>
+    <div
+      className={`fixed left-0 top-0 h-full bg-gray-900 text-white transition-transform duration-300 ease-in-out w-64 z-50 ${
+        isOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}
+    >
+      <div className="flex items-center justify-center h-16 border-b border-gray-800">
+        <span className="text-lg font-semibold">Controle Escolar</span>
+      </div>
+      <nav className="py-4">
+        <ul>
+          {renderNavItems(navigationItems)}
+        </ul>
+      </nav>
+      {/* Close button for mobile */}
+      <button
+        className="absolute top-4 right-4 text-gray-500 hover:text-gray-300 focus:outline-none"
+        onClick={onClose}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+    </div>
   );
 }
