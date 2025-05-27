@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,13 +31,10 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { Plus, Filter, Trash2, Edit2, Download, CheckCircle, Search, Eye } from "lucide-react";
+import { Plus, Filter, Trash2, Edit2, Download, CheckCircle, Search } from "lucide-react";
 import { exportToCsv, generatePDF } from "@/lib/pdf-utils";
 import { ReceiptRegistrationDialog } from "./ReceiptRegistrationDialog";
 import { ReceivableInstallmentDialog } from "./ReceivableInstallmentDialog";
-import { ViewReceivableDialog } from "./ViewReceivableDialog";
-import { EditReceivableDialog } from "./EditReceivableDialog";
-import { DeleteReceivableConfirmDialog } from "./DeleteReceivableConfirmDialog";
 import { toast } from "sonner";
 
 interface ReceivableAccountsProps {
@@ -63,9 +61,6 @@ export function ReceivableAccounts({
   const [isAddReceivableOpen, setIsAddReceivableOpen] = useState(false);
   const [isReceiptConfirmOpen, setIsReceiptConfirmOpen] = useState(false);
   const [isInstallmentConfigOpen, setIsInstallmentConfigOpen] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<ReceivableAccount | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -137,7 +132,6 @@ export function ReceivableAccounts({
       value: parseFloat(formData.value),
       resourceType: formData.resourceType,
       status: 'pendente',
-      notes: formData.notes,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -158,7 +152,6 @@ export function ReceivableAccounts({
       value: installment.value,
       resourceType: formData.resourceType,
       status: 'pendente' as const,
-      notes: formData.notes,
       createdAt: new Date(),
       updatedAt: new Date(),
     }));
@@ -204,73 +197,43 @@ export function ReceivableAccounts({
       toast.success("Recebimento registrado com sucesso! Lançamento automático criado na conciliação bancária.");
     }
   };
-
-  const handleEditReceivable = (updatedAccount: ReceivableAccount) => {
-    setReceivableAccounts(prev => 
-      prev.map(account => account.id === updatedAccount.id ? updatedAccount : account)
-    );
-    calculateFinancialSummary();
-    toast.success("Conta a receber atualizada com sucesso!");
-  };
   
-  const handleDeleteReceivable = (justification: string) => {
-    if (selectedAccount) {
-      if (selectedAccount.status === 'recebido') {
-        // If received, just remove receipt and return to pending
-        const updatedAccounts = receivableAccounts.map(acc => 
-          acc.id === selectedAccount.id 
-            ? { 
-                ...acc, 
-                status: 'pendente' as const, 
-                receivedDate: undefined, 
-                bankAccountId: undefined,
-                updatedAt: new Date()
-              }
-            : acc
+  const handleDeleteReceivable = (account: ReceivableAccount) => {
+    if (account.status === 'recebido') {
+      // If received, just remove receipt and return to pending
+      const updatedAccounts = receivableAccounts.map(acc => 
+        acc.id === account.id 
+          ? { 
+              ...acc, 
+              status: 'pendente' as const, 
+              receivedDate: undefined, 
+              bankAccountId: undefined,
+              updatedAt: new Date()
+            }
+          : acc
+      );
+      setReceivableAccounts(updatedAccounts);
+
+      // Remove corresponding bank transaction if exists
+      if (setBankTransactions && bankTransactions) {
+        const updatedTransactions = bankTransactions.filter(transaction => 
+          transaction.documentId !== account.id
         );
-        setReceivableAccounts(updatedAccounts);
-
-        // Remove corresponding bank transaction if exists
-        if (setBankTransactions && bankTransactions) {
-          const updatedTransactions = bankTransactions.filter(transaction => 
-            transaction.documentId !== selectedAccount.id
-          );
-          setBankTransactions(updatedTransactions);
-        }
-
-        toast.success("Recebimento removido. Conta retornada para pendente.");
-      } else {
-        // If pending, delete completely
-        setReceivableAccounts(receivableAccounts.filter(acc => acc.id !== selectedAccount.id));
-        
-        // Log deletion with justification
-        console.log(`Conta a receber excluída: ${selectedAccount.description}. Justificativa: ${justification}`);
-        
-        toast.success("Conta excluída com sucesso.");
+        setBankTransactions(updatedTransactions);
       }
-      calculateFinancialSummary();
-      setSelectedAccount(null);
+
+      toast.success("Recebimento removido. Conta retornada para pendente.");
+    } else {
+      // If pending, delete completely
+      setReceivableAccounts(receivableAccounts.filter(acc => acc.id !== account.id));
+      toast.success("Conta excluída com sucesso.");
     }
+    calculateFinancialSummary();
   };
   
   const openReceiptConfirm = (account: ReceivableAccount) => {
     setSelectedAccount(account);
     setIsReceiptConfirmOpen(true);
-  };
-
-  const openViewDialog = (account: ReceivableAccount) => {
-    setSelectedAccount(account);
-    setIsViewDialogOpen(true);
-  };
-
-  const openEditDialog = (account: ReceivableAccount) => {
-    setSelectedAccount(account);
-    setIsEditDialogOpen(true);
-  };
-
-  const openDeleteConfirm = (account: ReceivableAccount) => {
-    setSelectedAccount(account);
-    setIsDeleteConfirmOpen(true);
   };
   
   const resetForm = () => {
@@ -494,14 +457,6 @@ export function ReceivableAccounts({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => openViewDialog(account)}
-                          title="Visualizar"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
                         {account.status === 'pendente' && (
                           <>
                             <Button 
@@ -515,7 +470,6 @@ export function ReceivableAccounts({
                             <Button 
                               variant="ghost" 
                               size="icon"
-                              onClick={() => openEditDialog(account)}
                               title="Editar"
                             >
                               <Edit2 className="h-4 w-4" />
@@ -525,7 +479,7 @@ export function ReceivableAccounts({
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          onClick={() => openDeleteConfirm(account)}
+                          onClick={() => handleDeleteReceivable(account)}
                           title={account.status === 'recebido' ? 'Remover Recebimento' : 'Excluir'}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -682,29 +636,6 @@ export function ReceivableAccounts({
         onClose={() => setIsInstallmentConfigOpen(false)}
         formData={formData}
         onConfirm={handleCreateInstallments}
-      />
-
-      {/* View Receivable Dialog */}
-      <ViewReceivableDialog
-        isOpen={isViewDialogOpen}
-        onClose={() => setIsViewDialogOpen(false)}
-        account={selectedAccount}
-      />
-
-      {/* Edit Receivable Dialog */}
-      <EditReceivableDialog
-        isOpen={isEditDialogOpen}
-        onClose={() => setIsEditDialogOpen(false)}
-        account={selectedAccount}
-        onSave={handleEditReceivable}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <DeleteReceivableConfirmDialog
-        isOpen={isDeleteConfirmOpen}
-        onClose={() => setIsDeleteConfirmOpen(false)}
-        account={selectedAccount}
-        onConfirm={handleDeleteReceivable}
       />
     </div>
   );

@@ -1,11 +1,9 @@
 
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { OfflineIndicator } from "@/components/ui/offline-indicator";
-import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -19,7 +17,6 @@ export function AppLayout({
   requiredPermission 
 }: AppLayoutProps) {
   const { isAuthenticated, user, isLoading } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Check if user is authenticated when required
   if (requireAuth && !isLoading && !isAuthenticated) {
@@ -51,24 +48,9 @@ export function AppLayout({
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
-      />
+      <Sidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header with menu button */}
-        <header className="bg-white shadow-sm border-b p-4 md:hidden">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen(true)}
-            className="p-2"
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
-        </header>
-
         <main className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6">
           {children}
         </main>

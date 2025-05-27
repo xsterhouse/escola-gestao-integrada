@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,10 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Filter, CheckCircle, AlertCircle, DollarSign, Eye, Trash2 } from "lucide-react";
+import { Search, Filter, CheckCircle, AlertCircle, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ViewTransactionDialog } from "./ViewTransactionDialog";
-import { DeleteTransactionConfirmDialog } from "./DeleteTransactionConfirmDialog";
 
 interface BankTransaction {
   id: string;
@@ -43,9 +42,6 @@ export function BankReconciliationTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [showReconciled, setShowReconciled] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<BankTransaction | null>(null);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Carregar dados do localStorage
@@ -118,47 +114,6 @@ export function BankReconciliationTab() {
   };
 
   const summary = getReconciliationSummary();
-
-  const handleViewTransaction = (transaction: BankTransaction) => {
-    setSelectedTransaction(transaction);
-    setIsViewDialogOpen(true);
-  };
-
-  const handleDeleteTransaction = (transaction: BankTransaction) => {
-    setSelectedTransaction(transaction);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const confirmDeleteTransaction = (justification: string) => {
-    if (selectedTransaction) {
-      // Remove transaction from the list
-      setBankTransactions(prev => prev.filter(t => t.id !== selectedTransaction.id));
-      
-      // Save deletion record to history
-      const deletionRecord = {
-        id: Date.now().toString(),
-        transactionId: selectedTransaction.id,
-        transactionDescription: selectedTransaction.description,
-        transactionValue: selectedTransaction.value,
-        transactionDate: selectedTransaction.date,
-        deletedAt: new Date(),
-        deletedBy: JSON.parse(localStorage.getItem('currentUser') || '{}').name || 'Usuário',
-        justification: justification,
-        type: 'exclusao' as const
-      };
-
-      const existingHistory = JSON.parse(localStorage.getItem('transactionHistory') || '[]');
-      localStorage.setItem('transactionHistory', JSON.stringify([...existingHistory, deletionRecord]));
-      
-      toast({
-        title: "Transação excluída",
-        description: "A transação foi excluída com sucesso e registrada no histórico.",
-      });
-      
-      setIsDeleteDialogOpen(false);
-      setSelectedTransaction(null);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -323,39 +278,23 @@ export function BankReconciliationTab() {
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewTransaction(transaction)}
-                          title="Visualizar transação"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteTransaction(transaction)}
-                          className="text-red-600 hover:text-red-700"
-                          title="Excluir transação"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        {!transaction.reconciled && getUnreconciledEntries().length > 0 && (
-                          <Select onValueChange={(entryId) => handleReconciliation(transaction.id, entryId)}>
-                            <SelectTrigger className="w-32">
-                              <SelectValue placeholder="Vincular" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getUnreconciledEntries().map((entry) => (
-                                <SelectItem key={entry.id} value={entry.id}>
-                                  {entry.history.substring(0, 20)}...
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </div>
+                      {!transaction.reconciled && getUnreconciledEntries().length > 0 && (
+                        <Select onValueChange={(entryId) => handleReconciliation(transaction.id, entryId)}>
+                          <SelectTrigger className="w-40">
+                            <SelectValue placeholder="Vincular" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getUnreconciledEntries().map((entry) => (
+                              <SelectItem key={entry.id} value={entry.id}>
+                                {entry.history.substring(0, 30)}...
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {!transaction.reconciled && getUnreconciledEntries().length === 0 && (
+                        <span className="text-sm text-gray-400">Sem lançamentos</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -364,20 +303,6 @@ export function BankReconciliationTab() {
           </Table>
         </CardContent>
       </Card>
-
-      {/* Dialogs */}
-      <ViewTransactionDialog
-        isOpen={isViewDialogOpen}
-        onClose={() => setIsViewDialogOpen(false)}
-        transaction={selectedTransaction}
-      />
-
-      <DeleteTransactionConfirmDialog
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        transaction={selectedTransaction}
-        onConfirm={confirmDeleteTransaction}
-      />
     </div>
   );
 }

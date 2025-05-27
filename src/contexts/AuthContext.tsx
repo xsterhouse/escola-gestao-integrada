@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User, School } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +19,6 @@ type AuthContextType = {
   setCurrentSchool: (school: School) => void;
   availableSchools: School[];
   userPurchasingCenters: PurchasingCenter[];
-  hasPermission: (permission: string) => boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -430,16 +430,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const hasPermission = (permission: string): boolean => {
-    if (!user) return false;
-    
-    // Master users have access to everything
-    if (user.role === "master") return true;
-    
-    // Check if user has the specific permission
-    return user.permissions?.some(p => p.name === permission && p.hasAccess) || false;
-  };
-
   const value = {
     user,
     currentSchool,
@@ -450,7 +440,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCurrentSchool: handleSetCurrentSchool,
     availableSchools,
     userPurchasingCenters,
-    hasPermission,
   };
 
   return (
