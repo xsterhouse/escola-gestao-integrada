@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -13,7 +14,8 @@ import {
   Calculator,
   History,
   ChevronDown,
-  ChevronRight 
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -149,6 +151,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <li key={item.name}>
           <Link
             to={item.href}
+            onClick={onClose}
             className={`flex items-center p-2 text-sm font-medium transition duration-200 rounded-md hover:bg-gray-700 hover:text-white group ${
               isActive ? 'text-white bg-gray-800' : 'text-gray-400'
             }`}
@@ -162,39 +165,36 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   };
 
   return (
-    <div
-      className={`fixed left-0 top-0 h-full bg-gray-900 text-white transition-transform duration-300 ease-in-out w-64 z-50 ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}
-    >
-      <div className="flex items-center justify-center h-16 border-b border-gray-800">
-        <span className="text-lg font-semibold">Controle Escolar</span>
-      </div>
-      <nav className="py-4">
-        <ul>
-          {renderNavItems(navigationItems)}
-        </ul>
-      </nav>
-      {/* Close button for mobile */}
-      <button
-        className="absolute top-4 right-4 text-gray-500 hover:text-gray-300 focus:outline-none"
-        onClick={onClose}
+    <>
+      {/* Overlay for mobile */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div
+        className={`fixed left-0 top-0 h-full bg-gray-900 text-white transition-transform duration-300 ease-in-out w-64 z-50 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        } md:translate-x-0 md:static md:z-auto`}
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
-      </button>
-    </div>
+        <div className="flex items-center justify-between h-16 border-b border-gray-800 px-4">
+          <span className="text-lg font-semibold">Controle Escolar</span>
+          <button
+            className="md:hidden text-gray-500 hover:text-gray-300 focus:outline-none"
+            onClick={onClose}
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+        <nav className="py-4 px-4">
+          <ul className="space-y-1">
+            {renderNavItems(navigationItems)}
+          </ul>
+        </nav>
+      </div>
+    </>
   );
 }
