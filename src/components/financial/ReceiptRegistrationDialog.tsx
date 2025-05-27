@@ -52,6 +52,9 @@ export function ReceiptRegistrationDialog({
     }
   };
 
+  // Get selected bank account details
+  const selectedAccountData = bankAccounts.find(acc => acc.id === selectedBankAccount);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
@@ -94,17 +97,38 @@ export function ReceiptRegistrationDialog({
               <div>
                 <Label htmlFor="bankAccount">Conta Bancária *</Label>
                 <Select value={selectedBankAccount} onValueChange={setSelectedBankAccount}>
-                  <SelectTrigger id="bankAccount">
+                  <SelectTrigger id="bankAccount" className={selectedBankAccount ? "ring-2 ring-blue-500 bg-blue-50" : ""}>
                     <SelectValue placeholder="Selecione a conta" />
                   </SelectTrigger>
                   <SelectContent>
                     {bankAccounts.map(account => (
                       <SelectItem key={account.id} value={account.id}>
-                        {account.bankName} - {account.description}
+                        {account.bankName} - {account.description} ({account.managementType || 'Sem gestão'})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedAccountData && (
+                  <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm font-medium text-blue-800">
+                      {selectedAccountData.bankName}
+                    </p>
+                    <p className="text-sm text-blue-600">
+                      <span className="font-medium">Tipo:</span> {selectedAccountData.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}
+                    </p>
+                    <p className="text-sm text-blue-600">
+                      <span className="font-medium">Gestão:</span> {selectedAccountData.managementType || 'Não informado'}
+                    </p>
+                    <p className="text-sm text-blue-600">
+                      <span className="font-medium">Saldo Atual:</span> {formatCurrency(selectedAccountData.currentBalance)}
+                    </p>
+                    {selectedAccountData.description && (
+                      <p className="text-sm text-blue-600">
+                        <span className="font-medium">Descrição:</span> {selectedAccountData.description}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             
