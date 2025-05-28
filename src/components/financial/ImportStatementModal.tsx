@@ -76,7 +76,7 @@ export function ImportStatementModal({
           description: "Transferência Recebida",
           value: 1250.50,
           transactionType: "credito",
-          reconciliationStatus: "nao_conciliado",
+          reconciliationStatus: "pendente",
           createdAt: new Date(),
           updatedAt: new Date()
         },
@@ -88,7 +88,7 @@ export function ImportStatementModal({
           description: "Pagamento Fornecedor XYZ",
           value: 546.78,
           transactionType: "debito",
-          reconciliationStatus: "nao_conciliado",
+          reconciliationStatus: "pendente",
           createdAt: new Date(),
           updatedAt: new Date()
         },
@@ -100,7 +100,7 @@ export function ImportStatementModal({
           description: "Tarifa Bancária",
           value: 45.90,
           transactionType: "debito",
-          reconciliationStatus: "nao_conciliado",
+          reconciliationStatus: "pendente",
           createdAt: new Date(),
           updatedAt: new Date()
         }

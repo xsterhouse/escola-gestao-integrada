@@ -37,6 +37,7 @@ import { ImportInvoiceFromXmlDialog } from "./ImportInvoiceFromXmlDialog";
 import { PaymentRegistrationDialog } from "./PaymentRegistrationDialog";
 import { InstallmentConfigDialog } from "./InstallmentConfigDialog";
 import { DuplicatePaymentDialog } from "./DuplicatePaymentDialog";
+import { EditPaymentDialog } from "./EditPaymentDialog";
 import { toast } from "sonner";
 
 interface PayableAccountsProps {
@@ -749,14 +750,13 @@ export function PayableAccounts({
       />
 
       {/* Edit Payment Dialog */}
-      <PaymentRegistrationDialog
+      <EditPaymentDialog
         isOpen={isEditPaymentOpen}
         onClose={() => setIsEditPaymentOpen(false)}
-        account={selectedAccount}
-        bankAccounts={bankAccounts}
-        onConfirm={handleEditPayment}
-        isEditMode={true}
-        onEdit={handleEditPayment}
+        payment={selectedAccount}
+        onSave={handleEditPayment}
+        resourceCategories={resourceCategories}
+        expenseTypes={expenseTypes}
       />
 
       {/* Duplicate Payment Dialog */}
