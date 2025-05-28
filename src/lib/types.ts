@@ -222,6 +222,7 @@ export interface BankTransaction {
   source?: 'payment' | 'receivable' | 'manual';
   isDuplicate?: boolean;
   duplicateJustification?: string;
+  documentId?: string; // Added missing documentId property
   createdAt: Date;
   updatedAt: Date;
 }
@@ -241,6 +242,7 @@ export interface PaymentAccount {
   invoiceId?: string;
   isDuplicate?: boolean;
   duplicateJustification?: string;
+  documentUrl?: string; // Added missing documentUrl property
   createdAt: Date;
   updatedAt: Date;
 }

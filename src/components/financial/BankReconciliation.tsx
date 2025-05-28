@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,13 +22,15 @@ import {
 } from "@/components/ui/select";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Search, Download, Check, RefreshCw, Filter, Plus, FileText } from "lucide-react";
+import { Search, Download, Check, RefreshCw, Filter, Plus, FileText, Eye, Trash2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NewTransactionModal } from "./NewTransactionModal";
 import { GenerateReportModal } from "./GenerateReportModal";
+import { ViewTransactionDialog } from "./ViewTransactionDialog";
+import { DeleteTransactionDialog } from "./DeleteTransactionDialog";
 import { toast } from "sonner";
 
 interface BankReconciliationProps {
@@ -56,6 +59,8 @@ export function BankReconciliation({
   // Modal states
   const [isNewTransactionModalOpen, setIsNewTransactionModalOpen] = useState<boolean>(false);
   const [isGenerateReportModalOpen, setIsGenerateReportModalOpen] = useState<boolean>(false);
+  const [isViewTransactionOpen, setIsViewTransactionOpen] = useState<boolean>(false);
+  const [isDeleteTransactionOpen, setIsDeleteTransactionOpen] = useState<boolean>(false);
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -74,13 +79,43 @@ export function BankReconciliation({
       // Update the reconciliation status with the correct type
       const updatedTransactions = transactions.map(t => 
         t.id === selectedTransaction.id 
-          ? { ...t, reconciliationStatus: "conciliado" as "conciliado" | "nao_conciliado" }
+          ? { ...t, reconciliationStatus: "conciliado" as const }
           : t
       );
       setTransactions(updatedTransactions);
       setIsReconcileDialogOpen(false);
       calculateFinancialSummary();
       toast.success("Transação conciliada com sucesso!");
+    }
+  };
+
+  const handleViewTransaction = (transaction: BankTransaction) => {
+    setSelectedTransaction(transaction);
+    setIsViewTransactionOpen(true);
+  };
+
+  const handleDeleteTransaction = (transaction: BankTransaction) => {
+    setSelectedTransaction(transaction);
+    setIsDeleteTransactionOpen(true);
+  };
+
+  const confirmDeleteTransaction = (password: string, reason: string) => {
+    if (selectedTransaction) {
+      // Remove transaction from the list
+      const updatedTransactions = transactions.filter(t => t.id !== selectedTransaction.id);
+      setTransactions(updatedTransactions);
+      setIsDeleteTransactionOpen(false);
+      setSelectedTransaction(null);
+      calculateFinancialSummary();
+      toast.success("Transação excluída com sucesso!");
+      
+      // Here you could also save the deletion record for audit purposes
+      console.log('Transaction deleted:', {
+        transactionId: selectedTransaction.id,
+        reason,
+        deletedAt: new Date(),
+        deletedBy: 'current-user' // This would come from auth context
+      });
     }
   };
   
@@ -116,7 +151,7 @@ export function BankReconciliation({
     
     if (statusFilter !== "all" && 
         ((statusFilter === "reconciled" && transaction.reconciliationStatus !== "conciliado") ||
-         (statusFilter === "unreconciled" && transaction.reconciliationStatus !== "nao_conciliado"))) {
+         (statusFilter === "unreconciled" && transaction.reconciliationStatus !== "pendente"))) {
       includeTransaction = false;
     }
     
@@ -360,7 +395,16 @@ export function BankReconciliation({
                     <TableRow key={transaction.id}>
                       <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
                       <TableCell>{account?.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}</TableCell>
-                      <TableCell>{transaction.description}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {transaction.description}
+                          {transaction.isDuplicate && (
+                            <span className="px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded-full">
+                              Duplicado
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className={transaction.transactionType === 'credito' ? 'text-green-600' : 'text-red-600'}>
                         {formatCurrency(transaction.value)}
                       </TableCell>
@@ -377,16 +421,34 @@ export function BankReconciliation({
                         </div>
                       </TableCell>
                       <TableCell>
-                        {transaction.reconciliationStatus === 'nao_conciliado' && (
+                        <div className="flex items-center gap-2">
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            onClick={() => handleReconcileTransaction(transaction)}
+                            onClick={() => handleViewTransaction(transaction)}
+                            title="Visualizar"
                           >
-                            <Check className="h-4 w-4 mr-1" />
-                            Conciliar
+                            <Eye className="h-4 w-4" />
                           </Button>
-                        )}
+                          {transaction.reconciliationStatus === 'pendente' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleReconcileTransaction(transaction)}
+                              title="Conciliar"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDeleteTransaction(transaction)}
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -457,6 +519,21 @@ export function BankReconciliation({
         isOpen={isGenerateReportModalOpen}
         onClose={() => setIsGenerateReportModalOpen(false)}
         bankAccounts={bankAccounts}
+      />
+
+      {/* View Transaction Dialog */}
+      <ViewTransactionDialog
+        isOpen={isViewTransactionOpen}
+        onClose={() => setIsViewTransactionOpen(false)}
+        transaction={selectedTransaction}
+      />
+
+      {/* Delete Transaction Dialog */}
+      <DeleteTransactionDialog
+        isOpen={isDeleteTransactionOpen}
+        onClose={() => setIsDeleteTransactionOpen(false)}
+        transaction={selectedTransaction}
+        onConfirm={confirmDeleteTransaction}
       />
     </div>
   );

@@ -58,7 +58,7 @@ export function NewTransactionModal({
       description,
       value: parseFloat(value),
       transactionType,
-      reconciliationStatus: "nao_conciliado",
+      reconciliationStatus: "pendente",
       createdAt: new Date(),
       updatedAt: new Date()
     };
