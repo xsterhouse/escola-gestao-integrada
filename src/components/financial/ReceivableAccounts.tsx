@@ -35,6 +35,7 @@ import { Plus, Filter, Trash2, Edit2, Download, CheckCircle, Search } from "luci
 import { exportToCsv, generatePDF } from "@/lib/pdf-utils";
 import { ReceiptRegistrationDialog } from "./ReceiptRegistrationDialog";
 import { ReceivableInstallmentDialog } from "./ReceivableInstallmentDialog";
+import { EditReceivableDialog } from "./EditReceivableDialog";
 import { toast } from "sonner";
 
 interface ReceivableAccountsProps {
@@ -61,6 +62,7 @@ export function ReceivableAccounts({
   const [isAddReceivableOpen, setIsAddReceivableOpen] = useState(false);
   const [isReceiptConfirmOpen, setIsReceiptConfirmOpen] = useState(false);
   const [isInstallmentConfigOpen, setIsInstallmentConfigOpen] = useState(false);
+  const [isEditReceivableOpen, setIsEditReceivableOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<ReceivableAccount | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -196,6 +198,21 @@ export function ReceivableAccounts({
       
       toast.success("Recebimento registrado com sucesso! Lançamento automático criado na conciliação bancária.");
     }
+  };
+
+  const handleEditReceivable = (updatedReceivable: ReceivableAccount) => {
+    const updatedAccounts = receivableAccounts.map(account => 
+      account.id === updatedReceivable.id ? updatedReceivable : account
+    );
+    setReceivableAccounts(updatedAccounts);
+    calculateFinancialSummary();
+    setIsEditReceivableOpen(false);
+    setSelectedAccount(null);
+  };
+
+  const openEditReceivable = (account: ReceivableAccount) => {
+    setSelectedAccount(account);
+    setIsEditReceivableOpen(true);
   };
   
   const handleDeleteReceivable = (account: ReceivableAccount) => {
@@ -458,24 +475,23 @@ export function ReceivableAccounts({
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {account.status === 'pendente' && (
-                          <>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => openReceiptConfirm(account)}
-                              title="Registrar Recebimento"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              title="Editar"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => openReceiptConfirm(account)}
+                            title="Registrar Recebimento"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
                         )}
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => openEditReceivable(account)}
+                          title="Editar"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -636,6 +652,14 @@ export function ReceivableAccounts({
         onClose={() => setIsInstallmentConfigOpen(false)}
         formData={formData}
         onConfirm={handleCreateInstallments}
+      />
+
+      {/* Edit Receivable Dialog */}
+      <EditReceivableDialog
+        isOpen={isEditReceivableOpen}
+        onClose={() => setIsEditReceivableOpen(false)}
+        receivable={selectedAccount}
+        onSave={handleEditReceivable}
       />
     </div>
   );
