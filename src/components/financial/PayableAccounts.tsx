@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ import { exportToCsv, generatePDF } from "@/lib/pdf-utils";
 import { ImportInvoiceFromXmlDialog } from "./ImportInvoiceFromXmlDialog";
 import { PaymentRegistrationDialog } from "./PaymentRegistrationDialog";
 import { InstallmentConfigDialog } from "./InstallmentConfigDialog";
+import { DuplicatePaymentDialog } from "./DuplicatePaymentDialog";
 import { toast } from "sonner";
 
 interface PayableAccountsProps {
@@ -61,6 +63,8 @@ export function PayableAccounts({
 }: PayableAccountsProps) {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const [isPaymentConfirmOpen, setIsPaymentConfirmOpen] = useState(false);
+  const [isEditPaymentOpen, setIsEditPaymentOpen] = useState(false);
+  const [isDuplicatePaymentOpen, setIsDuplicatePaymentOpen] = useState(false);
   const [isImportInvoiceOpen, setIsImportInvoiceOpen] = useState(false);
   const [isInstallmentConfigOpen, setIsInstallmentConfigOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<PaymentAccount | null>(null);
@@ -97,6 +101,18 @@ export function PayableAccounts({
       style: 'currency',
       currency: 'BRL'
     }).format(value);
+  };
+
+  // Check for duplicate payments
+  const checkDuplicatePayment = (account: PaymentAccount): boolean => {
+    const existingPayments = paymentAccounts.filter(
+      payment => payment.id !== account.id && 
+                 payment.status === 'pago' && 
+                 payment.supplier === account.supplier &&
+                 payment.description === account.description &&
+                 payment.value === account.value
+    );
+    return existingPayments.length > 0;
   };
   
   const handleAddPayment = () => {
@@ -161,12 +177,31 @@ export function PayableAccounts({
   
   const handlePaymentConfirm = (paymentData: any) => {
     if (selectedAccount) {
+      // Check for duplicate payment
+      if (checkDuplicatePayment(selectedAccount)) {
+        setIsDuplicatePaymentOpen(true);
+        return;
+      }
+
+      processPayment(paymentData, false);
+    }
+  };
+
+  const handleDuplicatePaymentConfirm = (paymentData: any, justification: string) => {
+    processPayment(paymentData, true, justification);
+    setIsDuplicatePaymentOpen(false);
+  };
+
+  const processPayment = (paymentData: any, isDuplicate: boolean = false, justification?: string) => {
+    if (selectedAccount) {
       const updatedAccount = { 
         ...selectedAccount, 
         status: 'pago' as const, 
         paymentDate: new Date(), 
         updatedAt: new Date(),
-        bankAccountId: paymentData.bankAccountId
+        bankAccountId: paymentData.bankAccountId,
+        isDuplicate,
+        duplicateJustification: justification
       };
 
       // Update the payment account
@@ -189,8 +224,23 @@ export function PayableAccounts({
         onNavigateToBankReconciliation();
       }
       
-      toast.success("Pagamento registrado com sucesso! Lançamento automático criado na conciliação bancária.");
+      const message = isDuplicate 
+        ? "Pagamento duplicado registrado com sucesso! Lançamento automático criado na conciliação bancária com alerta de duplicidade."
+        : "Pagamento registrado com sucesso! Lançamento automático criado na conciliação bancária.";
+      
+      toast.success(message);
     }
+  };
+
+  const handleEditPayment = (updatedAccount: PaymentAccount) => {
+    const updatedAccounts = paymentAccounts.map(account => 
+      account.id === updatedAccount.id ? updatedAccount : account
+    );
+    setPaymentAccounts(updatedAccounts);
+    setIsEditPaymentOpen(false);
+    setSelectedAccount(null);
+    calculateFinancialSummary();
+    toast.success("Conta atualizada com sucesso!");
   };
   
   const handleDeletePayment = (account: PaymentAccount) => {
@@ -203,6 +253,8 @@ export function PayableAccounts({
               status: 'a_pagar' as const, 
               paymentDate: undefined, 
               bankAccountId: undefined,
+              isDuplicate: undefined,
+              duplicateJustification: undefined,
               updatedAt: new Date()
             }
           : acc
@@ -220,6 +272,11 @@ export function PayableAccounts({
   const openPaymentConfirm = (account: PaymentAccount) => {
     setSelectedAccount(account);
     setIsPaymentConfirmOpen(true);
+  };
+
+  const openEditPayment = (account: PaymentAccount) => {
+    setSelectedAccount(account);
+    setIsEditPaymentOpen(true);
   };
 
   const handleImportFromXml = (invoice: Invoice) => {
@@ -479,7 +536,16 @@ export function PayableAccounts({
               ) : (
                 filteredAccounts.map(account => (
                   <TableRow key={account.id}>
-                    <TableCell className="font-medium">{account.description}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {account.description}
+                        {account.isDuplicate && (
+                          <span className="px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded-full">
+                            Duplicado
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{account.supplier}</TableCell>
                     <TableCell>{account.expenseType}</TableCell>
                     <TableCell>{format(new Date(account.dueDate), 'dd/MM/yyyy')}</TableCell>
@@ -507,6 +573,7 @@ export function PayableAccounts({
                             <Button 
                               variant="ghost" 
                               size="icon"
+                              onClick={() => openEditPayment(account)}
                               title="Editar"
                             >
                               <Edit2 className="h-4 w-4" />
@@ -680,6 +747,26 @@ export function PayableAccounts({
         account={selectedAccount}
         bankAccounts={bankAccounts}
         onConfirm={handlePaymentConfirm}
+      />
+
+      {/* Edit Payment Dialog */}
+      <PaymentRegistrationDialog
+        isOpen={isEditPaymentOpen}
+        onClose={() => setIsEditPaymentOpen(false)}
+        account={selectedAccount}
+        bankAccounts={bankAccounts}
+        onConfirm={handleEditPayment}
+        isEditMode={true}
+        onEdit={handleEditPayment}
+      />
+
+      {/* Duplicate Payment Dialog */}
+      <DuplicatePaymentDialog
+        isOpen={isDuplicatePaymentOpen}
+        onClose={() => setIsDuplicatePaymentOpen(false)}
+        account={selectedAccount}
+        bankAccounts={bankAccounts}
+        onConfirm={handleDuplicatePaymentConfirm}
       />
 
       {/* Installment Configuration Dialog */}

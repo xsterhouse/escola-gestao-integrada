@@ -216,11 +216,12 @@ export interface BankTransaction {
   description: string;
   value: number;
   transactionType: 'credito' | 'debito';
-  reconciliationStatus: 'conciliado' | 'nao_conciliado';
+  reconciliationStatus: 'pendente' | 'conciliado';
   category?: string;
   resourceType?: string;
-  documentId?: string;
-  source?: 'manual' | 'payment' | 'receivable'; // Added to track transaction origin
+  source?: 'payment' | 'receivable' | 'manual';
+  isDuplicate?: boolean;
+  duplicateJustification?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -233,18 +234,13 @@ export interface PaymentAccount {
   dueDate: Date;
   value: number;
   expenseType: string;
-  resourceCategory: string; // Added resourceCategory field
+  resourceCategory: string;
   status: 'a_pagar' | 'pago';
   paymentDate?: Date;
-  documentUrl?: string;
+  bankAccountId?: string;
   invoiceId?: string;
-  notes?: string;
-  bankAccountId?: string; // Added for tracking which bank account was used for payment
-  installmentInfo?: {
-    total: number;
-    current: number;
-    originalId?: string;
-  }; // Added for installment tracking
+  isDuplicate?: boolean;
+  duplicateJustification?: string;
   createdAt: Date;
   updatedAt: Date;
 }
