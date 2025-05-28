@@ -46,7 +46,7 @@ export function PaymentRegistrationDialog({
     description: account?.description || "",
     supplier: account?.supplier || "",
     value: account?.value || 0,
-    dueDate: account?.dueDate || "",
+    dueDate: account?.dueDate ? format(new Date(account.dueDate), 'yyyy-MM-dd') : "",
     expenseType: account?.expenseType || "",
     resourceCategory: account?.resourceCategory || "",
   });
@@ -63,6 +63,7 @@ export function PaymentRegistrationDialog({
       const updatedAccount: PaymentAccount = {
         ...account,
         ...editFormData,
+        dueDate: new Date(editFormData.dueDate),
         updatedAt: new Date(),
       };
       onEdit(updatedAccount);
@@ -90,7 +91,7 @@ export function PaymentRegistrationDialog({
       description: account?.description || "",
       supplier: account?.supplier || "",
       value: account?.value || 0,
-      dueDate: account?.dueDate || "",
+      dueDate: account?.dueDate ? format(new Date(account.dueDate), 'yyyy-MM-dd') : "",
       expenseType: account?.expenseType || "",
       resourceCategory: account?.resourceCategory || "",
     });
