@@ -1,18 +1,9 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ReceivableAccount, BankTransaction } from "@/lib/types";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -31,11 +22,13 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { Plus, Filter, Trash2, Edit2, Download, CheckCircle, Search } from "lucide-react";
+import { Plus, Filter, Trash2, Edit2, Download, CheckCircle, Search, LayoutGrid, Table } from "lucide-react";
 import { exportToCsv, generatePDF } from "@/lib/pdf-utils";
 import { ReceiptRegistrationDialog } from "./ReceiptRegistrationDialog";
 import { ReceivableInstallmentDialog } from "./ReceivableInstallmentDialog";
 import { EditReceivableDialog } from "./EditReceivableDialog";
+import { ReceivableCard } from "./ReceivableCard";
+import { ReceivableAccountsTable } from "./ReceivableAccountsTable";
 import { toast } from "sonner";
 
 interface ReceivableAccountsProps {
@@ -68,6 +61,8 @@ export function ReceivableAccounts({
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [groupBy, setGroupBy] = useState<'description' | 'origin' | 'resourceType'>('description');
   
   // Form states for new receivable
   const [formData, setFormData] = useState({
@@ -176,7 +171,9 @@ export function ReceivableAccounts({
           receivedDate: new Date(), 
           updatedAt: new Date(),
           bankAccountId: receiptData.bankAccountId,
-          value: receiptData.partialAmount
+          receivedAmount: receiptData.partialAmount,
+          originalValue: selectedAccount.originalValue || selectedAccount.value,
+          isPartialPayment: true
         };
 
         // Create a new receivable for the remaining balance
@@ -189,7 +186,9 @@ export function ReceivableAccounts({
           value: receiptData.remainingBalance,
           resourceType: selectedAccount.resourceType,
           status: 'pendente',
-          notes: `Saldo restante de recebimento parcial. Valor original: ${formatCurrency(selectedAccount.value)}`,
+          notes: `Saldo restante de recebimento parcial. Valor original: ${formatCurrency(selectedAccount.originalValue || selectedAccount.value)}`,
+          originalValue: selectedAccount.originalValue || selectedAccount.value,
+          parentReceivableId: selectedAccount.id,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -214,7 +213,9 @@ export function ReceivableAccounts({
           status: 'recebido' as const, 
           receivedDate: new Date(), 
           updatedAt: new Date(),
-          bankAccountId: receiptData.bankAccountId
+          bankAccountId: receiptData.bankAccountId,
+          receivedAmount: selectedAccount.value,
+          originalValue: selectedAccount.originalValue || selectedAccount.value
         };
 
         // Update the receivable account
@@ -241,7 +242,7 @@ export function ReceivableAccounts({
       }
     }
   };
-
+  
   const handleEditReceivable = (updatedReceivable: ReceivableAccount) => {
     const updatedAccounts = receivableAccounts.map(account => 
       account.id === updatedReceivable.id ? updatedReceivable : account
@@ -251,7 +252,7 @@ export function ReceivableAccounts({
     setIsEditReceivableOpen(false);
     setSelectedAccount(null);
   };
-
+  
   const openEditReceivable = (account: ReceivableAccount) => {
     setSelectedAccount(account);
     setIsEditReceivableOpen(true);
@@ -321,7 +322,7 @@ export function ReceivableAccounts({
       }
     }
     
-    // Filter by search term (description or origin)
+    // Filter by search term
     if (searchTerm && 
         !account.description.toLowerCase().includes(searchTerm.toLowerCase()) && 
         !account.origin.toLowerCase().includes(searchTerm.toLowerCase())) {
@@ -343,14 +344,22 @@ export function ReceivableAccounts({
     
     return includeAccount;
   });
+
+  // Group accounts for card view
+  const groupedAccounts = filteredAccounts.reduce((groups, account) => {
+    const key = account[groupBy];
+    if (!groups[key]) {
+      groups[key] = [];
+    }
+    groups[key].push(account);
+    return groups;
+  }, {} as Record<string, ReceivableAccount[]>);
   
   // Calculate summary data
-  const totalAmount = filteredAccounts.reduce((sum, account) => sum + account.value, 0);
-  const pendingAmount = filteredAccounts
+  const totalAmount = filteredAccounts.reduce((sum, account) => sum + (account.originalValue || account.value), 0);
+  const totalReceived = filteredAccounts.reduce((sum, account) => sum + (account.receivedAmount || 0), 0);
+  const totalPending = filteredAccounts
     .filter(account => account.status === "pendente")
-    .reduce((sum, account) => sum + account.value, 0);
-  const receivedAmount = filteredAccounts
-    .filter(account => account.status === "recebido")
     .reduce((sum, account) => sum + account.value, 0);
   
   return (
@@ -359,7 +368,7 @@ export function ReceivableAccounts({
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Total</CardTitle>
+            <CardTitle className="text-sm">Total Original</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{formatCurrency(totalAmount)}</p>
@@ -368,23 +377,23 @@ export function ReceivableAccounts({
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-amber-600">Pendente</CardTitle>
+            <CardTitle className="text-sm text-green-600">Total Recebido</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-amber-600">{formatCurrency(pendingAmount)}</p>
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(totalReceived)}</p>
             <p className="text-xs text-muted-foreground">
-              {filteredAccounts.filter(a => a.status === "pendente").length} receitas pendentes
+              {filteredAccounts.filter(a => a.status === "recebido").length} receitas recebidas
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-green-600">Recebido</CardTitle>
+            <CardTitle className="text-sm text-amber-600">Total Pendente</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(receivedAmount)}</p>
+            <p className="text-2xl font-bold text-amber-600">{formatCurrency(totalPending)}</p>
             <p className="text-xs text-muted-foreground">
-              {filteredAccounts.filter(a => a.status === "recebido").length} receitas recebidas
+              {filteredAccounts.filter(a => a.status === "pendente").length} receitas pendentes
             </p>
           </CardContent>
         </Card>
@@ -405,57 +414,48 @@ export function ReceivableAccounts({
             </div>
           </div>
           
-          <div className="w-full md:w-auto">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Status</SelectItem>
+              <SelectItem value="pending">Pendente</SelectItem>
+              <SelectItem value="received">Recebido</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {viewMode === 'cards' && (
+            <Select value={groupBy} onValueChange={(value: 'description' | 'origin' | 'resourceType') => setGroupBy(value)}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder="Agrupar por" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os Status</SelectItem>
-                <SelectItem value="pending">Pendente</SelectItem>
-                <SelectItem value="received">Recebido</SelectItem>
+                <SelectItem value="description">Descrição</SelectItem>
+                <SelectItem value="origin">Origem</SelectItem>
+                <SelectItem value="resourceType">Tipo de Recurso</SelectItem>
               </SelectContent>
             </Select>
+          )}
+
+          <div className="flex border rounded-lg">
+            <Button
+              variant={viewMode === 'cards' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('cards')}
+              className="rounded-r-none"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="rounded-l-none"
+            >
+              <Table className="h-4 w-4" />
+            </Button>
           </div>
-          
-          <div className="w-full md:w-auto flex items-center gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="w-[120px] pl-3 text-left font-normal">
-                  {startDate ? format(startDate, 'dd/MM/yyyy') : "Data inicial"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={startDate}
-                  onSelect={setStartDate}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="w-[120px] pl-3 text-left font-normal">
-                  {endDate ? format(endDate, 'dd/MM/yyyy') : "Data final"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={endDate}
-                  onSelect={setEndDate}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          
-          <Button variant="outline" size="icon">
-            <Filter className="h-4 w-4" />
-          </Button>
         </div>
         
         <div className="flex gap-2">
@@ -470,87 +470,47 @@ export function ReceivableAccounts({
         </div>
       </div>
       
-      {/* Receivable Accounts Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Contas a Receber</CardTitle>
-          <CardDescription>
-            Gerencie todas as receitas da sua escola.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Origem</TableHead>
-                <TableHead>Tipo de Recurso</TableHead>
-                <TableHead>Data Prevista</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAccounts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center">
-                    Nenhuma receita encontrada.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredAccounts.map(account => (
-                  <TableRow key={account.id}>
-                    <TableCell className="font-medium">{account.description}</TableCell>
-                    <TableCell>{account.origin}</TableCell>
-                    <TableCell>{account.resourceType}</TableCell>
-                    <TableCell>{format(new Date(account.expectedDate), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>{formatCurrency(account.value)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <div className={`mr-2 h-2 w-2 rounded-full ${
-                          account.status === 'recebido' ? 'bg-green-500' : 'bg-amber-500'
-                        }`} />
-                        {account.status === 'recebido' ? 'Recebido' : 'Pendente'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {account.status === 'pendente' && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => openReceiptConfirm(account)}
-                            title="Registrar Recebimento"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => openEditReceivable(account)}
-                          title="Editar"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleDeleteReceivable(account)}
-                          title={account.status === 'recebido' ? 'Remover Recebimento' : 'Excluir'}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Content based on view mode */}
+      {viewMode === 'cards' ? (
+        <div className="space-y-4">
+          {Object.entries(groupedAccounts).length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-muted-foreground">Nenhuma receita encontrada.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            Object.entries(groupedAccounts).map(([groupKey, accounts]) => (
+              <ReceivableCard
+                key={groupKey}
+                groupKey={groupKey}
+                accounts={accounts}
+                groupType={groupBy}
+                onEditReceivable={openEditReceivable}
+                onDeleteReceivable={handleDeleteReceivable}
+                onOpenReceiptConfirm={openReceiptConfirm}
+              />
+            ))
+          )}
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Contas a Receber</CardTitle>
+            <CardDescription>
+              Gerencie todas as receitas da sua escola.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ReceivableAccountsTable
+              accounts={filteredAccounts}
+              onEditReceivable={openEditReceivable}
+              onDeleteReceivable={handleDeleteReceivable}
+              onOpenReceiptConfirm={openReceiptConfirm}
+            />
+          </CardContent>
+        </Card>
+      )}
       
       {/* Add Receivable Dialog */}
       <Dialog open={isAddReceivableOpen} onOpenChange={setIsAddReceivableOpen}>
