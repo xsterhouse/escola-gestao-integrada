@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { PaymentAccount, BankAccount } from "@/lib/types";
 
@@ -27,6 +28,8 @@ interface PaymentRegistrationDialogProps {
   account: PaymentAccount | null;
   bankAccounts: BankAccount[];
   onConfirm: (paymentData: { bankAccountId: string }) => void;
+  isEditMode?: boolean;
+  onEdit?: (updatedAccount: PaymentAccount) => void;
 }
 
 export function PaymentRegistrationDialog({
@@ -35,8 +38,18 @@ export function PaymentRegistrationDialog({
   account,
   bankAccounts,
   onConfirm,
+  isEditMode = false,
+  onEdit,
 }: PaymentRegistrationDialogProps) {
   const [selectedBankAccount, setSelectedBankAccount] = useState("");
+  const [editFormData, setEditFormData] = useState({
+    description: account?.description || "",
+    supplier: account?.supplier || "",
+    value: account?.value || 0,
+    dueDate: account?.dueDate || "",
+    expenseType: account?.expenseType || "",
+    resourceCategory: account?.resourceCategory || "",
+  });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -46,16 +59,41 @@ export function PaymentRegistrationDialog({
   };
 
   const handleConfirm = () => {
-    if (!selectedBankAccount) {
-      return;
+    if (isEditMode && onEdit && account) {
+      const updatedAccount: PaymentAccount = {
+        ...account,
+        ...editFormData,
+        updatedAt: new Date(),
+      };
+      onEdit(updatedAccount);
+    } else {
+      if (!selectedBankAccount) {
+        return;
+      }
+      onConfirm({ bankAccountId: selectedBankAccount });
     }
-
-    onConfirm({ bankAccountId: selectedBankAccount });
+    
     setSelectedBankAccount("");
+    setEditFormData({
+      description: "",
+      supplier: "",
+      value: 0,
+      dueDate: "",
+      expenseType: "",
+      resourceCategory: "",
+    });
   };
 
   const handleClose = () => {
     setSelectedBankAccount("");
+    setEditFormData({
+      description: account?.description || "",
+      supplier: account?.supplier || "",
+      value: account?.value || 0,
+      dueDate: account?.dueDate || "",
+      expenseType: account?.expenseType || "",
+      resourceCategory: account?.resourceCategory || "",
+    });
     onClose();
   };
 
@@ -63,71 +101,139 @@ export function PaymentRegistrationDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Registrar Pagamento</DialogTitle>
+          <DialogTitle>
+            {isEditMode ? "Editar Conta a Pagar" : "Registrar Pagamento"}
+          </DialogTitle>
           <DialogDescription>
-            Confirme os detalhes e selecione a conta bancária para registrar o pagamento.
+            {isEditMode 
+              ? "Altere os dados da conta a pagar conforme necessário."
+              : "Confirme os detalhes e selecione a conta bancária para registrar o pagamento."
+            }
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Descrição</Label>
-              <Input value={account.description} readOnly />
+              <Label htmlFor="description">Descrição</Label>
+              {isEditMode ? (
+                <Input
+                  id="description"
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
+                />
+              ) : (
+                <Input value={account.description} readOnly />
+              )}
             </div>
             <div>
-              <Label>Fornecedor</Label>
-              <Input value={account.supplier} readOnly />
+              <Label htmlFor="supplier">Fornecedor</Label>
+              {isEditMode ? (
+                <Input
+                  id="supplier"
+                  value={editFormData.supplier}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, supplier: e.target.value }))}
+                />
+              ) : (
+                <Input value={account.supplier} readOnly />
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Vencimento</Label>
-              <Input value={format(new Date(account.dueDate), 'dd/MM/yyyy')} readOnly />
+              <Label htmlFor="dueDate">Vencimento</Label>
+              {isEditMode ? (
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={editFormData.dueDate}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, dueDate: e.target.value }))}
+                />
+              ) : (
+                <Input value={format(new Date(account.dueDate), 'dd/MM/yyyy')} readOnly />
+              )}
             </div>
             <div>
-              <Label>Valor</Label>
-              <Input value={formatCurrency(account.value)} readOnly />
+              <Label htmlFor="value">Valor</Label>
+              {isEditMode ? (
+                <Input
+                  id="value"
+                  type="number"
+                  step="0.01"
+                  value={editFormData.value}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, value: parseFloat(e.target.value) || 0 }))}
+                />
+              ) : (
+                <Input value={formatCurrency(account.value)} readOnly />
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Data de Pagamento</Label>
-              <Input value={format(new Date(), 'dd/MM/yyyy')} readOnly />
+          {isEditMode && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="expenseType">Tipo de Despesa</Label>
+                <Input
+                  id="expenseType"
+                  value={editFormData.expenseType}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, expenseType: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="resourceCategory">Categoria de Recurso</Label>
+                <Input
+                  id="resourceCategory"
+                  value={editFormData.resourceCategory}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, resourceCategory: e.target.value }))}
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="bankAccount">Conta Bancária *</Label>
-              <Select value={selectedBankAccount} onValueChange={setSelectedBankAccount}>
-                <SelectTrigger id="bankAccount">
-                  <SelectValue placeholder="Selecione a conta bancária" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bankAccounts.filter(account => account.id && account.bankName).map(bankAccount => (
-                    <SelectItem key={bankAccount.id} value={bankAccount.id}>
-                      {bankAccount.bankName} - {bankAccount.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          )}
 
-          <div>
-            <Label htmlFor="attachment">Anexar Comprovante (opcional)</Label>
-            <Input id="attachment" type="file" />
-          </div>
+          {!isEditMode && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Data de Pagamento</Label>
+                  <Input value={format(new Date(), 'dd/MM/yyyy')} readOnly />
+                </div>
+                <div>
+                  <Label htmlFor="bankAccount">Conta Bancária *</Label>
+                  <Select value={selectedBankAccount} onValueChange={setSelectedBankAccount}>
+                    <SelectTrigger id="bankAccount">
+                      <SelectValue placeholder="Selecione a conta bancária" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bankAccounts.filter(account => account.id && account.bankName).map(bankAccount => (
+                        <SelectItem key={bankAccount.id} value={bankAccount.id}>
+                          {bankAccount.bankName} - {bankAccount.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="attachment">Anexar Comprovante (opcional)</Label>
+                <Input id="attachment" type="file" />
+              </div>
+            </>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button onClick={handleConfirm} disabled={!selectedBankAccount}>
-            Confirmar Pagamento
+          <Button 
+            onClick={handleConfirm} 
+            disabled={!isEditMode && !selectedBankAccount}
+          >
+            {isEditMode ? "Salvar Alterações" : "Confirmar Pagamento"}
           </Button>
         </DialogFooter>
       </DialogContent>

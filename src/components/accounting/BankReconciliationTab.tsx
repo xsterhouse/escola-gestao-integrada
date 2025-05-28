@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Filter, CheckCircle, AlertCircle, DollarSign, Eye, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +23,7 @@ interface BankTransaction {
   accountingEntryId?: string;
   paymentRegistered?: boolean;
   isDuplicate?: boolean;
+  duplicateJustification?: string;
   registeredBy?: string;
   registeredAt?: string;
 }
@@ -52,6 +52,11 @@ interface ViewModalData {
   isOpen: boolean;
 }
 
+interface DuplicatePaymentModalData {
+  transaction: BankTransaction | null;
+  isOpen: boolean;
+}
+
 export function BankReconciliationTab() {
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
   const [accountingEntries, setAccountingEntries] = useState<AccountingEntry[]>([]);
@@ -61,8 +66,10 @@ export function BankReconciliationTab() {
   const [showReconciled, setShowReconciled] = useState(false);
   const [deleteModal, setDeleteModal] = useState<DeleteModalData>({ transaction: null, isOpen: false });
   const [viewModal, setViewModal] = useState<ViewModalData>({ transaction: null, isOpen: false });
+  const [duplicatePaymentModal, setDuplicatePaymentModal] = useState<DuplicatePaymentModalData>({ transaction: null, isOpen: false });
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteReason, setDeleteReason] = useState("");
+  const [duplicateJustification, setDuplicateJustification] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -103,7 +110,7 @@ export function BankReconciliationTab() {
     });
   };
 
-  const handleRegisterPayment = (transaction: BankTransaction) => {
+  const checkForDuplicatePayment = (transaction: BankTransaction) => {
     const existingPayments = bankTransactions.filter(t => 
       t.paymentRegistered && 
       t.description === transaction.description && 
@@ -111,16 +118,22 @@ export function BankReconciliationTab() {
       t.id !== transaction.id
     );
 
-    const isDuplicate = existingPayments.length > 0;
+    return existingPayments.length > 0;
+  };
+
+  const handleRegisterPayment = (transaction: BankTransaction) => {
+    const isDuplicate = checkForDuplicatePayment(transaction);
     
     if (isDuplicate) {
-      toast({
-        title: "Aviso: Pagamento Duplicado",
-        description: "Este pagamento já foi registrado anteriormente. Registrando com alerta de duplicidade.",
-        variant: "destructive"
-      });
+      setDuplicatePaymentModal({ transaction, isOpen: true });
+      return;
     }
 
+    // Registrar pagamento normalmente
+    processPaymentRegistration(transaction, false);
+  };
+
+  const processPaymentRegistration = (transaction: BankTransaction, isDuplicate: boolean, justification?: string) => {
     // Atualizar a transação bancária
     const updatedTransactions = bankTransactions.map(t => 
       t.id === transaction.id 
@@ -128,6 +141,7 @@ export function BankReconciliationTab() {
             ...t, 
             paymentRegistered: true, 
             isDuplicate,
+            duplicateJustification: justification,
             registeredBy: user?.name || 'Sistema',
             registeredAt: new Date().toISOString()
           }
@@ -149,6 +163,8 @@ export function BankReconciliationTab() {
       bankAccountId: selectedBankAccount,
       expenseType: 'Outros',
       resourceCategory: 'Recursos Próprios',
+      isDuplicate,
+      duplicateJustification: justification,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -160,6 +176,23 @@ export function BankReconciliationTab() {
       title: "Pagamento registrado",
       description: isDuplicate ? "Pagamento registrado com alerta de duplicidade." : "Pagamento registrado com sucesso.",
     });
+  };
+
+  const handleConfirmDuplicatePayment = () => {
+    if (!duplicateJustification.trim()) {
+      toast({
+        title: "Justificativa obrigatória",
+        description: "Por favor, insira uma justificativa para o pagamento duplicado.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (duplicatePaymentModal.transaction) {
+      processPaymentRegistration(duplicatePaymentModal.transaction, true, duplicateJustification);
+      setDuplicatePaymentModal({ transaction: null, isOpen: false });
+      setDuplicateJustification("");
+    }
   };
 
   const handleViewTransaction = (transaction: BankTransaction) => {
@@ -367,7 +400,7 @@ export function BankReconciliationTab() {
                 getFilteredBankTransactions().map((transaction) => (
                   <TableRow 
                     key={transaction.id} 
-                    className={transaction.isDuplicate ? "bg-red-50 animate-pulse" : ""}
+                    className={transaction.isDuplicate ? "bg-red-50" : ""}
                   >
                     <TableCell className="font-medium">
                       {new Date(transaction.date).toLocaleDateString('pt-BR')}
@@ -505,6 +538,12 @@ export function BankReconciliationTab() {
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                   <Label className="text-sm font-medium text-red-800">⚠️ Pagamento em Duplicidade</Label>
                   <p className="text-sm text-red-600">Este pagamento foi identificado como duplicado.</p>
+                  {viewModal.transaction.duplicateJustification && (
+                    <div className="mt-2">
+                      <Label className="text-sm font-medium text-red-800">Justificativa:</Label>
+                      <p className="text-sm text-red-600">{viewModal.transaction.duplicateJustification}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -558,6 +597,51 @@ export function BankReconciliationTab() {
                 onClick={confirmDelete}
               >
                 Confirmar Exclusão
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Pagamento Duplicado */}
+      <Dialog open={duplicatePaymentModal.isOpen} onOpenChange={(open) => setDuplicatePaymentModal({ transaction: null, isOpen: open })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>⚠️ Pagamento Duplicado Detectado</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                Este pagamento já foi registrado anteriormente. Deseja continuar mesmo assim?
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="duplicate-justification">Justificativa para Pagamento Duplicado *</Label>
+              <Textarea
+                id="duplicate-justification"
+                value={duplicateJustification}
+                onChange={(e) => setDuplicateJustification(e.target.value)}
+                placeholder="Informe o motivo para registrar este pagamento em duplicidade"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDuplicatePaymentModal({ transaction: null, isOpen: false });
+                  setDuplicateJustification("");
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleConfirmDuplicatePayment}
+              >
+                Confirmar Pagamento Duplicado
               </Button>
             </div>
           </div>
