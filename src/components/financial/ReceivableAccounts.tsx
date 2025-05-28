@@ -168,23 +168,67 @@ export function ReceivableAccounts({
   
   const handleReceiptConfirm = (receiptData: any) => {
     if (selectedAccount) {
-      const updatedAccount = { 
-        ...selectedAccount, 
-        status: 'recebido' as const, 
-        receivedDate: new Date(), 
-        updatedAt: new Date(),
-        bankAccountId: receiptData.bankAccountId
-      };
+      if (receiptData.isPartial) {
+        // Handle partial payment
+        const updatedAccount = { 
+          ...selectedAccount, 
+          status: 'recebido' as const, 
+          receivedDate: new Date(), 
+          updatedAt: new Date(),
+          bankAccountId: receiptData.bankAccountId,
+          value: receiptData.partialAmount
+        };
 
-      // Update the receivable account
-      const updatedAccounts = receivableAccounts.map(account => 
-        account.id === selectedAccount.id ? updatedAccount : account
-      );
-      setReceivableAccounts(updatedAccounts);
+        // Create a new receivable for the remaining balance
+        const remainingReceivable: ReceivableAccount = {
+          id: `receivable-${Date.now()}-remaining`,
+          schoolId: selectedAccount.schoolId,
+          description: `${selectedAccount.description} (Saldo Restante)`,
+          origin: selectedAccount.origin,
+          expectedDate: selectedAccount.expectedDate,
+          value: receiptData.remainingBalance,
+          resourceType: selectedAccount.resourceType,
+          status: 'pendente',
+          notes: `Saldo restante de recebimento parcial. Valor original: ${formatCurrency(selectedAccount.value)}`,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
 
-      // Call the onUpdateReceivable callback to trigger automatic bank transaction
-      if (onUpdateReceivable) {
-        onUpdateReceivable(updatedAccount, receiptData.bankAccountId);
+        // Update the accounts list
+        const updatedAccounts = receivableAccounts.map(account => 
+          account.id === selectedAccount.id ? updatedAccount : account
+        );
+        updatedAccounts.push(remainingReceivable);
+        setReceivableAccounts(updatedAccounts);
+
+        // Call the onUpdateReceivable callback for the paid portion
+        if (onUpdateReceivable) {
+          onUpdateReceivable(updatedAccount, receiptData.bankAccountId);
+        }
+
+        toast.success(`Recebimento parcial registrado! Saldo restante: ${formatCurrency(receiptData.remainingBalance)}`);
+      } else {
+        // Handle full payment
+        const updatedAccount = { 
+          ...selectedAccount, 
+          status: 'recebido' as const, 
+          receivedDate: new Date(), 
+          updatedAt: new Date(),
+          bankAccountId: receiptData.bankAccountId
+        };
+
+        // Update the receivable account
+        const updatedAccounts = receivableAccounts.map(account => 
+          account.id === selectedAccount.id ? updatedAccount : account
+        );
+        setReceivableAccounts(updatedAccounts);
+
+        // Call the onUpdateReceivable callback
+        if (onUpdateReceivable) {
+          onUpdateReceivable(updatedAccount, receiptData.bankAccountId);
+        }
+
+        toast.success("Recebimento registrado com sucesso!");
       }
 
       setIsReceiptConfirmOpen(false);
@@ -195,8 +239,6 @@ export function ReceivableAccounts({
       if (onNavigateToBankReconciliation) {
         onNavigateToBankReconciliation();
       }
-      
-      toast.success("Recebimento registrado com sucesso! Lançamento automático criado na conciliação bancária.");
     }
   };
 

@@ -20,13 +20,20 @@ import {
 } from "@/components/ui/select";
 import { ReceivableAccount, BankAccount } from "@/lib/types";
 import { format } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 
 interface ReceiptRegistrationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   account: ReceivableAccount | null;
   bankAccounts: BankAccount[];
-  onConfirm: (receiptData: { bankAccountId: string }) => void;
+  onConfirm: (receiptData: { 
+    bankAccountId: string; 
+    isPartial: boolean; 
+    partialAmount?: number; 
+    remainingBalance?: number;
+  }) => void;
 }
 
 export function ReceiptRegistrationDialog({
@@ -37,6 +44,8 @@ export function ReceiptRegistrationDialog({
   onConfirm,
 }: ReceiptRegistrationDialogProps) {
   const [selectedBankAccount, setSelectedBankAccount] = useState<string>("");
+  const [isPartialPayment, setIsPartialPayment] = useState<boolean>(false);
+  const [partialAmount, setPartialAmount] = useState<string>("");
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -46,10 +55,37 @@ export function ReceiptRegistrationDialog({
   };
 
   const handleConfirm = () => {
-    if (selectedBankAccount) {
-      onConfirm({ bankAccountId: selectedBankAccount });
-      setSelectedBankAccount("");
+    if (!selectedBankAccount) {
+      toast.error("Selecione uma conta bancária");
+      return;
     }
+
+    if (!account) return;
+
+    if (isPartialPayment) {
+      const partial = parseFloat(partialAmount);
+      if (!partial || partial <= 0 || partial > account.value) {
+        toast.error("Valor parcial inválido");
+        return;
+      }
+      
+      const remainingBalance = account.value - partial;
+      onConfirm({ 
+        bankAccountId: selectedBankAccount, 
+        isPartial: true, 
+        partialAmount: partial,
+        remainingBalance 
+      });
+    } else {
+      onConfirm({ 
+        bankAccountId: selectedBankAccount, 
+        isPartial: false 
+      });
+    }
+    
+    setSelectedBankAccount("");
+    setIsPartialPayment(false);
+    setPartialAmount("");
   };
 
   // Get selected bank account details
@@ -84,9 +120,46 @@ export function ReceiptRegistrationDialog({
                 <Input value={format(new Date(account.expectedDate), 'dd/MM/yyyy')} readOnly />
               </div>
               <div>
-                <Label>Valor</Label>
+                <Label>Valor Total</Label>
                 <Input value={formatCurrency(account.value)} readOnly />
               </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="partialPayment"
+                  checked={isPartialPayment}
+                  onCheckedChange={(checked) => setIsPartialPayment(checked as boolean)}
+                />
+                <Label htmlFor="partialPayment">Recebimento Parcial</Label>
+              </div>
+
+              {isPartialPayment && (
+                <div className="space-y-2">
+                  <Label htmlFor="partialAmount">Valor a Receber</Label>
+                  <Input
+                    id="partialAmount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={account.value}
+                    value={partialAmount}
+                    onChange={(e) => setPartialAmount(e.target.value)}
+                    placeholder="Digite o valor parcial"
+                  />
+                  {partialAmount && parseFloat(partialAmount) > 0 && parseFloat(partialAmount) < account.value && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-sm text-amber-700">
+                        <strong>Saldo Restante:</strong> {formatCurrency(account.value - parseFloat(partialAmount))}
+                      </p>
+                      <p className="text-xs text-amber-600 mt-1">
+                        Uma nova conta a receber será criada automaticamente para o saldo restante.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             
             <div className="grid grid-cols-2 gap-4">

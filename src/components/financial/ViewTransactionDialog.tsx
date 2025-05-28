@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { BankTransaction } from "@/lib/types";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, FileText } from "lucide-react";
+import { generateTransactionPDF } from "@/lib/transaction-pdf-utils";
+import { toast } from "sonner";
 
 interface ViewTransactionDialogProps {
   isOpen: boolean;
@@ -28,6 +30,27 @@ export function ViewTransactionDialog({
       style: 'currency',
       currency: 'BRL'
     }).format(value);
+  };
+
+  const handleExportPDF = () => {
+    if (!transaction) return;
+
+    try {
+      // In a real application, these would come from your context/state
+      const schoolName = "Escola Municipal Exemplo"; // This should come from your app context
+      const purchasingCenter = "Central de Compras Regional Norte"; // This should come from your app context
+      
+      generateTransactionPDF({
+        schoolName,
+        purchasingCenter,
+        transaction
+      });
+      
+      toast.success("PDF exportado com sucesso!");
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error);
+      toast.error("Erro ao exportar PDF. Tente novamente.");
+    }
   };
 
   if (!transaction) return null;
@@ -123,7 +146,11 @@ export function ViewTransactionDialog({
           </div>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={handleExportPDF}>
+            <FileText className="mr-2 h-4 w-4" />
+            Exportar PDF
+          </Button>
           <Button onClick={onClose}>
             Fechar
           </Button>
