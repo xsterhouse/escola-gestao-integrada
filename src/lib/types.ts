@@ -93,7 +93,7 @@ export interface Supplier {
   id: string;
   cnpj: string;
   razaoSocial: string;
-  name: string; // Add name property
+  name: string;
   endereco: string;
   telefone: string;
   email: string;
@@ -159,12 +159,12 @@ export interface InvoiceItem {
   invoiceId: string;
   productId: string;
   productName: string;
-  description: string; // Add description property
+  description: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
   unit: string;
-  unitOfMeasure: string; // Add unitOfMeasure property
+  unitOfMeasure: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -172,7 +172,7 @@ export interface InvoiceItem {
 export interface Invoice {
   id: string;
   number: string;
-  danfeNumber: string; // Add danfeNumber property
+  danfeNumber: string;
   supplierId: string;
   supplier: Supplier;
   issueDate: Date;
@@ -181,7 +181,9 @@ export interface Invoice {
   status: 'pendente' | 'aprovada' | 'rejeitada';
   items: InvoiceItem[];
   xmlContent?: string;
-  isActive?: boolean; // Add isActive property
+  isActive?: boolean;
+  financialProgramming?: string;
+  approvedBy?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -189,7 +191,7 @@ export interface Invoice {
 export interface InvoiceData {
   id: string;
   number: string;
-  supplier: Supplier; // Change to Supplier object instead of string
+  supplier: Supplier;
   dataEmissao: Date;
   numeroDanfe: string;
   valorTotal: number;
@@ -201,19 +203,19 @@ export interface InventoryMovement {
   id: string;
   productId: string;
   productName: string;
-  productDescription: string; // Add productDescription property
+  productDescription: string;
   movementType: 'entrada' | 'saida';
-  type: 'entrada' | 'saida'; // Add type property as alias
+  type: 'entrada' | 'saida';
   quantity: number;
   unitPrice: number;
   totalValue: number;
-  totalCost: number; // Add totalCost property
+  totalCost: number;
   reason: string;
   invoiceId?: string;
   date: Date;
   createdBy: string;
-  source: 'manual' | 'invoice' | 'system'; // Add source property
-  unitOfMeasure: string; // Add unitOfMeasure property
+  source: 'manual' | 'invoice' | 'system';
+  unitOfMeasure: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -225,8 +227,15 @@ export interface InventoryReport {
   generatedAt: Date;
   generatedBy: string;
   data: any;
-  productName?: string; // Add productName property
-  productCode?: string; // Add productCode property
+  productName?: string;
+  productCode?: string;
+  // Additional properties used in components
+  lastEntryDate?: Date;
+  supplierCode?: string;
+  supplierName?: string;
+  currentQuantity?: number;
+  unitCost?: number;
+  totalCost?: number;
 }
 
 export interface PurchaseReport {
@@ -236,8 +245,15 @@ export interface PurchaseReport {
   generatedAt: Date;
   generatedBy: string;
   data: any;
-  description?: string; // Add description property
-  productCode?: string; // Add productCode property
+  description?: string;
+  productCode?: string;
+  // Additional properties used in components
+  supplier?: string;
+  entryDate?: Date;
+  quantity?: number;
+  unitOfMeasure?: string;
+  value?: number;
+  currentBalance?: number;
 }
 
 export interface DeletionHistory {
@@ -248,9 +264,9 @@ export interface DeletionHistory {
   deletedAt: Date;
   deletedBy: string;
   reason: string;
-  danfeNumber?: string; // Add danfeNumber property
-  supplierName?: string; // Add supplierName property
-  totalValue?: number; // Add totalValue property
+  danfeNumber?: string;
+  supplierName?: string;
+  totalValue?: number;
 }
 
 // Dashboard related types
@@ -261,9 +277,9 @@ export interface DashboardMetric {
   type: 'currency' | 'number' | 'percentage';
   trend: 'up' | 'down' | 'stable';
   change: number;
-  icon?: string; // Add icon property
-  additionalInfo?: string; // Add additionalInfo property
-  color?: string; // Add color property
+  icon?: string;
+  additionalInfo?: string;
+  color?: string;
 }
 
 // Financial reports types
@@ -273,4 +289,3 @@ export interface FinancialReportFilter {
   accountType?: string;
   status?: string;
 }
-
