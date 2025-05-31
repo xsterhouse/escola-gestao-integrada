@@ -159,26 +159,26 @@ export interface ContractFilter {
 export interface InvoiceItem {
   id: string;
   invoiceId: string;
-  productId: string;
-  productName: string;
+  productId?: string;
+  productName?: string;
   description: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
-  unit: string;
+  unit?: string;
   unitOfMeasure: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface Invoice {
   id: string;
-  number: string;
+  number?: string;
   danfeNumber: string;
   supplierId: string;
   supplier: Supplier;
   issueDate: Date;
-  dueDate: Date;
+  dueDate?: Date;
   totalValue: number;
   status: 'pendente' | 'aprovada' | 'rejeitada';
   items: InvoiceItem[];
@@ -205,19 +205,19 @@ export interface InvoiceData {
 // Inventory related types
 export interface InventoryMovement {
   id: string;
-  productId: string;
-  productName: string;
+  productId?: string;
+  productName?: string;
   productDescription: string;
-  movementType: 'entrada' | 'saida';
+  movementType?: 'entrada' | 'saida';
   type: 'entrada' | 'saida';
   quantity: number;
   unitPrice: number;
-  totalValue: number;
+  totalValue?: number;
   totalCost: number;
-  reason: string;
+  reason?: string;
   invoiceId?: string;
   date: Date;
-  createdBy: string;
+  createdBy?: string;
   source: 'manual' | 'invoice' | 'system';
   unitOfMeasure: string;
   requestId?: string;
@@ -226,12 +226,12 @@ export interface InventoryMovement {
 }
 
 export interface InventoryReport {
-  id: string;
-  name: string;
-  type: 'estoque' | 'movimentacao';
-  generatedAt: Date;
-  generatedBy: string;
-  data: any;
+  id?: string;
+  name?: string;
+  type?: 'estoque' | 'movimentacao';
+  generatedAt?: Date;
+  generatedBy?: string;
+  data?: any;
   productName?: string;
   productCode?: string;
   // Additional properties used in components
@@ -244,12 +244,12 @@ export interface InventoryReport {
 }
 
 export interface PurchaseReport {
-  id: string;
-  name: string;
-  type: 'compras';
-  generatedAt: Date;
-  generatedBy: string;
-  data: any;
+  id?: string;
+  name?: string;
+  type?: 'compras';
+  generatedAt?: Date;
+  generatedBy?: string;
+  data?: any;
   description?: string;
   productCode?: string;
   // Additional properties used in components
@@ -313,6 +313,7 @@ export interface School {
   cityState?: string;
   logo?: string;
   purchasingCenterId?: string;
+  status?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -402,3 +403,96 @@ export interface Product {
   updatedAt: Date;
 }
 
+// User types
+export interface Permission {
+  id: string;
+  name: string;
+  hasAccess: boolean;
+}
+
+export interface DetailedPermission {
+  moduleId: string;
+  moduleName: string;
+  view: boolean;
+  create: boolean;
+  edit: boolean;
+  delete: boolean;
+  read: boolean;
+}
+
+export interface ModuleRestriction {
+  schoolOnly?: boolean;
+  purchasingCenterOnly?: boolean;
+  readOnly?: boolean;
+  createOnly?: boolean;
+  updateOnly?: boolean;
+  deleteOnly?: boolean;
+}
+
+export interface UserModulePermission {
+  userId: string;
+  moduleId: string;
+  hasAccess: boolean;
+  restrictions?: ModuleRestriction;
+  grantedBy?: string;
+  grantedAt?: Date;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  matricula: string;
+  email: string;
+  role: string;
+  profileId?: string;
+  schoolId: string | null;
+  permissions: Permission[];
+  modulePermissions?: UserModulePermission[];
+  status?: "active" | "inactive";
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UserRole {
+  id: string;
+  name: string;
+  description: string;
+  detailedPermissions: DetailedPermission[];
+  moduleAccess?: {
+    [moduleId: string]: {
+      hasAccess: boolean;
+      restrictions?: ModuleRestriction;
+    };
+  };
+}
+
+export interface SystemUser {
+  id: string;
+  name: string;
+  matricula: string;
+  password: string;
+  profileId?: string;
+  schoolId: string | null;
+  purchasingCenterIds?: string[];
+  isLinkedToPurchasing: boolean;
+  status: "active" | "blocked";
+  modulePermissions?: UserModulePermission[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ModulePermission {
+  id: string;
+  name: string;
+  description: string;
+  hasAccess: boolean;
+}
+
+export interface PurchasingCenter {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
