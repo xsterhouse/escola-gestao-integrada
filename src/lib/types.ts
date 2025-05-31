@@ -1,5 +1,4 @@
 
-
 export interface BankAccount {
   id: string;
   schoolId: string;
@@ -97,6 +96,8 @@ export interface Supplier {
   endereco: string;
   telefone: string;
   email: string;
+  address?: string; // Alias for endereco
+  phone?: string; // Alias for telefone
   createdAt: Date;
   updatedAt: Date;
 }
@@ -184,6 +185,8 @@ export interface Invoice {
   isActive?: boolean;
   financialProgramming?: string;
   approvedBy?: string;
+  approvedAt?: Date;
+  rejectionReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -216,6 +219,7 @@ export interface InventoryMovement {
   createdBy: string;
   source: 'manual' | 'invoice' | 'system';
   unitOfMeasure: string;
+  requestId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -266,7 +270,10 @@ export interface DeletionHistory {
   reason: string;
   danfeNumber?: string;
   supplierName?: string;
+  supplierCnpj?: string;
   totalValue?: number;
+  issueDate?: Date;
+  items?: any[];
 }
 
 // Dashboard related types
@@ -288,4 +295,53 @@ export interface FinancialReportFilter {
   endDate?: Date;
   accountType?: string;
   status?: string;
+}
+
+// Planning related types
+export interface School {
+  id: string;
+  name: string;
+  code: string;
+  address: string;
+  phone: string;
+  email: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ATAItem {
+  id: string;
+  nome: string;
+  unidade: string;
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+  descricao?: string;
+  saldoDisponivel: number;
+}
+
+export interface ATAContract {
+  id: string;
+  schoolId: string;
+  numeroProcesso: string;
+  fornecedor: string;
+  dataATA: Date;
+  dataInicioVigencia: Date;
+  dataFimVigencia: Date;
+  observacoes?: string;
+  items: ATAItem[];
+  status: 'ativo' | 'encerrado' | 'vencido' | 'liquidado';
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Planning {
+  id: string;
+  schoolId: string;
+  ataNumber?: string;
+  status: 'draft' | 'finalized';
+  createdAt: Date;
+  updatedAt: Date;
+  finalizedAt?: Date;
 }
