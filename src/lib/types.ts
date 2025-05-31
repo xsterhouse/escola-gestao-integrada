@@ -1,4 +1,5 @@
 
+
 export interface BankAccount {
   id: string;
   schoolId: string;
@@ -345,11 +346,22 @@ export interface ATAContract {
 
 export interface PlanningItem {
   id: string;
-  nome: string;
-  unidade: string;
-  quantidade: number;
-  valorUnitario: number;
-  valorTotal: number;
+  name: string;
+  unit: string;
+  quantity: number;
+  unitPrice?: number;
+  totalPrice?: number;
+  description?: string;
+  availableQuantity?: number;
+  planningId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  // Portuguese aliases for compatibility
+  nome?: string;
+  unidade?: string;
+  quantidade?: number;
+  valorUnitario?: number;
+  valorTotal?: number;
   descricao?: string;
   saldoDisponivel?: number;
 }
@@ -369,18 +381,24 @@ export interface Planning {
 // Product related types
 export interface Product {
   id: string;
-  name: string;
-  description?: string;
+  item: number;
+  name?: string;
+  description: string;
   code?: string;
   category?: string;
   unit: string;
+  quantity?: string;
   unitPrice?: number;
   currentStock?: number;
   minStock?: number;
   maxStock?: number;
   supplier?: string;
   barcode?: string;
-  isActive: boolean;
+  isActive?: boolean;
+  familyAgriculture: boolean;
+  indication?: string;
+  restriction?: string;
   createdAt: Date;
   updatedAt: Date;
 }
+
