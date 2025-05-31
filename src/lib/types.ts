@@ -305,6 +305,13 @@ export interface School {
   address: string;
   phone: string;
   email: string;
+  cnpj?: string;
+  responsibleName?: string;
+  tradingName?: string;
+  director?: string;
+  cityState?: string;
+  logo?: string;
+  purchasingCenterId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -336,12 +343,44 @@ export interface ATAContract {
   updatedAt: Date;
 }
 
+export interface PlanningItem {
+  id: string;
+  nome: string;
+  unidade: string;
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+  descricao?: string;
+  saldoDisponivel?: number;
+}
+
 export interface Planning {
   id: string;
   schoolId: string;
   ataNumber?: string;
   status: 'draft' | 'finalized';
+  items?: PlanningItem[];
+  finalizedBy?: string;
   createdAt: Date;
   updatedAt: Date;
   finalizedAt?: Date;
+}
+
+// Product related types
+export interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  code?: string;
+  category?: string;
+  unit: string;
+  unitPrice?: number;
+  currentStock?: number;
+  minStock?: number;
+  maxStock?: number;
+  supplier?: string;
+  barcode?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
