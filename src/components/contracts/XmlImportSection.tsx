@@ -38,12 +38,17 @@ export function XmlImportSection({ onImport }: XmlImportSectionProps) {
     setTimeout(() => {
       const mockInvoiceData: InvoiceData = {
         id: Date.now().toString(),
+        number: "NF123456",
         supplier: {
+          id: "supplier-1",
           cnpj: "12.345.678/0001-90",
           razaoSocial: "Fornecedor Exemplo Ltda",
+          name: "Fornecedor Exemplo Ltda",
           endereco: "Rua das Flores, 123 - Centro",
           telefone: "(11) 1234-5678",
-          email: "contato@fornecedor.com.br"
+          email: "contato@fornecedor.com.br",
+          createdAt: new Date(),
+          updatedAt: new Date()
         },
         dataEmissao: new Date(),
         numeroDanfe: "123456789",

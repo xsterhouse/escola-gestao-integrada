@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { FileUp, Upload, X, Check } from "lucide-react";
 import { BankAccount, BankTransaction } from "@/lib/types";
@@ -77,6 +76,7 @@ export function ImportStatementModal({
           value: 1250.50,
           transactionType: "credito",
           reconciliationStatus: "pendente",
+          source: "manual",
           createdAt: new Date(),
           updatedAt: new Date()
         },
@@ -89,6 +89,7 @@ export function ImportStatementModal({
           value: 546.78,
           transactionType: "debito",
           reconciliationStatus: "pendente",
+          source: "manual",
           createdAt: new Date(),
           updatedAt: new Date()
         },
@@ -101,6 +102,7 @@ export function ImportStatementModal({
           value: 45.90,
           transactionType: "debito",
           reconciliationStatus: "pendente",
+          source: "manual",
           createdAt: new Date(),
           updatedAt: new Date()
         }

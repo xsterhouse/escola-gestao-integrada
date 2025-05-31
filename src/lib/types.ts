@@ -382,7 +382,7 @@ export interface Planning {
 // Product related types
 export interface Product {
   id: string;
-  item: number;
+  item?: number;
   name?: string;
   description: string;
   code?: string;
@@ -486,6 +486,10 @@ export interface ModulePermission {
   name: string;
   description: string;
   hasAccess: boolean;
+  create?: boolean;
+  read?: boolean;
+  update?: boolean;
+  delete?: boolean;
 }
 
 export interface PurchasingCenter {
@@ -493,6 +497,19 @@ export interface PurchasingCenter {
   name: string;
   code: string;
   description?: string;
+  schoolIds?: string[];
+  status?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface TransferRecord {
+  id: string;
+  fromSchoolId: string;
+  toSchoolId: string;
+  planningId: string;
+  transferredAt: Date;
+  transferredBy: string;
+  items: PlanningItem[];
+  notes?: string;
 }

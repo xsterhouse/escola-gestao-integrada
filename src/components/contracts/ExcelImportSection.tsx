@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -169,6 +168,7 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
           id: "fornecedor-1",
           cnpj: "12.345.678/0001-90",
           razaoSocial: "PAULISTA INDÚSTRIA E COMÉRCIO DE ALIMENTOS LTDA",
+          name: "PAULISTA INDÚSTRIA E COMÉRCIO DE ALIMENTOS LTDA",
           endereco: "Rua das Indústrias, 123 - São Paulo/SP",
           telefone: "(11) 1234-5678",
           email: "contato@paulista.com.br",

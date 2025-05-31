@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Check, X } from "lucide-react";
@@ -59,6 +58,7 @@ export function NewTransactionModal({
       value: parseFloat(value),
       transactionType,
       reconciliationStatus: "pendente",
+      source: "manual",
       createdAt: new Date(),
       updatedAt: new Date()
     };

@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User, School } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -82,9 +81,12 @@ const getStoredSchools = (): School[] => {
     {
       id: "1",
       name: "Escola Municipal João da Silva",
+      code: "ESC001",
+      address: "Rua das Flores, 123 - Centro",
+      phone: "(11) 1234-5678",
+      email: "contato@joaodasilva.edu.br",
       cnpj: "12.345.678/0001-90",
       responsibleName: "Maria Oliveira",
-      email: "contato@joaodasilva.edu.br",
       status: "active",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -92,9 +94,12 @@ const getStoredSchools = (): School[] => {
     {
       id: "2",
       name: "Colégio Estadual Paulo Freire",
+      code: "ESC002",
+      address: "Av. Paulo Freire, 456 - Cidade Nova",
+      phone: "(11) 5678-9012",
+      email: "contato@paulofreire.edu.br",
       cnpj: "98.765.432/0001-10",
       responsibleName: "Carlos Santos",
-      email: "contato@paulofreire.edu.br",
       status: "active",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -102,9 +107,12 @@ const getStoredSchools = (): School[] => {
     {
       id: "3",
       name: "Escola Municipal Maria José",
+      code: "ESC003",
+      address: "Rua Maria José, 789 - Vila Verde",
+      phone: "(11) 9012-3456",
+      email: "contato@mariajose.edu.br",
       cnpj: "45.678.901/0001-23",
       responsibleName: "Pedro Alves",
-      email: "contato@mariajose.edu.br",
       status: "active",
       createdAt: new Date(),
       updatedAt: new Date(),
