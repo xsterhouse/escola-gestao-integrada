@@ -92,6 +92,16 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
       return;
     }
 
+    if (!formData.schoolId || formData.schoolId === "none") {
+      alert("Selecione uma escola");
+      return;
+    }
+
+    if (formData.purchasingCenterIds.length === 0) {
+      alert("Selecione pelo menos uma central de compras");
+      return;
+    }
+
     onSave(formData);
     handleClose();
   };
@@ -143,13 +153,12 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="school">Escola</Label>
+            <Label htmlFor="school">Escola *</Label>
             <Select value={formData.schoolId} onValueChange={handleSchoolChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione uma escola (opcional)" />
+                <SelectValue placeholder="Selecione uma escola" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Nenhuma escola</SelectItem>
                 {schools.map((school) => (
                   <SelectItem key={school.id} value={school.id}>
                     {school.name}
@@ -159,28 +168,35 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
             </Select>
           </div>
 
-          {formData.schoolId && formData.schoolId !== "none" && availablePurchasingCenters.length > 0 && (
+          {formData.schoolId && formData.schoolId !== "none" && (
             <div className="space-y-2">
-              <Label>Centrais de Compras</Label>
-              <div className="space-y-2 border rounded-md p-3">
-                {availablePurchasingCenters.map((center) => (
-                  <div key={center.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`center-${center.id}`}
-                      checked={formData.purchasingCenterIds.includes(center.id)}
-                      onCheckedChange={(checked) => 
-                        handlePurchasingCenterChange(center.id, checked as boolean)
-                      }
-                    />
-                    <Label 
-                      htmlFor={`center-${center.id}`}
-                      className="text-sm font-normal"
-                    >
-                      {center.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
+              <Label>Centrais de Compras *</Label>
+              {availablePurchasingCenters.length > 0 ? (
+                <div className="space-y-2 border rounded-md p-3">
+                  {availablePurchasingCenters.map((center) => (
+                    <div key={center.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`center-${center.id}`}
+                        checked={formData.purchasingCenterIds.includes(center.id)}
+                        onCheckedChange={(checked) => 
+                          handlePurchasingCenterChange(center.id, checked as boolean)
+                        }
+                      />
+                      <Label 
+                        htmlFor={`center-${center.id}`}
+                        className="text-sm font-normal"
+                      >
+                        {center.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 p-3 border rounded-md bg-gray-50">
+                  Nenhuma central de compras disponível para esta escola. 
+                  Configure as centrais de compras primeiro na aba "Central de Compras".
+                </div>
+              )}
             </div>
           )}
 
