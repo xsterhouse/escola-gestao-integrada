@@ -93,10 +93,13 @@ export function SchoolForm({
     try {
       onSave({
         name,
+        code: cnpj.replace(/\D/g, '').substring(0, 8), // Generate code from CNPJ
         cnpj,
         responsibleName,
         email,
-        status: "active", // Adding the required status property with default value "active"
+        address: "",
+        phone: "",
+        status: "active",
       });
       
       toast({

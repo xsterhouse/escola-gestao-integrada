@@ -1,4 +1,3 @@
-
 import { Planning, PlanningItem, TransferRecord } from "@/lib/types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -13,11 +12,11 @@ export const saveTransferRecord = (
     id: uuidv4(),
     fromSchoolId,
     toSchoolId,
-    planningItemId: itemId,
-    quantity,
+    planningId: itemId,
     transferredAt: new Date(),
-    transferredBy: userName, // In a real app, use the actual user name
-    createdAt: new Date(),
+    transferredBy: userName,
+    items: [],
+    notes: "",
   };
   
   // Save to localStorage

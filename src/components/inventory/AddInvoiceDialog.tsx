@@ -75,6 +75,11 @@ export function AddInvoiceDialog({ open, onOpenChange, onSubmit }: AddInvoiceDia
       totalPrice: item.quantity * item.unitPrice,
       unitOfMeasure: item.unitOfMeasure,
       invoiceId: "",
+      productId: undefined,
+      productName: undefined,
+      unit: item.unitOfMeasure,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }));
 
     const totalValue = items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -83,13 +88,23 @@ export function AddInvoiceDialog({ open, onOpenChange, onSubmit }: AddInvoiceDia
       id: uuidv4(),
       name: values.supplier.name,
       cnpj: values.supplier.cnpj,
+      razaoSocial: values.supplier.name,
+      endereco: "",
+      telefone: "",
+      email: "",
+      address: "",
+      phone: "",
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     const invoice: Invoice = {
       id: uuidv4(),
+      number: undefined,
       supplierId: supplier.id,
       supplier,
       issueDate: new Date(values.issueDate),
+      dueDate: undefined,
       danfeNumber: values.danfeNumber,
       totalValue,
       items,

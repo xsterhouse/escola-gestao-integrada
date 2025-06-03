@@ -43,6 +43,9 @@ export default function Inventory() {
       // Criar registro no histórico de exclusões
       const deletionRecord: DeletionHistory = {
         id: uuidv4(),
+        entityType: "invoice",
+        entityId: invoiceToDelete.id,
+        entityName: `NF ${invoiceToDelete.danfeNumber}`,
         danfeNumber: invoiceToDelete.danfeNumber,
         supplierName: invoiceToDelete.supplier.name,
         supplierCnpj: invoiceToDelete.supplier.cnpj,

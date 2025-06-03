@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Dialog, 
@@ -60,6 +59,12 @@ export function ModernUserForm({
     { id: "2", name: "Produtos", description: "Gestão de produtos", create: false, read: true, update: false, delete: false },
     { id: "3", name: "Estoque", description: "Controle de estoque", create: false, read: true, update: false, delete: false },
   ]);
+
+  const defaultModulePermissions: ModulePermission[] = [
+    { id: "dashboard", name: "Dashboard", description: "Acesso ao painel principal", hasAccess: true, create: true, read: true, update: false, delete: false },
+    { id: "planning", name: "Planejamento", description: "Gestão de planejamentos", hasAccess: true, create: false, read: true, update: false, delete: false },
+    { id: "inventory", name: "Estoque", description: "Controle de estoque", hasAccess: true, create: false, read: true, update: false, delete: false },
+  ];
 
   const generatePassword = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";

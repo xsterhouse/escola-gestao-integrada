@@ -1,356 +1,256 @@
-
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { v4 as uuidv4 } from "uuid";
+import { PurchasingCenter } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Pencil, Trash2, Plus, School as SchoolIcon, Ban, ShieldCheck } from "lucide-react";
-import { PurchasingCenter, School } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
+import { Trash } from "lucide-react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+
+const formSchema = z.object({
+  name: z.string().min(2, {
+    message: "Nome deve ter pelo menos 2 caracteres.",
+  }),
+  description: z.string().optional(),
+  schoolIds: z.array(z.string()).optional(),
+});
+
+interface PurchasingCenterFormValues {
+  name: string;
+  description?: string;
+  schoolIds?: string[];
+}
 
 export function PurchasingCenterTab() {
+  const [open, setOpen] = useState(false);
+  const [editingCenter, setEditingCenter] = useState<PurchasingCenter | null>(null);
   const { toast } = useToast();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [currentCenter, setCurrentCenter] = useState<PurchasingCenter | null>(null);
-  
-  const { data: purchasingCenters, saveData: setPurchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasingCenters', []);
-  const { data: schools } = useLocalStorageSync<School>('schools', []);
+  const { data: centers, saveData: setCenters } = useLocalStorageSync<PurchasingCenter>('purchasing-centers', []);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    schoolIds: [] as string[]
+  const form = useForm<PurchasingCenterFormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      schoolIds: [],
+    },
   });
 
-  const handleOpenModal = (center?: PurchasingCenter) => {
-    if (center) {
-      setCurrentCenter(center);
+  const [formData, setFormData] = useState<PurchasingCenterFormValues>({
+    name: "",
+    description: "",
+    schoolIds: [],
+  });
+
+  useEffect(() => {
+    if (editingCenter) {
       setFormData({
-        name: center.name,
-        description: center.description,
-        schoolIds: [...center.schoolIds]
+        name: editingCenter.name,
+        description: editingCenter.description || "",
+        schoolIds: editingCenter.schoolIds || [],
       });
-      setIsEditMode(true);
     } else {
-      setCurrentCenter(null);
       setFormData({
         name: "",
         description: "",
-        schoolIds: []
+        schoolIds: [],
       });
-      setIsEditMode(false);
     }
-    setIsModalOpen(true);
+  }, [editingCenter]);
+
+  const handleOpen = () => {
+    setEditingCenter(null);
+    setOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleEdit = (center: PurchasingCenter) => {
+    setEditingCenter(center);
+    setOpen(true);
   };
 
-  const handleFormChange = (field: string, value: string | string[]) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleClose = () => {
+    setOpen(false);
+    setEditingCenter(null);
   };
 
-  const handleToggleSchool = (schoolId: string, checked: boolean) => {
-    if (checked) {
-      setFormData(prev => ({
-        ...prev,
-        schoolIds: [...prev.schoolIds, schoolId]
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        schoolIds: prev.schoolIds.filter(id => id !== schoolId)
-      }));
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveCenter = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name) {
+  const handleSave = () => {
+    if (!formData.name.trim()) {
       toast({
-        title: "Campo obrigatório",
-        description: "O nome da Central de Compras é obrigatório.",
-        variant: "destructive"
+        title: "Erro",
+        description: "Nome da central é obrigatório.",
+        variant: "destructive",
       });
       return;
     }
 
-    if (formData.schoolIds.length === 0) {
-      toast({
-        title: "Escolas não selecionadas",
-        description: "Selecione pelo menos uma escola para a Central de Compras.",
-        variant: "destructive"
-      });
-      return;
-    }
+    const centerData: PurchasingCenter = {
+      id: editingCenter?.id || uuidv4(),
+      name: formData.name,
+      code: formData.name.replace(/\s+/g, '').substring(0, 10).toUpperCase(), // Generate code from name
+      description: formData.description,
+      schoolIds: formData.schoolIds,
+      status: "active",
+      createdAt: editingCenter?.createdAt || new Date(),
+      updatedAt: new Date(),
+    };
 
-    if (isEditMode && currentCenter) {
+    if (editingCenter) {
       // Update existing center
-      const updatedCenters = purchasingCenters.map(center => 
-        center.id === currentCenter.id
-          ? {
-              ...center,
-              name: formData.name,
-              description: formData.description,
-              schoolIds: formData.schoolIds,
-              updatedAt: new Date()
-            }
-          : center
+      const updatedCenters = centers.map(center =>
+        center.id === editingCenter.id ? centerData : center
       );
-      setPurchasingCenters(updatedCenters);
+      setCenters(updatedCenters);
       toast({
-        title: "Central de Compras atualizada",
-        description: "A Central de Compras foi atualizada com sucesso."
+        title: "Central atualizada",
+        description: "Central de compras atualizada com sucesso.",
       });
     } else {
       // Create new center
-      const newCenter: PurchasingCenter = {
-        id: Date.now().toString(),
-        name: formData.name,
-        description: formData.description,
-        schoolIds: formData.schoolIds,
-        status: "active",
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      setPurchasingCenters([...purchasingCenters, newCenter]);
+      setCenters([...centers, centerData]);
       toast({
-        title: "Central de Compras criada",
-        description: "A Central de Compras foi criada com sucesso."
+        title: "Central criada",
+        description: "Central de compras criada com sucesso.",
       });
     }
 
-    setIsModalOpen(false);
+    handleClose();
   };
 
-  const handleToggleStatus = (id: string, newStatus: "active" | "inactive") => {
-    const updatedCenters = purchasingCenters.map(center => 
-      center.id === id
-        ? { ...center, status: newStatus, updatedAt: new Date() }
-        : center
-    );
-    setPurchasingCenters(updatedCenters);
-    toast({
-      title: newStatus === "active" ? "Central de Compras ativada" : "Central de Compras desativada",
-      description: `O status da Central de Compras foi alterado para ${newStatus === "active" ? "ativo" : "inativo"}.`
-    });
-  };
-
-  const handleDeleteCenter = (id: string) => {
-    if (window.confirm("Tem certeza que deseja excluir esta Central de Compras? Esta ação não pode ser desfeita.")) {
-      const updatedCenters = purchasingCenters.filter(center => center.id !== id);
-      setPurchasingCenters(updatedCenters);
+  const handleDelete = (id: string) => {
+    if (window.confirm("Tem certeza que deseja excluir esta central?")) {
+      const updatedCenters = centers.filter(center => center.id !== id);
+      setCenters(updatedCenters);
       toast({
-        title: "Central de Compras excluída",
-        description: "A Central de Compras foi excluída com sucesso."
+        title: "Central excluída",
+        description: "Central de compras excluída com sucesso.",
       });
     }
-  };
-
-  const getSchoolNames = (schoolIds: string[]) => {
-    return schoolIds
-      .map(id => schools.find(school => school.id === id)?.name || "")
-      .filter(Boolean)
-      .join(", ");
   };
 
   return (
-    <Card className="border shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <div>
-          <CardTitle>Central de Compras (POLO)</CardTitle>
-          <CardDescription>
-            Gerencie os polos de compras para grupos de instituições.
-          </CardDescription>
-        </div>
-        <Button 
-          className="flex items-center gap-1" 
-          onClick={() => handleOpenModal()}
-        >
-          <Plus className="h-4 w-4" />
-          Nova Central de compras
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Instituições</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {purchasingCenters.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
-                  Nenhuma Central de Compras cadastrada.
-                </TableCell>
-              </TableRow>
-            ) : (
-              purchasingCenters.map((center) => (
-                <TableRow key={center.id}>
-                  <TableCell className="font-medium">{center.name}</TableCell>
-                  <TableCell>{center.description}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span>{center.schoolIds.length} escolas</span>
-                      <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                        {getSchoolNames(center.schoolIds)}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      center.status === "active" 
-                        ? "bg-green-100 text-green-800" 
-                        : "bg-red-100 text-red-800"
-                    }`}>
-                      {center.status === "active" ? "Ativo" : "Inativo"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right space-x-1">
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => handleOpenModal(center)}
-                      title="Editar"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => handleDeleteCenter(center.id)}
-                      className="text-red-600 hover:text-red-700"
-                      title="Excluir"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                    {center.status === "active" ? (
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        onClick={() => handleToggleStatus(center.id, "inactive")}
-                        className="text-red-600 hover:text-red-700"
-                        title="Desativar"
-                      >
-                        <Ban className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        onClick={() => handleToggleStatus(center.id, "active")}
-                        className="text-green-600 hover:text-green-700"
-                        title="Ativar"
-                      >
-                        <ShieldCheck className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold">Centrais de Compras</h2>
+        <Button onClick={handleOpen}>Adicionar Central</Button>
+      </div>
 
-        <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {isEditMode ? "Editar Central de Compras" : "Nova Central de Compras"}
-              </DialogTitle>
-              <DialogDescription>
-                {isEditMode 
-                  ? "Atualize os dados da Central de Compras." 
-                  : "Cadastre uma nova Central de Compras para grupo de escolas."}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <form onSubmit={handleSaveCenter}>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome da Central de Compras *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => handleFormChange("name", e.target.value)}
-                    placeholder="Nome da Central de Compras"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <Input
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => handleFormChange("description", e.target.value)}
-                    placeholder="Descrição da Central de Compras"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Escola Central *</Label>
-                  <div className="border rounded-md p-4 max-h-[200px] overflow-y-auto">
-                    {schools.length === 0 ? (
-                      <div className="text-center text-muted-foreground py-4">
-                        Nenhuma escola ativa cadastrada no sistema.
-                      </div>
-                    ) : (
-                      schools.map((school) => (
-                        <div key={school.id} className="flex items-center space-x-2 mb-2">
-                          <Checkbox
-                            id={`school-${school.id}`}
-                            checked={formData.schoolIds.includes(school.id)}
-                            onCheckedChange={(checked) => 
-                              handleToggleSchool(school.id, checked === true)
-                            }
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nome</TableHead>
+            <TableHead>Descrição</TableHead>
+            <TableHead className="text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {centers.map(center => (
+            <TableRow key={center.id}>
+              <TableCell className="font-medium">{center.name}</TableCell>
+              <TableCell>{center.description}</TableCell>
+              <TableCell className="text-right">
+                <Button variant="outline" size="sm" onClick={() => handleEdit(center)}>
+                  Editar
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(center.id)}>
+                  <Trash className="w-4 h-4 mr-2" />
+                  Excluir
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{editingCenter ? "Editar Central" : "Nova Central"}</DialogTitle>
+            <DialogDescription>
+              {editingCenter
+                ? "Atualize os dados da central de compras."
+                : "Cadastre uma nova central de compras no sistema."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSave)} className="w-full">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Nome da central"
+                            {...field}
                           />
-                          <Label 
-                            htmlFor={`school-${school.id}`}
-                            className="text-sm cursor-pointer flex-1"
-                          >
-                            <div>
-                              <div className="font-medium">{school.name}</div>
-                              <div className="text-xs text-muted-foreground">
-                                CNPJ: {school.cnpj} | Responsável: {school.responsibleName}
-                              </div>
-                            </div>
-                          </Label>
-                        </div>
-                      ))
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </div>
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={handleCloseModal}>
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {isEditMode ? "Atualizar" : "Cadastrar"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Descrição</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Descrição da central"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </form>
+              </Form>
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="secondary" onClick={handleClose}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSave}>Salvar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

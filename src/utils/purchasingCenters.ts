@@ -1,30 +1,31 @@
-
 import { PurchasingCenter } from "@/lib/types";
 
 // Mock purchasing centers for demo
-export const MOCK_PURCHASING_CENTERS: PurchasingCenter[] = [
+export const mockPurchasingCenters: PurchasingCenter[] = [
   {
-    id: "1",
-    name: "Central Municipal",
-    description: "Central de Compras Municipal",
-    schoolIds: ["1", "3"],
+    id: "pc1",
+    name: "Central de Compras Norte",
+    code: "CCN001",
+    description: "Central responsável pelas escolas da região norte",
+    schoolIds: ["school1", "school2"],
     status: "active",
-    createdAt: new Date(),
-    updatedAt: new Date()
+    createdAt: new Date("2024-01-01"),
+    updatedAt: new Date("2024-01-01"),
   },
   {
-    id: "2",
-    name: "Central Regional Norte",
-    description: "Central de Compras Regional Norte",
-    schoolIds: ["2"],
+    id: "pc2", 
+    name: "Central de Compras Sul",
+    code: "CCS001",
+    description: "Central responsável pelas escolas da região sul",
+    schoolIds: ["school3"],
     status: "active",
-    createdAt: new Date(),
-    updatedAt: new Date()
+    createdAt: new Date("2024-01-01"),
+    updatedAt: new Date("2024-01-01"),
   }
 ];
 
 export const getCurrentPurchasingCenter = (schoolId: string) => {
-  return MOCK_PURCHASING_CENTERS.find(center => 
+  return mockPurchasingCenters.find(center => 
     center.schoolIds.includes(schoolId)
   );
 };

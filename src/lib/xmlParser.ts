@@ -1,4 +1,3 @@
-
 import { Invoice, Supplier, InvoiceItem } from "@/lib/types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -82,8 +81,14 @@ export function parseXMLToInvoice(xmlContent: string): ParsedXMLData {
       id: uuidv4(),
       name: supplierName,
       cnpj: supplierCNPJ,
+      razaoSocial: supplierName,
+      endereco: supplierAddress,
+      telefone: supplierPhone,
+      email: "",
       address: supplierAddress,
-      phone: supplierPhone
+      phone: supplierPhone,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     console.log(`Fornecedor extraído: ${supplierName} (CNPJ: ${supplierCNPJ})`);
