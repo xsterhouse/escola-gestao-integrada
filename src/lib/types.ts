@@ -301,9 +301,11 @@ export interface PurchasingCenter {
   id: string;
   name: string;
   code: string;
+  cnpj?: string;
+  responsible?: string;
+  address?: string;
+  city?: string;
   description?: string;
-  email?: string;
-  password?: string;
   schoolIds?: string[];
   status?: string;
   createdAt: Date;

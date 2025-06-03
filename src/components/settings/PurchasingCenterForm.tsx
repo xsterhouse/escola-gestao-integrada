@@ -14,7 +14,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
 
 type PurchasingCenterFormProps = {
   open: boolean;
@@ -30,31 +29,33 @@ export function PurchasingCenterForm({
   onSave,
 }: PurchasingCenterFormProps) {
   const { toast } = useToast();
-  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
+    cnpj: "",
+    responsible: "",
+    address: "",
+    city: "",
     description: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
   });
 
   useEffect(() => {
     if (editingCenter) {
       setFormData({
         name: editingCenter.name,
+        cnpj: editingCenter.cnpj || "",
+        responsible: editingCenter.responsible || "",
+        address: editingCenter.address || "",
+        city: editingCenter.city || "",
         description: editingCenter.description || "",
-        email: editingCenter.email || "",
-        password: "",
-        confirmPassword: "",
       });
     } else {
       setFormData({
         name: "",
+        cnpj: "",
+        responsible: "",
+        address: "",
+        city: "",
         description: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
       });
     }
   }, [editingCenter]);
@@ -62,6 +63,27 @@ export function PurchasingCenterForm({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const formatCNPJ = (value: string) => {
+    // Remove tudo que não é dígito
+    const cleanValue = value.replace(/\D/g, '');
+    
+    // Aplica a máscara XX.XXX.XXX/XXXX-XX
+    if (cleanValue.length <= 14) {
+      return cleanValue
+        .replace(/(\d{2})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1/$2')
+        .replace(/(\d{4})(\d)/, '$1-$2');
+    }
+    return value;
+  };
+
+  const handleCNPJChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    const formattedValue = formatCNPJ(value);
+    setFormData(prev => ({ ...prev, cnpj: formattedValue }));
   };
 
   const handleSave = () => {
@@ -74,37 +96,37 @@ export function PurchasingCenterForm({
       return;
     }
 
-    if (!formData.email.trim()) {
+    if (!formData.cnpj.trim()) {
       toast({
         title: "Erro",
-        description: "E-mail é obrigatório para acesso ao sistema.",
+        description: "CNPJ é obrigatório.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!editingCenter && !formData.password.trim()) {
+    if (!formData.responsible.trim()) {
       toast({
         title: "Erro",
-        description: "Senha é obrigatória para nova central.",
+        description: "Responsável é obrigatório.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!editingCenter && formData.password !== formData.confirmPassword) {
+    if (!formData.address.trim()) {
       toast({
         title: "Erro",
-        description: "Senhas não coincidem.",
+        description: "Endereço é obrigatório.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!editingCenter && formData.password.length < 6) {
+    if (!formData.city.trim()) {
       toast({
         title: "Erro",
-        description: "Senha deve ter pelo menos 6 caracteres.",
+        description: "Cidade é obrigatória.",
         variant: "destructive",
       });
       return;
@@ -114,9 +136,11 @@ export function PurchasingCenterForm({
       id: editingCenter?.id || uuidv4(),
       name: formData.name,
       code: formData.name.replace(/\s+/g, '').substring(0, 10).toUpperCase(),
+      cnpj: formData.cnpj,
+      responsible: formData.responsible,
+      address: formData.address,
+      city: formData.city,
       description: formData.description,
-      email: formData.email,
-      password: formData.password || editingCenter?.password || "",
       schoolIds: editingCenter?.schoolIds || [],
       status: "active",
       createdAt: editingCenter?.createdAt || new Date(),
@@ -130,22 +154,23 @@ export function PurchasingCenterForm({
     onClose();
     setFormData({
       name: "",
+      cnpj: "",
+      responsible: "",
+      address: "",
+      city: "",
       description: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{editingCenter ? "Editar Central" : "Nova Central"}</DialogTitle>
           <DialogDescription>
             {editingCenter
               ? "Atualize os dados da central de compras."
-              : "Cadastre uma nova central de compras no sistema. Esta central terá acesso ao sistema com suas próprias credenciais."}
+              : "Cadastre uma nova central de compras no sistema."}
           </DialogDescription>
         </DialogHeader>
         
@@ -161,6 +186,55 @@ export function PurchasingCenterForm({
               required
             />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cnpj">CNPJ *</Label>
+            <Input
+              id="cnpj"
+              name="cnpj"
+              value={formData.cnpj}
+              onChange={handleCNPJChange}
+              placeholder="XX.XXX.XXX/XXXX-XX"
+              maxLength={18}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="responsible">Responsável *</Label>
+            <Input
+              id="responsible"
+              name="responsible"
+              value={formData.responsible}
+              onChange={handleChange}
+              placeholder="Nome do responsável"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address">Endereço *</Label>
+            <Input
+              id="address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              placeholder="Endereço completo"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="city">Cidade *</Label>
+            <Input
+              id="city"
+              name="city"
+              value={formData.city}
+              onChange={handleChange}
+              placeholder="Cidade"
+              required
+            />
+          </div>
           
           <div className="space-y-2">
             <Label htmlFor="description">Descrição</Label>
@@ -172,79 +246,6 @@ export function PurchasingCenterForm({
               placeholder="Descrição da central"
             />
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">E-mail de Acesso *</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="email@exemplo.com"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">
-              {editingCenter ? "Nova Senha (deixe em branco para manter atual)" : "Senha *"}
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Senha mínima 6 caracteres"
-                required={!editingCenter}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {!editingCenter && (
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Confirme a senha"
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
 
         <DialogFooter>

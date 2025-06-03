@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash, Mail } from "lucide-react";
+import { Trash, Building2, User } from "lucide-react";
 
 type PurchasingCenterTableProps = {
   centers: PurchasingCenter[];
@@ -27,22 +27,31 @@ export function PurchasingCenterTable({
       <TableHeader>
         <TableRow>
           <TableHead>Nome</TableHead>
-          <TableHead>Descrição</TableHead>
-          <TableHead>E-mail de Acesso</TableHead>
+          <TableHead>CNPJ</TableHead>
+          <TableHead>Responsável</TableHead>
+          <TableHead>Endereço</TableHead>
+          <TableHead>Cidade</TableHead>
           <TableHead className="text-right">Ações</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {centers.map(center => (
           <TableRow key={center.id}>
-            <TableCell className="font-medium">{center.name}</TableCell>
-            <TableCell>{center.description || "—"}</TableCell>
-            <TableCell>
+            <TableCell className="font-medium">
               <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-gray-500" />
-                {center.email || "—"}
+                <Building2 className="w-4 h-4 text-gray-500" />
+                {center.name}
               </div>
             </TableCell>
+            <TableCell className="font-mono text-sm">{center.cnpj || "—"}</TableCell>
+            <TableCell>
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-gray-500" />
+                {center.responsible || "—"}
+              </div>
+            </TableCell>
+            <TableCell className="text-sm">{center.address || "—"}</TableCell>
+            <TableCell className="text-sm">{center.city || "—"}</TableCell>
             <TableCell className="text-right space-x-2">
               <Button variant="outline" size="sm" onClick={() => onEdit(center)}>
                 Editar

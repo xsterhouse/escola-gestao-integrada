@@ -1,174 +1,155 @@
 
 import { useState, useEffect } from "react";
-import { 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogHeader,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
-import { UserPlus } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 
-interface School {
-  id: string;
-  name: string;
+interface SystemUserFormProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (userData: any) => void;
+  schools: any[];
 }
 
 interface PurchasingCenter {
   id: string;
   name: string;
-  schoolIds: string[];
+  schoolIds?: string[];
 }
 
-interface SystemUser {
-  name: string;
-  matricula: string;
-  password: string;
-  schoolId: string | null;
-  purchasingCenterIds: string[];
-  isLinkedToPurchasing: boolean;
-  status: "active" | "blocked";
-}
-
-type SystemUserFormProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (user: SystemUser) => void;
-  schools: School[];
-};
-
-export function SystemUserForm({
-  isOpen,
-  onClose,
-  onSave,
-  schools,
-}: SystemUserFormProps) {
+export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserFormProps) {
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     matricula: "",
     password: "",
+    confirmPassword: "",
     schoolId: "",
     purchasingCenterIds: [] as string[],
     isLinkedToPurchasing: false,
+    status: "active" as "active" | "blocked"
   });
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [allPurchasingCenters, setAllPurchasingCenters] = useState<PurchasingCenter[]>([]);
-  const { toast } = useToast();
-  const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasingCenters', []);
 
-  // Carregar todas as centrais de compras
-  useEffect(() => {
-    setAllPurchasingCenters(purchasingCenters);
-  }, [purchasingCenters]);
+  const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasing-centers', []);
 
-  const generatePassword = () => {
-    const password = Math.floor(100000 + Math.random() * 900000).toString();
-    setFormData(prev => ({ ...prev, password }));
+  // Filter purchasing centers based on selected school
+  const availablePurchasingCenters = purchasingCenters.filter(center => 
+    formData.schoolId ? center.schoolIds?.includes(formData.schoolId) : true
+  );
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handlePurchasingCenterToggle = (centerId: string, checked: boolean) => {
+  const handleSchoolChange = (schoolId: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      schoolId,
+      purchasingCenterIds: [], // Reset purchasing centers when school changes
+      isLinkedToPurchasing: false
+    }));
+  };
+
+  const handlePurchasingCenterChange = (centerId: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
       purchasingCenterIds: checked 
         ? [...prev.purchasingCenterIds, centerId]
-        : prev.purchasingCenterIds.filter(id => id !== centerId)
+        : prev.purchasingCenterIds.filter(id => id !== centerId),
+      isLinkedToPurchasing: checked || prev.purchasingCenterIds.length > 1 || (prev.purchasingCenterIds.length === 1 && !prev.purchasingCenterIds.includes(centerId))
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name || !formData.matricula || !formData.password) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
+  const handleSubmit = () => {
+    if (!formData.name.trim()) {
+      alert("Nome é obrigatório");
       return;
     }
 
-    if (formData.password.length !== 6 || !/^\d{6}$/.test(formData.password)) {
-      toast({
-        title: "Senha inválida",
-        description: "A senha deve ter exatamente 6 dígitos numéricos.",
-        variant: "destructive",
-      });
+    if (!formData.matricula.trim()) {
+      alert("Matrícula é obrigatória");
       return;
     }
-    
-    setIsSubmitting(true);
-    
-    try {
-      const userData: SystemUser = {
-        name: formData.name,
-        matricula: formData.matricula,
-        password: formData.password,
-        schoolId: formData.schoolId === "none" ? null : formData.schoolId || null,
-        purchasingCenterIds: formData.purchasingCenterIds,
-        isLinkedToPurchasing: formData.isLinkedToPurchasing,
-        status: "active",
-      };
 
-      onSave(userData);
-      
-      // Reset form
-      setFormData({
-        name: "",
-        matricula: "",
-        password: "",
-        schoolId: "",
-        purchasingCenterIds: [],
-        isLinkedToPurchasing: false,
-      });
-      
-      toast({
-        title: "Usuário criado",
-        description: "O usuário do sistema foi criado com sucesso.",
-      });
-      
-      onClose();
-    } catch (error) {
-      toast({
-        title: "Erro ao criar usuário",
-        description: "Ocorreu um erro ao criar o usuário.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+    if (!formData.password.trim()) {
+      alert("Senha é obrigatória");
+      return;
     }
+
+    if (formData.password !== formData.confirmPassword) {
+      alert("Senhas não coincidem");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      alert("Senha deve ter pelo menos 6 caracteres");
+      return;
+    }
+
+    onSave(formData);
+    handleClose();
+  };
+
+  const handleClose = () => {
+    setFormData({
+      name: "",
+      matricula: "",
+      password: "",
+      confirmPassword: "",
+      schoolId: "",
+      purchasingCenterIds: [],
+      isLinkedToPurchasing: false,
+      status: "active"
+    });
+    onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            Novo Usuário do Sistema
-          </DialogTitle>
-          <DialogDescription>
-            Cadastre um novo usuário que terá acesso ao sistema.
-          </DialogDescription>
+          <DialogTitle>Novo Usuário do Sistema</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="school">Escola *</Label>
-            <Select value={formData.schoolId} onValueChange={(value) => setFormData(prev => ({ ...prev, schoolId: value }))}>
+            <Label htmlFor="name">Nome Completo *</Label>
+            <Input
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              placeholder="Nome completo do usuário"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="matricula">Matrícula *</Label>
+            <Input
+              id="matricula"
+              name="matricula"
+              value={formData.matricula}
+              onChange={handleInputChange}
+              placeholder="Matrícula do usuário"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="school">Escola</Label>
+            <Select value={formData.schoolId} onValueChange={handleSchoolChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione a escola" />
+                <SelectValue placeholder="Selecione uma escola (opcional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Nenhuma escola específica</SelectItem>
+                <SelectItem value="">Nenhuma escola</SelectItem>
                 {schools.map((school) => (
                   <SelectItem key={school.id} value={school.id}>
                     {school.name}
@@ -178,119 +159,88 @@ export function SystemUserForm({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Centrais de Compras</Label>
-            <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-3 bg-gray-50">
-              {allPurchasingCenters.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-2">
-                  Nenhuma central de compras cadastrada
-                </p>
-              ) : (
-                allPurchasingCenters.map((center) => (
+          {formData.schoolId && availablePurchasingCenters.length > 0 && (
+            <div className="space-y-2">
+              <Label>Centrais de Compras</Label>
+              <div className="space-y-2 border rounded-md p-3">
+                {availablePurchasingCenters.map((center) => (
                   <div key={center.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`center-${center.id}`}
                       checked={formData.purchasingCenterIds.includes(center.id)}
                       onCheckedChange={(checked) => 
-                        handlePurchasingCenterToggle(center.id, checked as boolean)
+                        handlePurchasingCenterChange(center.id, checked as boolean)
                       }
                     />
-                    <Label htmlFor={`center-${center.id}`} className="text-sm flex-1">
+                    <Label 
+                      htmlFor={`center-${center.id}`}
+                      className="text-sm font-normal"
+                    >
                       {center.name}
                     </Label>
                   </div>
-                ))
-              )}
+                ))}
+              </div>
             </div>
-            <p className="text-xs text-gray-500">
-              Selecione as centrais de compras que este usuário terá acesso
-            </p>
-          </div>
+          )}
 
           <div className="space-y-2">
-            <Label htmlFor="name">Nome do Usuário *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Digite o nome completo"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="matricula">Número da Matrícula *</Label>
-            <Input
-              id="matricula"
-              value={formData.matricula}
-              onChange={(e) => setFormData(prev => ({ ...prev, matricula: e.target.value }))}
-              placeholder="Digite o número da matrícula"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Senha (6 dígitos) *</Label>
-            <div className="flex gap-2">
+            <Label htmlFor="password">Senha *</Label>
+            <div className="relative">
               <Input
                 id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
                 value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                placeholder="Digite 6 dígitos"
-                maxLength={6}
-                pattern="[0-9]{6}"
+                onChange={handleInputChange}
+                placeholder="Senha mínima 6 caracteres"
                 required
               />
               <Button
                 type="button"
-                variant="outline"
-                onClick={generatePassword}
-                className="whitespace-nowrap"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
               >
-                Gerar
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
-            <p className="text-xs text-gray-500">
-              A senha deve ter exatamente 6 dígitos numéricos
-            </p>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="purchasingCenter"
-              checked={formData.isLinkedToPurchasing}
-              onCheckedChange={(checked) => 
-                setFormData(prev => ({ ...prev, isLinkedToPurchasing: checked as boolean }))
-              }
-            />
-            <Label htmlFor="purchasingCenter" className="text-sm">
-              Vincular à Central de Compras
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showPassword ? "text" : "password"}
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                placeholder="Confirme a senha"
+                required
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
-          
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              style={{ backgroundColor: '#012340', color: 'white' }}
-              onMouseOver={(e) => {
-                if (!isSubmitting) {
-                  e.currentTarget.style.backgroundColor = '#013a5c';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (!isSubmitting) {
-                  e.currentTarget.style.backgroundColor = '#012340';
-                }
-              }}
-            >
-              {isSubmitting ? "Salvando..." : "Criar Usuário"}
-            </Button>
-          </DialogFooter>
-        </form>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSubmit}>
+            Criar Usuário
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
