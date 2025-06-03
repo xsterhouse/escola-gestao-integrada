@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,10 +33,17 @@ export function TransferButton({
   const [open, setOpen] = useState(false);
   
   // Escolas da mesma central de compras (simulado)
-  const eligibleSchools = availableSchools.filter(school => 
-    school.id !== currentSchool?.id && 
-    school.purchasingCenterId === currentSchool?.purchasingCenterId
-  );
+  const eligibleSchools = availableSchools.filter(school => {
+    if (school.id === currentSchool?.id) return false;
+    
+    // Check if schools share at least one purchasing center
+    const currentSchoolCenterIds = currentSchool?.purchasingCenterIds || [];
+    const schoolCenterIds = school.purchasingCenterIds || [];
+    
+    return currentSchoolCenterIds.some(centerId => 
+      schoolCenterIds.includes(centerId)
+    );
+  });
 
   const handleTransferSubmit = (transferData: {
     toSchoolId: string;
