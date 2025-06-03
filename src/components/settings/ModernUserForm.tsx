@@ -55,9 +55,9 @@ export function ModernUserForm({
 
   // Mock permissions - will be inherited from selected profile
   const [permissions, setPermissions] = useState<ModulePermission[]>([
-    { id: "1", name: "Dashboard", description: "Painel principal", create: true, read: true, update: false, delete: false },
-    { id: "2", name: "Produtos", description: "Gestão de produtos", create: false, read: true, update: false, delete: false },
-    { id: "3", name: "Estoque", description: "Controle de estoque", create: false, read: true, update: false, delete: false },
+    { id: "1", name: "Dashboard", description: "Painel principal", hasAccess: true, create: true, read: true, update: false, delete: false },
+    { id: "2", name: "Produtos", description: "Gestão de produtos", hasAccess: true, create: false, read: true, update: false, delete: false },
+    { id: "3", name: "Estoque", description: "Controle de estoque", hasAccess: true, create: false, read: true, update: false, delete: false },
   ]);
 
   const defaultModulePermissions: ModulePermission[] = [

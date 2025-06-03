@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Dialog, 
@@ -106,7 +105,13 @@ export function ModernSchoolForm({
     setIsSubmitting(true);
     
     try {
-      onSave(formData);
+      // Generate code from CNPJ (first 8 digits)
+      const code = formData.cnpj.replace(/\D/g, '').substring(0, 8);
+      
+      onSave({
+        ...formData,
+        code, // Add the missing code property
+      });
       
       toast({
         title: initialData ? "Escola atualizada" : "Escola cadastrada",

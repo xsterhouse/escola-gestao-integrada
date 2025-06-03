@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Dialog, 
@@ -55,8 +54,12 @@ export function SchoolForm({
     setIsSubmitting(true);
     
     try {
+      // Generate code from CNPJ (first 8 digits)
+      const code = cnpj.replace(/\D/g, '').substring(0, 8);
+      
       onSave({
         name,
+        code, // Add the missing code property
         tradingName,
         cnpj,
         director,
