@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { PurchasingCenter } from "@/lib/types";
@@ -8,17 +9,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -30,23 +24,6 @@ import {
 } from "@/components/ui/table";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { Trash } from "lucide-react";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-
-const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Nome deve ter pelo menos 2 caracteres.",
-  }),
-  description: z.string().optional(),
-  schoolIds: z.array(z.string()).optional(),
-});
-
-interface PurchasingCenterFormValues {
-  name: string;
-  description?: string;
-  schoolIds?: string[];
-}
 
 export function PurchasingCenterTab() {
   const [open, setOpen] = useState(false);
@@ -54,19 +31,9 @@ export function PurchasingCenterTab() {
   const { toast } = useToast();
   const { data: centers, saveData: setCenters } = useLocalStorageSync<PurchasingCenter>('purchasing-centers', []);
 
-  const form = useForm<PurchasingCenterFormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      schoolIds: [],
-    },
-  });
-
-  const [formData, setFormData] = useState<PurchasingCenterFormValues>({
+  const [formData, setFormData] = useState({
     name: "",
     description: "",
-    schoolIds: [],
   });
 
   useEffect(() => {
@@ -74,13 +41,11 @@ export function PurchasingCenterTab() {
       setFormData({
         name: editingCenter.name,
         description: editingCenter.description || "",
-        schoolIds: editingCenter.schoolIds || [],
       });
     } else {
       setFormData({
         name: "",
         description: "",
-        schoolIds: [],
       });
     }
   }, [editingCenter]);
@@ -98,9 +63,13 @@ export function PurchasingCenterTab() {
   const handleClose = () => {
     setOpen(false);
     setEditingCenter(null);
+    setFormData({
+      name: "",
+      description: "",
+    });
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -118,16 +87,15 @@ export function PurchasingCenterTab() {
     const centerData: PurchasingCenter = {
       id: editingCenter?.id || uuidv4(),
       name: formData.name,
-      code: formData.name.replace(/\s+/g, '').substring(0, 10).toUpperCase(), // Generate code from name
+      code: formData.name.replace(/\s+/g, '').substring(0, 10).toUpperCase(),
       description: formData.description,
-      schoolIds: formData.schoolIds,
+      schoolIds: editingCenter?.schoolIds || [],
       status: "active",
       createdAt: editingCenter?.createdAt || new Date(),
       updatedAt: new Date(),
     };
 
     if (editingCenter) {
-      // Update existing center
       const updatedCenters = centers.map(center =>
         center.id === editingCenter.id ? centerData : center
       );
@@ -137,7 +105,6 @@ export function PurchasingCenterTab() {
         description: "Central de compras atualizada com sucesso.",
       });
     } else {
-      // Create new center
       setCenters([...centers, centerData]);
       toast({
         title: "Central criada",
@@ -179,7 +146,7 @@ export function PurchasingCenterTab() {
             <TableRow key={center.id}>
               <TableCell className="font-medium">{center.name}</TableCell>
               <TableCell>{center.description}</TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right space-x-2">
                 <Button variant="outline" size="sm" onClick={() => handleEdit(center)}>
                   Editar
                 </Button>
@@ -203,52 +170,40 @@ export function PurchasingCenterTab() {
                 : "Cadastre uma nova central de compras no sistema."}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSave)} className="w-full">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Nome da central"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Descrição</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Descrição da central"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </form>
-              </Form>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome da Central *</Label>
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Nome da central"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">Descrição</Label>
+              <Input
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Descrição da central"
+              />
             </div>
           </div>
-          <div className="flex justify-end space-x-2">
-            <Button variant="secondary" onClick={handleClose}>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={handleClose}>
               Cancelar
             </Button>
-            <Button onClick={handleSave}>Salvar</Button>
-          </div>
+            <Button onClick={handleSave}>
+              {editingCenter ? "Atualizar" : "Cadastrar"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
