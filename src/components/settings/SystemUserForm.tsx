@@ -39,7 +39,7 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
 
   // Filter purchasing centers based on selected school
   const availablePurchasingCenters = purchasingCenters.filter(center => 
-    formData.schoolId ? center.schoolIds?.includes(formData.schoolId) : true
+    formData.schoolId && formData.schoolId !== "none" ? center.schoolIds?.includes(formData.schoolId) : true
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,7 +149,7 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
                 <SelectValue placeholder="Selecione uma escola (opcional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhuma escola</SelectItem>
+                <SelectItem value="none">Nenhuma escola</SelectItem>
                 {schools.map((school) => (
                   <SelectItem key={school.id} value={school.id}>
                     {school.name}
@@ -159,7 +159,7 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
             </Select>
           </div>
 
-          {formData.schoolId && availablePurchasingCenters.length > 0 && (
+          {formData.schoolId && formData.schoolId !== "none" && availablePurchasingCenters.length > 0 && (
             <div className="space-y-2">
               <Label>Centrais de Compras</Label>
               <div className="space-y-2 border rounded-md p-3">
