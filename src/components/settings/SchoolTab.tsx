@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ModernSchoolForm } from "@/components/settings/ModernSchoolForm";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { School } from "@/lib/types";
+import { School, PurchasingCenter } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { 
@@ -26,6 +26,7 @@ export function SchoolTab() {
   
   // Usar hook de sincronização em vez de useState + useEffect manual
   const { data: schools, saveData: setSchools } = useLocalStorageSync<School>('schools', []);
+  const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasing-centers', []);
 
   const handleOpenModal = (school?: School) => {
     console.log('Abrindo modal para escola:', school);
@@ -82,6 +83,16 @@ export function SchoolTab() {
         ? "A escola foi atualizada com sucesso." 
         : "A escola foi cadastrada com sucesso.",
     });
+  };
+
+  const getPurchasingCenterNames = (centerIds: string[] = []) => {
+    if (!centerIds.length) return "—";
+    
+    const names = centerIds
+      .map(id => purchasingCenters.find(center => center.id === id)?.name)
+      .filter(Boolean);
+    
+    return names.length > 0 ? names.join(", ") : "—";
   };
 
   const handleToggleStatus = (id: string, newStatus: "active" | "suspended") => {
@@ -153,6 +164,7 @@ export function SchoolTab() {
               <TableHead>CNPJ</TableHead>
               <TableHead>Diretor(a)</TableHead>
               <TableHead>Responsável</TableHead>
+              <TableHead>Centrais de Compras</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -160,7 +172,7 @@ export function SchoolTab() {
           <TableBody>
             {schools.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                   Nenhuma escola cadastrada. Clique em "Nova Escola" para começar.
                 </TableCell>
               </TableRow>
@@ -190,6 +202,11 @@ export function SchoolTab() {
                   <TableCell>{school.cnpj}</TableCell>
                   <TableCell>{school.director || "—"}</TableCell>
                   <TableCell>{school.responsibleName}</TableCell>
+                  <TableCell className="max-w-48">
+                    <div className="text-sm text-gray-600 truncate" title={getPurchasingCenterNames(school.purchasingCenterIds)}>
+                      {getPurchasingCenterNames(school.purchasingCenterIds)}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                       school.status === "active" 
@@ -352,6 +369,13 @@ export function SchoolTab() {
                 <label className="text-sm font-medium">Status</label>
                 <p className="text-sm text-gray-600">
                   {currentSchool.status === "active" ? "Ativa" : "Suspensa"}
+                </p>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium">Centrais de Compras Vinculadas</label>
+                <p className="text-sm text-gray-600">
+                  {getPurchasingCenterNames(currentSchool.purchasingCenterIds)}
                 </p>
               </div>
             </div>

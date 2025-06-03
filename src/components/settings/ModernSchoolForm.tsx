@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Dialog, 
@@ -10,9 +11,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { School } from "@/lib/types";
+import { School, PurchasingCenter } from "@/lib/types";
 import { Upload, X } from "lucide-react";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 
 type ModernSchoolFormProps = {
   isOpen: boolean;
@@ -38,11 +41,12 @@ export function ModernSchoolForm({
     address: "",
     cityState: "",
     logo: "",
-    purchasingCenterId: "",
+    purchasingCenterIds: [] as string[],
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasing-centers', []);
 
   // Effect to populate form data when initialData changes
   useEffect(() => {
@@ -59,7 +63,7 @@ export function ModernSchoolForm({
         address: initialData.address || "",
         cityState: initialData.cityState || "",
         logo: initialData.logo || "",
-        purchasingCenterId: initialData.purchasingCenterId || "",
+        purchasingCenterIds: initialData.purchasingCenterIds || [],
       });
     } else {
       // Reset form for new school
@@ -74,7 +78,7 @@ export function ModernSchoolForm({
         address: "",
         cityState: "",
         logo: "",
-        purchasingCenterId: "",
+        purchasingCenterIds: [],
       });
     }
   }, [initialData]);
@@ -88,6 +92,15 @@ export function ModernSchoolForm({
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handlePurchasingCenterChange = (centerId: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      purchasingCenterIds: checked 
+        ? [...prev.purchasingCenterIds, centerId]
+        : prev.purchasingCenterIds.filter(id => id !== centerId)
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -284,14 +297,37 @@ export function ModernSchoolForm({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="purchasingCenterId">Central de Compras</Label>
-              <Input
-                id="purchasingCenterId"
-                value={formData.purchasingCenterId}
-                onChange={(e) => setFormData(prev => ({ ...prev, purchasingCenterId: e.target.value }))}
-                placeholder="ID da Central de Compras"
-              />
+            {/* Centrais de Compras Section */}
+            <div className="md:col-span-2 space-y-2">
+              <Label>Centrais de Compras</Label>
+              <div className="border rounded-md p-4 space-y-3 max-h-40 overflow-y-auto">
+                {purchasingCenters.length === 0 ? (
+                  <p className="text-sm text-gray-500">Nenhuma central de compras cadastrada.</p>
+                ) : (
+                  purchasingCenters.map((center) => (
+                    <div key={center.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`center-${center.id}`}
+                        checked={formData.purchasingCenterIds.includes(center.id)}
+                        onCheckedChange={(checked) => 
+                          handlePurchasingCenterChange(center.id, checked as boolean)
+                        }
+                      />
+                      <Label 
+                        htmlFor={`center-${center.id}`} 
+                        className="text-sm font-normal cursor-pointer flex-1"
+                      >
+                        <div>
+                          <div className="font-medium">{center.name}</div>
+                          {center.description && (
+                            <div className="text-xs text-gray-500">{center.description}</div>
+                          )}
+                        </div>
+                      </Label>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
           

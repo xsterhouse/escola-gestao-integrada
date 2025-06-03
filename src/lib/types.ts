@@ -1,5 +1,3 @@
-
-
 export interface BankAccount {
   id: string;
   schoolId: string;
@@ -299,6 +297,19 @@ export interface FinancialReportFilter {
 }
 
 // Planning related types
+export interface PurchasingCenter {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  email?: string;
+  password?: string;
+  schoolIds?: string[];
+  status?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface School {
   id: string;
   name: string;
@@ -312,7 +323,7 @@ export interface School {
   director?: string;
   cityState?: string;
   logo?: string;
-  purchasingCenterId?: string;
+  purchasingCenterIds?: string[];
   status?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -490,17 +501,6 @@ export interface ModulePermission {
   read?: boolean;
   update?: boolean;
   delete?: boolean;
-}
-
-export interface PurchasingCenter {
-  id: string;
-  name: string;
-  code: string;
-  description?: string;
-  schoolIds?: string[];
-  status?: string;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface TransferRecord {

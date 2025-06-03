@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash } from "lucide-react";
+import { Trash, Mail } from "lucide-react";
 
 type PurchasingCenterTableProps = {
   centers: PurchasingCenter[];
@@ -28,6 +28,7 @@ export function PurchasingCenterTable({
         <TableRow>
           <TableHead>Nome</TableHead>
           <TableHead>Descrição</TableHead>
+          <TableHead>E-mail de Acesso</TableHead>
           <TableHead className="text-right">Ações</TableHead>
         </TableRow>
       </TableHeader>
@@ -35,7 +36,13 @@ export function PurchasingCenterTable({
         {centers.map(center => (
           <TableRow key={center.id}>
             <TableCell className="font-medium">{center.name}</TableCell>
-            <TableCell>{center.description}</TableCell>
+            <TableCell>{center.description || "—"}</TableCell>
+            <TableCell>
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-gray-500" />
+                {center.email || "—"}
+              </div>
+            </TableCell>
             <TableCell className="text-right space-x-2">
               <Button variant="outline" size="sm" onClick={() => onEdit(center)}>
                 Editar
