@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import {
   Table,
@@ -22,12 +21,16 @@ import { ViewReportDialog } from "./ViewReportDialog";
 import { DeleteReportDialog } from "./DeleteReportDialog";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { toast } from "@/hooks/use-toast";
+import { generateInventoryReportPDF } from "@/lib/inventory-pdf-utils";
+import { getAllProductsStock } from "@/lib/inventory-calculations";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface InventoryReportsProps {
   invoices: Invoice[];
 }
 
 export function InventoryReports({ invoices }: InventoryReportsProps) {
+  const { currentSchool, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [fromDate, setFromDate] = useState<Date | undefined>(
     new Date(new Date().setDate(new Date().getDate() - 30))
@@ -226,9 +229,35 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
   };
 
   const handleExportPdf = () => {
+    if (!currentSchool || !user) {
+      toast({
+        title: "Erro",
+        description: "Informações do usuário não encontradas.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const stockData = getAllProductsStock(invoices, manualMovements);
+    
+    const reportTypeMapping = {
+      'inventory': 'current-stock' as const,
+      'purchases': 'movements' as const
+    };
+
+    generateInventoryReportPDF({
+      schoolName: currentSchool.name,
+      userName: user.name,
+      date: new Date().toLocaleDateString('pt-BR'),
+      reportType: reportTypeMapping[reportType],
+      stockData: reportType === 'inventory' ? stockData : undefined,
+      movements: reportType === 'purchases' ? manualMovements : undefined,
+      dateRange: fromDate && toDate ? { from: fromDate, to: toDate } : undefined
+    });
+    
     toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "A exportação em PDF será implementada em breve.",
+      title: "Relatório gerado",
+      description: "O relatório PDF foi gerado com sucesso.",
     });
   };
 

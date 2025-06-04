@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -10,24 +9,30 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, FileDown, Plus, Eye, Edit, Trash2, AlertTriangle } from "lucide-react";
+import { Search, FileDown, Plus, Eye, Edit, Trash2, AlertTriangle, Minus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Invoice, InventoryMovement } from "@/lib/types";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { ViewMovementDialog } from "./ViewMovementDialog";
 import { AddManualMovementDialog } from "./AddManualMovementDialog";
+import { ExitMovementDialog } from "./ExitMovementDialog";
 import { ProductAutocomplete } from "./ProductAutocomplete";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
+import { generateInventoryReportPDF } from "@/lib/inventory-pdf-utils";
+import { getAllProductsStock } from "@/lib/inventory-calculations";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface InventoryMovementsProps {
   invoices: Invoice[];
 }
 
 export function InventoryMovements({ invoices }: InventoryMovementsProps) {
+  const { currentSchool, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMovement, setSelectedMovement] = useState<InventoryMovement | null>(null);
   const [isAddManualMovementOpen, setIsAddManualMovementOpen] = useState(false);
+  const [isExitMovementOpen, setIsExitMovementOpen] = useState(false);
   
   const { data: manualMovements, saveData: setManualMovements } = useLocalStorageSync<InventoryMovement>('inventory-movements', []);
   
@@ -144,6 +149,25 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
     
     setIsAddManualMovementOpen(false);
   };
+
+  const handleAddExitMovement = (movement: Omit<InventoryMovement, "id" | "createdAt" | "updatedAt">) => {
+    const newMovement: InventoryMovement = {
+      ...movement,
+      id: `exit-${Date.now()}`,
+      source: 'manual',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    setManualMovements([...manualMovements, newMovement]);
+    
+    toast({
+      title: "Saída registrada",
+      description: "A saída foi registrada com sucesso.",
+    });
+    
+    setIsExitMovementOpen(false);
+  };
   
   const handleExportCsv = () => {
     const csvHeaders = [
@@ -190,9 +214,29 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
   };
   
   const handleExportPdf = () => {
+    if (!currentSchool || !user) {
+      toast({
+        title: "Erro",
+        description: "Informações do usuário não encontradas.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const stockData = getAllProductsStock(invoices, manualMovements);
+    
+    generateInventoryReportPDF({
+      schoolName: currentSchool.name,
+      userName: user.name,
+      date: new Date().toLocaleDateString('pt-BR'),
+      reportType: 'movements',
+      movements: filteredMovements,
+      stockData
+    });
+    
     toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "A exportação em PDF será implementada em breve.",
+      title: "Relatório gerado",
+      description: "O relatório PDF foi gerado com sucesso.",
     });
   };
 
@@ -203,7 +247,11 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
         <div className="flex items-center gap-2">
           <Button onClick={() => setIsAddManualMovementOpen(true)} variant="outline" size="sm">
             <Plus className="h-4 w-4 mr-1" />
-            Adicionar Manual
+            Entrada Manual
+          </Button>
+          <Button onClick={() => setIsExitMovementOpen(true)} variant="outline" size="sm">
+            <Minus className="h-4 w-4 mr-1" />
+            Registrar Saída
           </Button>
           <Button onClick={handleExportCsv} variant="outline" size="sm">
             <FileDown className="h-4 w-4 mr-1" />
@@ -339,6 +387,14 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
         onSubmit={handleAddManualMovement}
         invoices={invoices}
         ProductAutocomplete={ProductAutocomplete}
+      />
+
+      <ExitMovementDialog
+        open={isExitMovementOpen}
+        onOpenChange={setIsExitMovementOpen}
+        onSubmit={handleAddExitMovement}
+        invoices={invoices}
+        movements={manualMovements}
       />
     </Card>
   );

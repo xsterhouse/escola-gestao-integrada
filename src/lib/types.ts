@@ -221,6 +221,10 @@ export interface InventoryMovement {
   requestId?: string;
   createdAt: Date;
   updatedAt: Date;
+  // New fields for exit movements
+  exitType?: string;
+  destination?: string;
+  documentReference?: string;
 }
 
 export interface InventoryReport {
