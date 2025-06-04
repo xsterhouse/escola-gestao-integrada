@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, Plus, Trash2, Save, Download, FileText, BarChart3, ArrowLeftRight, CheckCircle, XCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -111,11 +112,37 @@ const Planning = () => {
 
   const getPurchasingCentersFromSettings = () => {
     try {
-      const centers = JSON.parse(localStorage.getItem("purchasingCenters") || "[]");
-      return centers;
-    } catch {
+      const storageData = localStorage.getItem("purchasing-centers");
+      if (!storageData) return [];
+      
+      const parsedData = JSON.parse(storageData);
+      
+      // Se for um array de objetos com propriedade 'data', extrair os dados
+      if (Array.isArray(parsedData) && parsedData.length > 0 && parsedData[0].data) {
+        return parsedData.map(item => item.data);
+      }
+      
+      // Se for um array direto, retornar como está
+      if (Array.isArray(parsedData)) {
+        return parsedData;
+      }
+      
+      return [];
+    } catch (error) {
+      console.error("Error loading purchasing centers:", error);
       return [];
     }
+  };
+
+  // Get purchasing centers filtered by selected school
+  const getAvailablePurchasingCenters = () => {
+    const allCenters = getPurchasingCentersFromSettings();
+    if (!formData.schoolId) return [];
+    
+    // Filtrar centrais que estão vinculadas à escola selecionada
+    return allCenters.filter(center => 
+      center.schoolIds && center.schoolIds.includes(formData.schoolId)
+    );
   };
 
   const tabs = [
@@ -160,6 +187,14 @@ const Planning = () => {
       title: "ATA aprovada",
       description: "ATA foi aprovada e está disponível para transferências"
     });
+  };
+
+  const handleSchoolChange = (schoolId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      schoolId,
+      centralComprasId: "" // Reset central de compras quando escola mudar
+    }));
   };
 
   const handleAddItem = () => {
@@ -207,6 +242,24 @@ const Planning = () => {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios e adicione pelo menos um item",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.schoolId) {
+      toast({
+        title: "Erro",
+        description: "Selecione uma escola",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.centralComprasId) {
+      toast({
+        title: "Erro",
+        description: "Selecione uma central de compras",
         variant: "destructive"
       });
       return;
@@ -306,35 +359,48 @@ const Planning = () => {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-1">Escola</label>
-                        <select 
-                          className="w-full border rounded-md px-3 py-2"
-                          value={formData.schoolId}
-                          onChange={(e) => setFormData({...formData, schoolId: e.target.value})}
-                        >
-                          <option value="">Selecione a escola</option>
-                          {getSchoolsFromSettings().map((school: any) => (
-                            <option key={school.id} value={school.id}>{school.name}</option>
-                          ))}
-                        </select>
+                        <label className="block text-sm font-medium mb-1">Escola *</label>
+                        <Select value={formData.schoolId} onValueChange={handleSchoolChange}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a escola" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getSchoolsFromSettings().map((school: any) => (
+                              <SelectItem key={school.id} value={school.id}>
+                                {school.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium mb-1">Central de Compras</label>
-                        <select 
-                          className="w-full border rounded-md px-3 py-2"
-                          value={formData.centralComprasId}
-                          onChange={(e) => setFormData({...formData, centralComprasId: e.target.value})}
+                        <label className="block text-sm font-medium mb-1">Central de Compras *</label>
+                        <Select 
+                          value={formData.centralComprasId} 
+                          onValueChange={(value) => setFormData({...formData, centralComprasId: value})}
+                          disabled={!formData.schoolId}
                         >
-                          <option value="">Selecione a central</option>
-                          {getPurchasingCentersFromSettings().map((center: any) => (
-                            <option key={center.id} value={center.id}>{center.name}</option>
-                          ))}
-                        </select>
+                          <SelectTrigger>
+                            <SelectValue placeholder={formData.schoolId ? "Selecione a central" : "Selecione uma escola primeiro"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getAvailablePurchasingCenters().map((center: any) => (
+                              <SelectItem key={center.id} value={center.id}>
+                                {center.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {formData.schoolId && getAvailablePurchasingCenters().length === 0 && (
+                          <p className="text-sm text-gray-500 mt-1">
+                            Nenhuma central de compras vinculada a esta escola. Configure primeiro nas Configurações.
+                          </p>
+                        )}
                       </div>
                     </div>
 
-                    {/* Item addition section remains the same */}
+                    {/* Item addition section */}
                     <div className="border rounded-lg p-4">
                       <h3 className="font-medium mb-3">Adicionar Item</h3>
                       <div className="grid grid-cols-6 gap-2 mb-4">
@@ -348,17 +414,17 @@ const Planning = () => {
                           value={newItem.descricaoProduto}
                           onChange={(e) => setNewItem({...newItem, descricaoProduto: e.target.value})}
                         />
-                        <select 
-                          className="border rounded-md px-3 py-2"
-                          value={newItem.unidade}
-                          onChange={(e) => setNewItem({...newItem, unidade: e.target.value})}
-                        >
-                          <option value="">Unid</option>
-                          <option value="Kg">Kg</option>
-                          <option value="Litro">Litro</option>
-                          <option value="Unidade">Unidade</option>
-                          <option value="Pacote">Pacote</option>
-                        </select>
+                        <Select value={newItem.unidade} onValueChange={(value) => setNewItem({...newItem, unidade: value})}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Unid" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Kg">Kg</SelectItem>
+                            <SelectItem value="Litro">Litro</SelectItem>
+                            <SelectItem value="Unidade">Unidade</SelectItem>
+                            <SelectItem value="Pacote">Pacote</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <Input
                           type="number"
                           placeholder="Quant"
