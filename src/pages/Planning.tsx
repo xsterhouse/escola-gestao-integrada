@@ -104,6 +104,7 @@ const Planning = () => {
   const getSchoolsFromSettings = () => {
     try {
       const schools = JSON.parse(localStorage.getItem("schools") || "[]");
+      console.log("Escolas carregadas:", schools);
       return schools;
     } catch {
       return [];
@@ -113,17 +114,23 @@ const Planning = () => {
   const getPurchasingCentersFromSettings = () => {
     try {
       const storageData = localStorage.getItem("purchasing-centers");
+      console.log("Dados brutos das centrais:", storageData);
+      
       if (!storageData) return [];
       
       const parsedData = JSON.parse(storageData);
+      console.log("Dados parseados das centrais:", parsedData);
       
       // Se for um array de objetos com propriedade 'data', extrair os dados
       if (Array.isArray(parsedData) && parsedData.length > 0 && parsedData[0].data) {
-        return parsedData.map(item => item.data);
+        const centers = parsedData.map(item => item.data);
+        console.log("Centrais extraídas (com .data):", centers);
+        return centers;
       }
       
       // Se for um array direto, retornar como está
       if (Array.isArray(parsedData)) {
+        console.log("Centrais diretas:", parsedData);
         return parsedData;
       }
       
@@ -137,12 +144,30 @@ const Planning = () => {
   // Get purchasing centers filtered by selected school
   const getAvailablePurchasingCenters = () => {
     const allCenters = getPurchasingCentersFromSettings();
-    if (!formData.schoolId) return [];
+    console.log("Todas as centrais disponíveis:", allCenters);
+    console.log("Escola selecionada:", formData.schoolId);
+    
+    if (!formData.schoolId) {
+      console.log("Nenhuma escola selecionada, retornando array vazio");
+      return [];
+    }
     
     // Filtrar centrais que estão vinculadas à escola selecionada
-    return allCenters.filter(center => 
-      center.schoolIds && center.schoolIds.includes(formData.schoolId)
-    );
+    const filteredCenters = allCenters.filter(center => {
+      console.log(`Verificando central ${center.name}:`, {
+        centerSchoolIds: center.schoolIds,
+        selectedSchoolId: formData.schoolId,
+        hasSchoolIds: center.schoolIds && Array.isArray(center.schoolIds),
+        includes: center.schoolIds && center.schoolIds.includes(formData.schoolId)
+      });
+      
+      return center.schoolIds && 
+             Array.isArray(center.schoolIds) && 
+             center.schoolIds.includes(formData.schoolId);
+    });
+    
+    console.log("Centrais filtradas para a escola:", filteredCenters);
+    return filteredCenters;
   };
 
   const tabs = [
@@ -190,6 +215,7 @@ const Planning = () => {
   };
 
   const handleSchoolChange = (schoolId: string) => {
+    console.log("Escola selecionada:", schoolId);
     setFormData(prev => ({
       ...prev,
       schoolId,
@@ -393,8 +419,15 @@ const Planning = () => {
                           </SelectContent>
                         </Select>
                         {formData.schoolId && getAvailablePurchasingCenters().length === 0 && (
+                          <p className="text-sm text-orange-600 mt-1">
+                            Nenhuma central de compras vinculada a esta escola. 
+                            <br />
+                            Verifique as configurações ou vincule a escola a uma central de compras.
+                          </p>
+                        )}
+                        {!formData.schoolId && (
                           <p className="text-sm text-gray-500 mt-1">
-                            Nenhuma central de compras vinculada a esta escola. Configure primeiro nas Configurações.
+                            Selecione uma escola para ver as centrais disponíveis.
                           </p>
                         )}
                       </div>
