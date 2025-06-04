@@ -6,11 +6,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { FileText, Download } from "lucide-react";
 import { ATAContract } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { generateATAReport } from "@/lib/ata-reports";
+import { ReportGenerationModal } from "./ReportGenerationModal";
 
 export function ATAReportsTab() {
   const { currentSchool } = useAuth();
   const [contracts, setContracts] = useState<ATAContract[]>([]);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   useEffect(() => {
     if (currentSchool) {
@@ -20,24 +21,6 @@ export function ATAReportsTab() {
       setContracts(storedContracts);
     }
   }, [currentSchool]);
-
-  const handleGenerateReport = (format: 'pdf' | 'excel') => {
-    if (!currentSchool || contracts.length === 0) return;
-
-    const reportData = contracts.map(contract => ({
-      escola: currentSchool.name,
-      usuario: contract.createdBy,
-      fornecedor: contract.fornecedor,
-      numeroProcesso: contract.numeroProcesso,
-      dataATA: contract.dataATA,
-      inicioVigencia: contract.dataInicioVigencia,
-      fimVigencia: contract.dataFimVigencia,
-      items: contract.items,
-      valorTotal: contract.items.reduce((total, item) => total + item.valorTotal, 0),
-    }));
-
-    generateATAReport(reportData, format);
-  };
 
   const totalContratos = contracts.length;
   const totalItens = contracts.reduce((total, contract) => total + contract.items.length, 0);
@@ -56,7 +39,7 @@ export function ATAReportsTab() {
           <div className="flex gap-2">
             <Button 
               variant="outline" 
-              onClick={() => handleGenerateReport('pdf')}
+              onClick={() => setIsReportModalOpen(true)}
               disabled={contracts.length === 0}
             >
               <Download className="h-4 w-4 mr-2" />
@@ -64,7 +47,7 @@ export function ATAReportsTab() {
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => handleGenerateReport('excel')}
+              onClick={() => setIsReportModalOpen(true)}
               disabled={contracts.length === 0}
             >
               <Download className="h-4 w-4 mr-2" />
@@ -139,6 +122,12 @@ export function ATAReportsTab() {
           )}
         </CardContent>
       </Card>
+
+      <ReportGenerationModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        contracts={contracts}
+      />
     </div>
   );
 }
