@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +99,7 @@ export function TransferTable({ transfers, onDeleteTransfer, schools, centers }:
                   <TableRow>
                     <TableHead>Data</TableHead>
                     <TableHead>ATA</TableHead>
+                    <TableHead>Item</TableHead>
                     <TableHead>Escola Origem</TableHead>
                     <TableHead>Escola Destino</TableHead>
                     <TableHead>Quantidade</TableHead>
@@ -113,11 +114,26 @@ export function TransferTable({ transfers, onDeleteTransfer, schools, centers }:
                         {new Date(transfer.createdAt).toLocaleDateString('pt-BR')}
                       </TableCell>
                       <TableCell className="font-medium">{transfer.ataId}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{transfer.itemName}</p>
+                          {transfer.itemUnit && (
+                            <Badge variant="outline" className="text-xs">
+                              {transfer.itemUnit}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>{getSchoolName(transfer.schoolOriginId)}</TableCell>
                       <TableCell>
                         {transfer.schoolDestinationId ? getSchoolName(transfer.schoolDestinationId) : "N/A"}
                       </TableCell>
-                      <TableCell>{transfer.quantity}</TableCell>
+                      <TableCell>
+                        <span className="font-medium">{transfer.quantity}</span>
+                        {transfer.itemUnit && (
+                          <span className="text-muted-foreground ml-1">{transfer.itemUnit}</span>
+                        )}
+                      </TableCell>
                       <TableCell>{getStatusBadge(transfer.status)}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
@@ -167,6 +183,21 @@ export function TransferTable({ transfers, onDeleteTransfer, schools, centers }:
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="font-medium">ATA:</label>
+                  <p>{selectedTransfer.ataId}</p>
+                </div>
+                <div>
+                  <label className="font-medium">Item:</label>
+                  <p>{selectedTransfer.itemName}</p>
+                  {selectedTransfer.itemUnit && (
+                    <Badge variant="outline" className="mt-1">
+                      {selectedTransfer.itemUnit}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <label className="font-medium">Escola Origem:</label>
                   <p>{getSchoolName(selectedTransfer.schoolOriginId)}</p>
                 </div>
@@ -177,7 +208,16 @@ export function TransferTable({ transfers, onDeleteTransfer, schools, centers }:
               </div>
               <div>
                 <label className="font-medium">Quantidade:</label>
-                <p>{selectedTransfer.quantity}</p>
+                <p>
+                  {selectedTransfer.quantity}
+                  {selectedTransfer.itemUnit && (
+                    <span className="text-muted-foreground ml-1">{selectedTransfer.itemUnit}</span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <label className="font-medium">Central de Compras:</label>
+                <p>{selectedTransfer.centerId ? getCenterName(selectedTransfer.centerId) : "N/A"}</p>
               </div>
               <div>
                 <label className="font-medium">Justificativa:</label>

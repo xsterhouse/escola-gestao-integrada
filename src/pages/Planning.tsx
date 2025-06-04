@@ -28,7 +28,7 @@ interface ATAItem {
 
 interface ATA {
   id: string;
-  numeroATA: string; // Agora será o ID automático (ATA001, ATA002, etc.)
+  numeroATA: string;
   dataATA: string;
   dataInicioVigencia: string;
   dataFimVigencia: string;
@@ -46,7 +46,13 @@ const Planning = () => {
   const [activeTab, setActiveTab] = useState("nova-ata");
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isNewATAModalOpen, setIsNewATAModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isVigencyItemsModalOpen, setIsVigencyItemsModalOpen] = useState(false);
   const [selectedProcess, setSelectedProcess] = useState<ATA | null>(null);
+  const [selectedVigencyATA, setSelectedVigencyATA] = useState<ATA | null>(null);
+  const [ataToDelete, setAtaToDelete] = useState<string | null>(null);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteJustification, setDeleteJustification] = useState("");
   const [atas, setAtas] = useState<ATA[]>([]);
   const [ataItems, setAtaItems] = useState<ATAItem[]>([]);
   const [transfers, setTransfers] = useState<any[]>([]);
@@ -190,13 +196,34 @@ const Planning = () => {
     setIsDetailsModalOpen(true);
   };
 
-  const handleDeleteATA = (ataId: string) => {
-    const updatedATAs = atas.filter(ata => ata.id !== ataId);
-    saveATAs(updatedATAs);
-    toast({
-      title: "ATA excluída",
-      description: "ATA foi excluída com sucesso"
-    });
+  const handleDeleteClick = (ataId: string) => {
+    setAtaToDelete(ataId);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletePassword || !deleteJustification) {
+      toast({
+        title: "Erro",
+        description: "Senha e justificativa são obrigatórias",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (ataToDelete) {
+      const updatedATAs = atas.filter(ata => ata.id !== ataToDelete);
+      saveATAs(updatedATAs);
+      setIsDeleteModalOpen(false);
+      setDeletePassword("");
+      setDeleteJustification("");
+      setAtaToDelete(null);
+      
+      toast({
+        title: "ATA excluída",
+        description: "ATA foi excluída com sucesso"
+      });
+    }
   };
 
   const handleFinalizeATA = (ataId: string) => {
@@ -226,8 +253,13 @@ const Planning = () => {
     setFormData(prev => ({
       ...prev,
       schoolId,
-      centralComprasId: "" // Reset central de compras quando escola mudar
+      centralComprasId: ""
     }));
+  };
+
+  const handleVigencyCardClick = (ata: ATA) => {
+    setSelectedVigencyATA(ata);
+    setIsVigencyItemsModalOpen(true);
   };
 
   const handleAddItem = () => {
@@ -312,7 +344,6 @@ const Planning = () => {
     const updatedATAs = [...atas, newATA];
     saveATAs(updatedATAs);
     
-    // Reset form
     setFormData({
       dataATA: "",
       dataInicioVigencia: "",
@@ -322,8 +353,6 @@ const Planning = () => {
     });
     setAtaItems([]);
     setIsNewATAModalOpen(false);
-
-    // Automatically switch to "Gestão de ATAs" tab
     setActiveTab("gestao-atas");
 
     toast({
@@ -348,7 +377,6 @@ const Planning = () => {
   const handleTransferSaved = (transfer: any) => {
     setTransfers(prev => [...prev, transfer]);
     
-    // Save to localStorage
     const existingTransfers = JSON.parse(localStorage.getItem("transfers") || "[]");
     localStorage.setItem("transfers", JSON.stringify([...existingTransfers, transfer]));
   };
@@ -356,7 +384,6 @@ const Planning = () => {
   const handleDeleteTransfer = (transferId: string, password: string, justification: string) => {
     const transferToDelete = transfers.find(t => t.id === transferId);
     if (transferToDelete) {
-      // Move to history
       const historyEntry = {
         ...transferToDelete,
         deletedAt: new Date().toISOString(),
@@ -366,11 +393,8 @@ const Planning = () => {
       };
       
       setTransferHistory(prev => [...prev, historyEntry]);
-      
-      // Remove from active transfers
       setTransfers(prev => prev.filter(t => t.id !== transferId));
       
-      // Update localStorage
       const remainingTransfers = transfers.filter(t => t.id !== transferId);
       localStorage.setItem("transfers", JSON.stringify(remainingTransfers));
       
@@ -393,7 +417,6 @@ const Planning = () => {
   }, []);
 
   const handleExportReport = (format: 'pdf' | 'excel') => {
-    // Implement export functionality
     toast({
       title: "Exportando relatório",
       description: `Relatório em formato ${format.toUpperCase()} será baixado em instantes`
@@ -500,7 +523,6 @@ const Planning = () => {
                       </div>
                     </div>
 
-                    {/* Item addition section */}
                     <div className="border rounded-lg p-4">
                       <h3 className="font-medium mb-3">Adicionar Item</h3>
                       <div className="grid grid-cols-6 gap-2 mb-4">
@@ -522,6 +544,7 @@ const Planning = () => {
                             <SelectItem value="Kg">Kg</SelectItem>
                             <SelectItem value="Litro">Litro</SelectItem>
                             <SelectItem value="Unidade">Unidade</SelectItem>
+                            <SelectItem value="Frc">Frc</SelectItem>
                             <SelectItem value="Pacote">Pacote</SelectItem>
                           </SelectContent>
                         </Select>
@@ -661,7 +684,7 @@ const Planning = () => {
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                onClick={() => handleDeleteATA(ata.id)}
+                                onClick={() => handleDeleteClick(ata.id)}
                                 className="text-red-600 hover:text-red-800"
                                 title="Excluir ATA"
                               >
@@ -694,11 +717,12 @@ const Planning = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activeATAs.map((ata) => (
-                  <VigencyCounter
-                    key={ata.id}
-                    endDate={new Date(ata.dataFimVigencia)}
-                    ataNumber={ata.numeroATA}
-                  />
+                  <div key={ata.id} onClick={() => handleVigencyCardClick(ata)} className="cursor-pointer">
+                    <VigencyCounter
+                      endDate={new Date(ata.dataFimVigencia)}
+                      ataNumber={ata.numeroATA}
+                    />
+                  </div>
                 ))}
               </div>
             )}
@@ -887,10 +911,10 @@ const Planning = () => {
                               </Badge>
                             </TableCell>
                             <TableCell>{entry.ataId}</TableCell>
-                            <TableCell>{getSchoolsFromSettings().find(s => s.id === entry.schoolOriginId)?.name || "N/A"}</TableCell>
+                            <TableCell>{getSchoolsFromSettings().find((s: any) => s.id === entry.schoolOriginId)?.name || "N/A"}</TableCell>
                             <TableCell>
                               {entry.schoolDestinationId ? 
-                                getSchoolsFromSettings().find(s => s.id === entry.schoolDestinationId)?.name || "N/A" : 
+                                getSchoolsFromSettings().find((s: any) => s.id === entry.schoolDestinationId)?.name || "N/A" : 
                                 "N/A"
                               }
                             </TableCell>
@@ -944,6 +968,165 @@ const Planning = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Modal de Visualização de ATA */}
+        <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Detalhes da ATA {selectedProcess?.numeroATA}</DialogTitle>
+            </DialogHeader>
+            {selectedProcess && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="font-medium">Data da ATA:</label>
+                    <p>{selectedProcess.dataATA}</p>
+                  </div>
+                  <div>
+                    <label className="font-medium">Status:</label>
+                    <p>{getStatusBadge(selectedProcess.status)}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="font-medium">Início da Vigência:</label>
+                    <p>{selectedProcess.dataInicioVigencia}</p>
+                  </div>
+                  <div>
+                    <label className="font-medium">Fim da Vigência:</label>
+                    <p>{selectedProcess.dataFimVigencia}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="font-medium">Valor Total:</label>
+                  <p>R$ {selectedProcess.valorTotal.toFixed(2)}</p>
+                </div>
+                <div>
+                  <label className="font-medium mb-2 block">Itens da ATA:</label>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nº Item</TableHead>
+                        <TableHead>Produto</TableHead>
+                        <TableHead>Unidade</TableHead>
+                        <TableHead>Quantidade</TableHead>
+                        <TableHead>Valor Unitário</TableHead>
+                        <TableHead>Valor Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedProcess.items.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.numeroItem}</TableCell>
+                          <TableCell>{item.descricaoProduto}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{item.unidade}</Badge>
+                          </TableCell>
+                          <TableCell>{item.quantidade}</TableCell>
+                          <TableCell>R$ {item.valorUnitario.toFixed(2)}</TableCell>
+                          <TableCell className="font-medium">R$ {item.valorTotal.toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Exclusão de ATA */}
+        <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar Exclusão da ATA</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p>Para excluir esta ATA, digite sua senha e justificativa:</p>
+              <div>
+                <label className="block text-sm font-medium mb-1">Senha *</label>
+                <Input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Digite sua senha"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Justificativa *</label>
+                <Textarea
+                  value={deleteJustification}
+                  onChange={(e) => setDeleteJustification(e.target.value)}
+                  placeholder="Justifique a exclusão..."
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button variant="destructive" onClick={handleConfirmDelete}>
+                  Confirmar Exclusão
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Itens da Vigência */}
+        <Dialog open={isVigencyItemsModalOpen} onOpenChange={setIsVigencyItemsModalOpen}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Itens da ATA {selectedVigencyATA?.numeroATA}</DialogTitle>
+            </DialogHeader>
+            {selectedVigencyATA && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="font-medium">Vigência:</label>
+                    <p>{selectedVigencyATA.dataInicioVigencia} até {selectedVigencyATA.dataFimVigencia}</p>
+                  </div>
+                  <div>
+                    <label className="font-medium">Status:</label>
+                    <p>{getStatusBadge(selectedVigencyATA.status)}</p>
+                  </div>
+                  <div>
+                    <label className="font-medium">Valor Total:</label>
+                    <p>R$ {selectedVigencyATA.valorTotal.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="font-medium mb-2 block">Itens da ATA:</label>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nº Item</TableHead>
+                        <TableHead>Produto</TableHead>
+                        <TableHead>Unidade</TableHead>
+                        <TableHead>Quantidade</TableHead>
+                        <TableHead>Valor Unitário</TableHead>
+                        <TableHead>Valor Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedVigencyATA.items.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.numeroItem}</TableCell>
+                          <TableCell>{item.descricaoProduto}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{item.unidade}</Badge>
+                          </TableCell>
+                          <TableCell>{item.quantidade}</TableCell>
+                          <TableCell>R$ {item.valorUnitario.toFixed(2)}</TableCell>
+                          <TableCell className="font-medium">R$ {item.valorTotal.toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
