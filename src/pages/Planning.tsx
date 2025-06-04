@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Eye, Plus, Trash2, Save, Download, FileText, BarChart3, ArrowLeftRight, CheckCircle, XCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { isSchoolLinkedToPurchasingCenter } from "@/utils/schoolPurchasingSync";
 
 interface ATAItem {
   id: string;
@@ -104,7 +105,7 @@ const Planning = () => {
   const getSchoolsFromSettings = () => {
     try {
       const schools = JSON.parse(localStorage.getItem("schools") || "[]");
-      console.log("Escolas carregadas:", schools);
+      console.log("📚 Escolas carregadas:", schools);
       return schools;
     } catch {
       return [];
@@ -114,59 +115,59 @@ const Planning = () => {
   const getPurchasingCentersFromSettings = () => {
     try {
       const storageData = localStorage.getItem("purchasing-centers");
-      console.log("Dados brutos das centrais:", storageData);
+      console.log("🏢 Dados brutos das centrais:", storageData);
       
       if (!storageData) return [];
       
       const parsedData = JSON.parse(storageData);
-      console.log("Dados parseados das centrais:", parsedData);
+      console.log("📋 Dados parseados das centrais:", parsedData);
       
       // Se for um array de objetos com propriedade 'data', extrair os dados
       if (Array.isArray(parsedData) && parsedData.length > 0 && parsedData[0].data) {
         const centers = parsedData.map(item => item.data);
-        console.log("Centrais extraídas (com .data):", centers);
+        console.log("🏢 Centrais extraídas (com .data):", centers);
         return centers;
       }
       
       // Se for um array direto, retornar como está
       if (Array.isArray(parsedData)) {
-        console.log("Centrais diretas:", parsedData);
+        console.log("🏢 Centrais diretas:", parsedData);
         return parsedData;
       }
       
       return [];
     } catch (error) {
-      console.error("Error loading purchasing centers:", error);
+      console.error("❌ Erro ao carregar centrais de compras:", error);
       return [];
     }
   };
 
-  // Get purchasing centers filtered by selected school
+  // Get purchasing centers filtered by selected school with improved logic
   const getAvailablePurchasingCenters = () => {
     const allCenters = getPurchasingCentersFromSettings();
-    console.log("Todas as centrais disponíveis:", allCenters);
-    console.log("Escola selecionada:", formData.schoolId);
+    console.log("🔍 Todas as centrais disponíveis:", allCenters);
+    console.log("🎯 Escola selecionada:", formData.schoolId);
     
     if (!formData.schoolId) {
-      console.log("Nenhuma escola selecionada, retornando array vazio");
+      console.log("⚠️ Nenhuma escola selecionada, retornando array vazio");
       return [];
     }
     
-    // Filtrar centrais que estão vinculadas à escola selecionada
+    // Filtrar centrais usando verificação bidirecional
     const filteredCenters = allCenters.filter(center => {
-      console.log(`Verificando central ${center.name}:`, {
+      const isLinked = isSchoolLinkedToPurchasingCenter(formData.schoolId, center.id);
+      
+      console.log(`🔗 Verificando central ${center.name}:`, {
+        centerId: center.id,
         centerSchoolIds: center.schoolIds,
         selectedSchoolId: formData.schoolId,
-        hasSchoolIds: center.schoolIds && Array.isArray(center.schoolIds),
-        includes: center.schoolIds && center.schoolIds.includes(formData.schoolId)
+        isLinked
       });
       
-      return center.schoolIds && 
-             Array.isArray(center.schoolIds) && 
-             center.schoolIds.includes(formData.schoolId);
+      return isLinked;
     });
     
-    console.log("Centrais filtradas para a escola:", filteredCenters);
+    console.log("✅ Centrais filtradas para a escola:", filteredCenters);
     return filteredCenters;
   };
 
@@ -215,7 +216,7 @@ const Planning = () => {
   };
 
   const handleSchoolChange = (schoolId: string) => {
-    console.log("Escola selecionada:", schoolId);
+    console.log("🎯 Escola selecionada:", schoolId);
     setFormData(prev => ({
       ...prev,
       schoolId,

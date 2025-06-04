@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Dialog, 
@@ -16,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { School, PurchasingCenter } from "@/lib/types";
 import { Upload, X } from "lucide-react";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
+import { syncSchoolPurchasingRelationship } from "@/utils/schoolPurchasingSync";
 
 type ModernSchoolFormProps = {
   isOpen: boolean;
@@ -45,6 +45,7 @@ export function ModernSchoolForm({
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [originalPurchasingCenterIds, setOriginalPurchasingCenterIds] = useState<string[]>([]);
   const { toast } = useToast();
   const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasing-centers', []);
 
@@ -52,6 +53,7 @@ export function ModernSchoolForm({
   useEffect(() => {
     console.log('InitialData changed:', initialData);
     if (initialData) {
+      const purchasingIds = initialData.purchasingCenterIds || [];
       setFormData({
         name: initialData.name || "",
         tradingName: initialData.tradingName || "",
@@ -63,8 +65,9 @@ export function ModernSchoolForm({
         address: initialData.address || "",
         cityState: initialData.cityState || "",
         logo: initialData.logo || "",
-        purchasingCenterIds: initialData.purchasingCenterIds || [],
+        purchasingCenterIds: purchasingIds,
       });
+      setOriginalPurchasingCenterIds(purchasingIds);
     } else {
       // Reset form for new school
       setFormData({
@@ -80,6 +83,7 @@ export function ModernSchoolForm({
         logo: "",
         purchasingCenterIds: [],
       });
+      setOriginalPurchasingCenterIds([]);
     }
   }, [initialData]);
 
@@ -121,10 +125,26 @@ export function ModernSchoolForm({
       // Generate code from CNPJ (first 8 digits)
       const code = formData.cnpj.replace(/\D/g, '').substring(0, 8);
       
+      // Salvar a escola
       onSave({
         ...formData,
         code, // Add the missing code property
       });
+
+      // Sincronizar relacionamento bidirecional apenas se for uma edição
+      if (initialData?.id) {
+        console.log("🔄 Sincronizando relacionamento para escola editada:", {
+          schoolId: initialData.id,
+          oldIds: originalPurchasingCenterIds,
+          newIds: formData.purchasingCenterIds
+        });
+        
+        syncSchoolPurchasingRelationship(
+          initialData.id,
+          formData.purchasingCenterIds,
+          originalPurchasingCenterIds
+        );
+      }
       
       toast({
         title: initialData ? "Escola atualizada" : "Escola cadastrada",
