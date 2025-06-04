@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Table,
@@ -10,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, FileDown, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { DeletionHistory, InventoryMovement } from "@/lib/types";
