@@ -8,10 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Plus, Trash2, Save, Download, FileText, BarChart3, ArrowLeftRight, CheckCircle, XCircle } from "lucide-react";
+import { Eye, Plus, Trash2, Save, Download, FileText, BarChart3, CheckCircle, Clock, History } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isSchoolLinkedToPurchasingCenter } from "@/utils/schoolPurchasingSync";
+import { VigencyCounter } from "@/components/planning/VigencyCounter";
+import { TransferFormComponent } from "@/components/planning/TransferFormComponent";
+import { TransferTable } from "@/components/planning/TransferTable";
 
 interface ATAItem {
   id: string;
@@ -46,6 +49,8 @@ const Planning = () => {
   const [selectedProcess, setSelectedProcess] = useState<ATA | null>(null);
   const [atas, setAtas] = useState<ATA[]>([]);
   const [ataItems, setAtaItems] = useState<ATAItem[]>([]);
+  const [transfers, setTransfers] = useState<any[]>([]);
+  const [transferHistory, setTransferHistory] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     dataATA: "",
     dataInicioVigencia: "",
@@ -176,7 +181,8 @@ const Planning = () => {
     { id: "gestao-atas", label: "Gestão de ATAs" },
     { id: "vigencia", label: "Vigência" },
     { id: "relatorios", label: "Relatórios" },
-    { id: "transferencia", label: "Transferência de Saldos" }
+    { id: "transferencia", label: "Transferência de Saldos" },
+    { id: "historico", label: "Histórico" }
   ];
 
   const handleViewDetails = (ata: ATA) => {
@@ -317,9 +323,12 @@ const Planning = () => {
     setAtaItems([]);
     setIsNewATAModalOpen(false);
 
+    // Automatically switch to "Gestão de ATAs" tab
+    setActiveTab("gestao-atas");
+
     toast({
       title: "ATA salva",
-      description: `ATA ${newATA.numeroATA} foi salva com sucesso`
+      description: `ATA ${newATA.numeroATA} foi salva com sucesso e está pendente de aprovação`
     });
   };
 
@@ -334,6 +343,63 @@ const Planning = () => {
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
+  };
+
+  const handleTransferSaved = (transfer: any) => {
+    setTransfers(prev => [...prev, transfer]);
+    
+    // Save to localStorage
+    const existingTransfers = JSON.parse(localStorage.getItem("transfers") || "[]");
+    localStorage.setItem("transfers", JSON.stringify([...existingTransfers, transfer]));
+  };
+
+  const handleDeleteTransfer = (transferId: string, password: string, justification: string) => {
+    const transferToDelete = transfers.find(t => t.id === transferId);
+    if (transferToDelete) {
+      // Move to history
+      const historyEntry = {
+        ...transferToDelete,
+        deletedAt: new Date().toISOString(),
+        deletePassword: password,
+        deleteJustification: justification,
+        action: "deleted"
+      };
+      
+      setTransferHistory(prev => [...prev, historyEntry]);
+      
+      // Remove from active transfers
+      setTransfers(prev => prev.filter(t => t.id !== transferId));
+      
+      // Update localStorage
+      const remainingTransfers = transfers.filter(t => t.id !== transferId);
+      localStorage.setItem("transfers", JSON.stringify(remainingTransfers));
+      
+      const existingHistory = JSON.parse(localStorage.getItem("transferHistory") || "[]");
+      localStorage.setItem("transferHistory", JSON.stringify([...existingHistory, historyEntry]));
+      
+      toast({
+        title: "Transferência excluída",
+        description: "A transferência foi movida para o histórico"
+      });
+    }
+  };
+
+  // Load transfers from localStorage
+  useEffect(() => {
+    const storedTransfers = JSON.parse(localStorage.getItem("transfers") || "[]");
+    const storedHistory = JSON.parse(localStorage.getItem("transferHistory") || "[]");
+    setTransfers(storedTransfers);
+    setTransferHistory(storedHistory);
+  }, []);
+
+  const handleExportReport = (format: 'pdf' | 'excel') => {
+    // Implement export functionality
+    toast({
+      title: "Exportando relatório",
+      description: `Relatório em formato ${format.toUpperCase()} será baixado em instantes`
+    });
+    
+    console.log(`Exporting report in ${format} format`);
   };
 
   const renderTabContent = () => {
@@ -566,6 +632,7 @@ const Planning = () => {
                                 variant="ghost" 
                                 size="sm" 
                                 onClick={() => handleViewDetails(ata)}
+                                title="Visualizar detalhes"
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
@@ -575,6 +642,7 @@ const Planning = () => {
                                   size="sm" 
                                   onClick={() => handleFinalizeATA(ata.id)}
                                   className="text-blue-600 hover:text-blue-800"
+                                  title="Finalizar ATA"
                                 >
                                   <CheckCircle className="h-4 w-4" />
                                 </Button>
@@ -585,6 +653,7 @@ const Planning = () => {
                                   size="sm" 
                                   onClick={() => handleApproveATA(ata.id)}
                                   className="text-green-600 hover:text-green-800"
+                                  title="Aprovar ATA"
                                 >
                                   <CheckCircle className="h-4 w-4" />
                                 </Button>
@@ -594,6 +663,7 @@ const Planning = () => {
                                 size="sm" 
                                 onClick={() => handleDeleteATA(ata.id)}
                                 className="text-red-600 hover:text-red-800"
+                                title="Excluir ATA"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -610,10 +680,9 @@ const Planning = () => {
         );
 
       case "vigencia":
-        // ... keep existing code (vigencia tab implementation)
         const activeATAs = atas.filter(ata => ata.status === "aprovada");
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <h2 className="text-xl font-semibold mb-4">ATAs em Vigência</h2>
             
             {activeATAs.length === 0 ? (
@@ -625,185 +694,12 @@ const Planning = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activeATAs.map((ata) => (
-                  <Card key={ata.id} className="hover:shadow-md transition-all">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h3 className="font-semibold">ATA: {ata.numeroATA}</h3>
-                          <p className="text-gray-600">Valor: R$ {ata.valorTotal.toFixed(2)}</p>
-                        </div>
-                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                          {ata.status}
-                        </span>
-                      </div>
-                      <div className="pt-3 border-t border-gray-100 space-y-1">
-                        <p className="text-sm">
-                          <span className="text-gray-600">Vigência:</span> {ata.dataInicioVigencia} - {ata.dataFimVigencia}
-                        </p>
-                        <p className="text-sm">
-                          <span className="text-gray-600">Itens:</span> {ata.items.length} produtos
-                        </p>
-                      </div>
-                      <div className="mt-3 flex justify-between">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-blue-600 hover:text-blue-800"
-                          onClick={() => handleViewDetails(ata)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Ver detalhes
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <VigencyCounter
+                    key={ata.id}
+                    endDate={new Date(ata.dataFimVigencia)}
+                    ataNumber={ata.numeroATA}
+                  />
                 ))}
-              </div>
-            )}
-
-            <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Detalhes da ATA</DialogTitle>
-                </DialogHeader>
-                {selectedProcess && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="font-medium">ATA:</label>
-                        <p>{selectedProcess.numeroATA}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium">Valor Total:</label>
-                        <p>R$ {selectedProcess.valorTotal.toFixed(2)}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium">Data da ATA:</label>
-                        <p>{selectedProcess.dataATA}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium">Vigência:</label>
-                        <p>{selectedProcess.dataInicioVigencia} - {selectedProcess.dataFimVigencia}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium">Status:</label>
-                        <p>{selectedProcess.status}</p>
-                      </div>
-                      <div>
-                        <label className="font-medium">Quantidade de Itens:</label>
-                        <p>{selectedProcess.items.length}</p>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-medium mb-2">Itens da ATA:</h3>
-                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {selectedProcess.items.map((item) => (
-                          <div key={item.id} className="p-3 bg-gray-50 rounded-md">
-                            <p className="font-medium">{item.numeroItem} - {item.descricaoProduto}</p>
-                            <p className="text-sm text-gray-600">
-                              {item.quantidade} {item.unidade} x R$ {item.valorUnitario.toFixed(2)} = R$ {item.valorTotal.toFixed(2)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
-          </div>
-        );
-
-      case "transferencia":
-        const schools = getSchoolsFromSettings();
-        const centers = getPurchasingCentersFromSettings();
-        const approvedATAs = atas.filter(ata => ata.status === "aprovada");
-        
-        return (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold mb-4">Transferência de Saldos</h2>
-            
-            {approvedATAs.length === 0 ? (
-              <Card className="bg-yellow-50 border-yellow-200">
-                <CardContent className="p-4">
-                  <h3 className="font-medium text-yellow-800 mb-2 flex items-center gap-2">
-                    <XCircle className="h-4 w-4" />
-                    Nenhuma ATA aprovada disponível
-                  </h3>
-                  <p className="text-yellow-700 text-sm">
-                    Para realizar transferências de saldo, é necessário ter pelo menos uma ATA com status "Aprovada".
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">ATA de Origem</label>
-                    <select className="w-full border border-input rounded-md px-3 py-2">
-                      <option>Selecione a ATA</option>
-                      {approvedATAs.map((ata) => (
-                        <option key={ata.id} value={ata.id}>{ata.numeroATA}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Escola de Origem</label>
-                    <select className="w-full border border-input rounded-md px-3 py-2">
-                      <option>Selecione a escola de origem</option>
-                      {schools.map((school: any) => (
-                        <option key={school.id} value={school.id}>{school.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Escola de Destino</label>
-                    <select className="w-full border border-input rounded-md px-3 py-2">
-                      <option>Selecione a escola de destino</option>
-                      {schools.map((school: any) => (
-                        <option key={school.id} value={school.id}>{school.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Central de Compras</label>
-                    <select className="w-full border border-input rounded-md px-3 py-2">
-                      <option>Selecione a central</option>
-                      {centers.map((center: any) => (
-                        <option key={center.id} value={center.id}>{center.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Justificativa</label>
-                    <Textarea 
-                      className="h-36"
-                      placeholder="Explique o motivo da transferência"
-                    />
-                  </div>
-                  
-                  <Card className="bg-blue-50 border-blue-200">
-                    <CardContent className="p-4">
-                      <h3 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Informações sobre a transferência
-                      </h3>
-                      <ul className="text-sm text-blue-700 space-y-1">
-                        <li>• As transferências só são permitidas entre escolas da mesma Central de Compras.</li>
-                        <li>• O saldo será automaticamente atualizado nas duas escolas após a confirmação.</li>
-                        <li>• Todas as transferências ficam registradas para fins de auditoria.</li>
-                        <li>• Somente ATAs com status "Aprovada" podem ter saldos transferidos.</li>
-                      </ul>
-                    </CardContent>
-                  </Card>
-                </div>
               </div>
             )}
           </div>
@@ -822,10 +718,23 @@ const Planning = () => {
                   </div>
                   <h3 className="font-semibold text-lg mb-2 text-center">Relatório por Escola</h3>
                   <p className="text-gray-600 text-sm mb-4 text-center">Exporte relatórios detalhados por escola, com todos os produtos contratados e saldos disponíveis.</p>
-                  <Button className="w-full" variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1" 
+                      variant="outline"
+                      onClick={() => handleExportReport('pdf')}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      PDF
+                    </Button>
+                    <Button 
+                      className="flex-1 bg-green-600 hover:bg-green-700" 
+                      onClick={() => handleExportReport('excel')}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Excel
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
               
@@ -836,10 +745,23 @@ const Planning = () => {
                   </div>
                   <h3 className="font-semibold text-lg mb-2 text-center">Relatório por Produto</h3>
                   <p className="text-gray-600 text-sm mb-4 text-center">Visualize a distribuição de um produto específico entre as escolas da rede municipal.</p>
-                  <Button className="w-full" variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1" 
+                      variant="outline"
+                      onClick={() => handleExportReport('pdf')}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      PDF
+                    </Button>
+                    <Button 
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={() => handleExportReport('excel')}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Excel
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -873,17 +795,113 @@ const Planning = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Formato</label>
                     <div className="flex gap-2">
-                      <Button className="flex-1" size="sm">
+                      <Button 
+                        className="flex-1" 
+                        size="sm"
+                        onClick={() => handleExportReport('pdf')}
+                      >
                         <FileText className="h-4 w-4 mr-1" />
                         PDF
                       </Button>
-                      <Button className="flex-1 bg-green-600 hover:bg-green-700" size="sm">
+                      <Button 
+                        className="flex-1 bg-green-600 hover:bg-green-700" 
+                        size="sm"
+                        onClick={() => handleExportReport('excel')}
+                      >
                         <BarChart3 className="h-4 w-4 mr-1" />
                         Excel
                       </Button>
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case "transferencia":
+        const schools = getSchoolsFromSettings();
+        const centers = getPurchasingCentersFromSettings();
+        const approvedATAs = atas.filter(ata => ata.status === "aprovada");
+        
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold mb-4">Transferência de Saldos</h2>
+            
+            <TransferFormComponent
+              schools={schools}
+              centers={centers}
+              approvedATAs={approvedATAs}
+              onTransferSaved={handleTransferSaved}
+            />
+            
+            <TransferTable
+              transfers={transfers}
+              onDeleteTransfer={handleDeleteTransfer}
+              schools={schools}
+              centers={centers}
+            />
+          </div>
+        );
+
+      case "historico":
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold mb-4">Histórico de Operações</h2>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Histórico de Transferências
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {transferHistory.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhum histórico de transferências encontrado.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data Operação</TableHead>
+                          <TableHead>Ação</TableHead>
+                          <TableHead>ATA</TableHead>
+                          <TableHead>Escola Origem</TableHead>
+                          <TableHead>Escola Destino</TableHead>
+                          <TableHead>Quantidade</TableHead>
+                          <TableHead>Justificativa Exclusão</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {transferHistory.map((entry) => (
+                          <TableRow key={entry.id}>
+                            <TableCell>
+                              {new Date(entry.deletedAt || entry.createdAt).toLocaleDateString('pt-BR')}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={entry.action === "deleted" ? "destructive" : "secondary"}>
+                                {entry.action === "deleted" ? "Excluída" : "Criada"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{entry.ataId}</TableCell>
+                            <TableCell>{getSchoolsFromSettings().find(s => s.id === entry.schoolOriginId)?.name || "N/A"}</TableCell>
+                            <TableCell>
+                              {entry.schoolDestinationId ? 
+                                getSchoolsFromSettings().find(s => s.id === entry.schoolDestinationId)?.name || "N/A" : 
+                                "N/A"
+                              }
+                            </TableCell>
+                            <TableCell>{entry.quantity}</TableCell>
+                            <TableCell>{entry.deleteJustification || "N/A"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -904,7 +922,7 @@ const Planning = () => {
 
         <Card className="mb-6">
           <CardContent className="p-4">
-            <div className="flex space-x-2 border-b pb-4">
+            <div className="flex space-x-2 border-b pb-4 overflow-x-auto">
               {tabs.map((tab) => (
                 <Button
                   key={tab.id}
@@ -914,7 +932,7 @@ const Planning = () => {
                     ? { backgroundColor: "#012340", color: "white" }
                     : { backgroundColor: "#e5e7eb", color: "#374151" }
                   }
-                  className="hover:opacity-90"
+                  className="hover:opacity-90 whitespace-nowrap"
                 >
                   {tab.label}
                 </Button>
