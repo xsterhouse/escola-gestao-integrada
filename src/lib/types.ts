@@ -21,7 +21,7 @@ export interface BankTransaction {
   description: string;
   value: number;
   transactionType: 'credito' | 'debito';
-  reconciliationStatus: 'pendente' | 'conciliado';
+  reconciliationStatus: 'pendente' | 'conciliado' | 'pgt_parcial';
   category?: string;
   resourceType?: string;
   source: 'payment' | 'receivable' | 'manual';
@@ -31,6 +31,12 @@ export interface BankTransaction {
   // Duplicate transaction control
   isDuplicate?: boolean;
   duplicateJustification?: string;
+  // Partial payment control
+  isPartialPayment?: boolean;
+  partialAmount?: number;
+  remainingAmount?: number;
+  parentTransactionId?: string;
+  originalReceivableId?: string;
 }
 
 export interface PaymentAccount {

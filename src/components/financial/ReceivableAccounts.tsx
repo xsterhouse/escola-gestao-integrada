@@ -30,6 +30,7 @@ import { EditReceivableDialog } from "./EditReceivableDialog";
 import { ReceivableCard } from "./ReceivableCard";
 import { ReceivableAccountsTable } from "./ReceivableAccountsTable";
 import { toast } from "sonner";
+import { CompletePartialPaymentDialog } from "./CompletePartialPaymentDialog";
 
 interface ReceivableAccountsProps {
   receivableAccounts: ReceivableAccount[];
@@ -63,6 +64,7 @@ export function ReceivableAccounts({
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [groupBy, setGroupBy] = useState<'description' | 'origin' | 'resourceType'>('description');
+  const [isCompletePartialPaymentOpen, setIsCompletePartialPaymentOpen] = useState<boolean>(false);
   
   // Form states for new receivable
   const [formData, setFormData] = useState({
@@ -176,28 +178,10 @@ export function ReceivableAccounts({
           isPartialPayment: true
         };
 
-        // Create a new receivable for the remaining balance
-        const remainingReceivable: ReceivableAccount = {
-          id: `receivable-${Date.now()}-remaining`,
-          schoolId: selectedAccount.schoolId,
-          description: `${selectedAccount.description} (Saldo Restante)`,
-          origin: selectedAccount.origin,
-          expectedDate: selectedAccount.expectedDate,
-          value: receiptData.remainingBalance,
-          resourceType: selectedAccount.resourceType,
-          status: 'pendente',
-          notes: `Saldo restante de recebimento parcial. Valor original: ${formatCurrency(selectedAccount.originalValue || selectedAccount.value)}`,
-          originalValue: selectedAccount.originalValue || selectedAccount.value,
-          parentReceivableId: selectedAccount.id,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
         // Update the accounts list
         const updatedAccounts = receivableAccounts.map(account => 
           account.id === selectedAccount.id ? updatedAccount : account
         );
-        updatedAccounts.push(remainingReceivable);
         setReceivableAccounts(updatedAccounts);
 
         // Call the onUpdateReceivable callback for the paid portion
@@ -235,6 +219,51 @@ export function ReceivableAccounts({
       setIsReceiptConfirmOpen(false);
       setSelectedAccount(null);
       calculateFinancialSummary();
+      
+      // Navigate to bank reconciliation if callback is provided
+      if (onNavigateToBankReconciliation) {
+        onNavigateToBankReconciliation();
+      }
+    }
+  };
+
+  const handleCompletePartialPayment = (account: ReceivableAccount) => {
+    setSelectedAccount(account);
+    setIsCompletePartialPaymentOpen(true);
+  };
+
+  const handleConfirmCompletePayment = (data: { bankAccountId: string; remainingAmount: number }) => {
+    if (selectedAccount) {
+      // Update the current account to show it's fully paid
+      const updatedAccount = { 
+        ...selectedAccount, 
+        receivedAmount: (selectedAccount.originalValue || selectedAccount.value),
+        isPartialPayment: false,
+        updatedAt: new Date()
+      };
+
+      // Update the receivable account
+      const updatedAccounts = receivableAccounts.map(account => 
+        account.id === selectedAccount.id ? updatedAccount : account
+      );
+      setReceivableAccounts(updatedAccounts);
+
+      // Call the onUpdateReceivable callback for the remaining amount
+      if (onUpdateReceivable) {
+        const remainingReceivable = {
+          ...selectedAccount,
+          value: data.remainingAmount,
+          receivedAmount: data.remainingAmount,
+          status: 'recebido' as const
+        };
+        onUpdateReceivable(remainingReceivable, data.bankAccountId);
+      }
+
+      setIsCompletePartialPaymentOpen(false);
+      setSelectedAccount(null);
+      calculateFinancialSummary();
+      
+      toast.success("Pagamento quitado com sucesso!");
       
       // Navigate to bank reconciliation if callback is provided
       if (onNavigateToBankReconciliation) {
@@ -507,6 +536,7 @@ export function ReceivableAccounts({
               onEditReceivable={openEditReceivable}
               onDeleteReceivable={handleDeleteReceivable}
               onOpenReceiptConfirm={openReceiptConfirm}
+              onCompletePartialPayment={handleCompletePartialPayment}
             />
           </CardContent>
         </Card>
@@ -662,6 +692,15 @@ export function ReceivableAccounts({
         onClose={() => setIsEditReceivableOpen(false)}
         receivable={selectedAccount}
         onSave={handleEditReceivable}
+      />
+
+      {/* Complete Partial Payment Dialog */}
+      <CompletePartialPaymentDialog
+        isOpen={isCompletePartialPaymentOpen}
+        onClose={() => setIsCompletePartialPaymentOpen(false)}
+        receivable={selectedAccount}
+        bankAccounts={bankAccounts}
+        onConfirm={handleConfirmCompletePayment}
       />
     </div>
   );

@@ -149,10 +149,12 @@ export function BankReconciliation({
       }
     }
     
-    if (statusFilter !== "all" && 
-        ((statusFilter === "reconciled" && transaction.reconciliationStatus !== "conciliado") ||
-         (statusFilter === "unreconciled" && transaction.reconciliationStatus !== "pendente"))) {
-      includeTransaction = false;
+    if (statusFilter !== "all") {
+      if (statusFilter === "reconciled" && transaction.reconciliationStatus !== "conciliado") {
+        includeTransaction = false;
+      } else if (statusFilter === "unreconciled" && !["pendente", "pgt_parcial"].includes(transaction.reconciliationStatus)) {
+        includeTransaction = false;
+      }
     }
     
     if (typeFilter !== "all" && 
@@ -457,6 +459,10 @@ export function BankReconciliation({
               ) : (
                 transactionsWithBalance.map(transaction => {
                   const account = bankAccounts.find(a => a.id === transaction.bankAccountId);
+                  const displayValue = transaction.isPartialPayment && transaction.partialAmount 
+                    ? transaction.partialAmount 
+                    : transaction.value;
+                  
                   return (
                     <TableRow key={transaction.id}>
                       <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
@@ -469,10 +475,20 @@ export function BankReconciliation({
                               Duplicado
                             </span>
                           )}
+                          {transaction.isPartialPayment && (
+                            <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">
+                              Parcial
+                            </span>
+                          )}
                         </div>
+                        {transaction.remainingAmount && transaction.remainingAmount > 0 && (
+                          <div className="text-xs text-orange-600 mt-1">
+                            Restante: {formatCurrency(transaction.remainingAmount)}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className={transaction.transactionType === 'credito' ? 'text-green-600' : 'text-red-600'}>
-                        {formatCurrency(transaction.value)}
+                        {formatCurrency(displayValue)}
                       </TableCell>
                       <TableCell className="font-medium">
                         {formatCurrency(transaction.balance)}
@@ -491,9 +507,13 @@ export function BankReconciliation({
                       <TableCell>
                         <div className="flex items-center">
                           <div className={`mr-2 h-2 w-2 rounded-full ${
-                            transaction.reconciliationStatus === 'conciliado' ? 'bg-green-500' : 'bg-orange-500'
+                            transaction.reconciliationStatus === 'conciliado' ? 'bg-green-500' : 
+                            transaction.reconciliationStatus === 'pgt_parcial' ? 'bg-orange-500' :
+                            'bg-orange-500'
                           }`} />
-                          {transaction.reconciliationStatus === 'conciliado' ? 'Conciliado' : 'Não Conciliado'}
+                          {transaction.reconciliationStatus === 'conciliado' ? 'Conciliado' : 
+                           transaction.reconciliationStatus === 'pgt_parcial' ? 'Pgt Parcial' :
+                           'Não Conciliado'}
                         </div>
                       </TableCell>
                       <TableCell>

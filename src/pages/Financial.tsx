@@ -253,7 +253,51 @@ export default function Financial() {
     if (previousReceivable?.status === 'pendente' && 
         updatedReceivable.status === 'recebido' && 
         bankAccountId) {
-      createAutomaticBankTransaction('receivable', updatedReceivable, bankAccountId);
+      
+      // Determine if this is a partial payment
+      const originalValue = updatedReceivable.originalValue || updatedReceivable.value;
+      const receivedAmount = updatedReceivable.receivedAmount || updatedReceivable.value;
+      const isPartialPayment = receivedAmount < originalValue;
+      const remainingAmount = originalValue - receivedAmount;
+
+      const bankAccount = bankAccounts.find(ba => ba.id === bankAccountId);
+      if (bankAccount) {
+        const newTransaction: BankTransaction = {
+          id: uuidv4(),
+          schoolId: "current-school-id",
+          bankAccountId,
+          date: new Date(),
+          description: isPartialPayment 
+            ? `Recebimento Parcial: ${updatedReceivable.description}` 
+            : `Recebimento: ${updatedReceivable.description}`,
+          value: receivedAmount,
+          transactionType: 'credito',
+          reconciliationStatus: isPartialPayment ? 'pgt_parcial' : 'conciliado',
+          category: updatedReceivable.resourceType,
+          resourceType: bankAccount.managementType,
+          source: 'receivable',
+          documentId: updatedReceivable.id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isPartialPayment,
+          partialAmount: isPartialPayment ? receivedAmount : undefined,
+          remainingAmount: isPartialPayment ? remainingAmount : undefined,
+          originalReceivableId: updatedReceivable.id
+        };
+
+        setBankTransactions(prev => [...prev, newTransaction]);
+        
+        // Update bank account balance
+        setBankAccounts(prev => prev.map(ba => 
+          ba.id === bankAccountId 
+            ? { 
+                ...ba, 
+                currentBalance: ba.currentBalance + receivedAmount,
+                updatedAt: new Date()
+              }
+            : ba
+        ));
+      }
     }
 
     // Update receivable accounts
