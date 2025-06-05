@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -56,6 +57,12 @@ export function Sidebar({ className }: SidebarProps) {
   
   // Encontrar a central de compras do usuário/escola atual
   useEffect(() => {
+    // Não mostrar central de compras para usuário master
+    if (user?.role === "master") {
+      setUserPurchasingCenter(null);
+      return;
+    }
+
     if (currentSchool && purchasingCenters.length > 0) {
       const center = purchasingCenters.find(pc => 
         pc.schoolIds.includes(currentSchool.id) && pc.status === "active"
@@ -64,7 +71,7 @@ export function Sidebar({ className }: SidebarProps) {
     } else {
       setUserPurchasingCenter(null);
     }
-  }, [currentSchool, purchasingCenters]);
+  }, [currentSchool, purchasingCenters, user?.role]);
   
   // Update session time every second
   useEffect(() => {
@@ -165,6 +172,23 @@ export function Sidebar({ className }: SidebarProps) {
     return location.pathname === path;
   };
 
+  // Function to get display text for current context
+  const getContextDisplay = () => {
+    if (user?.role === "master") {
+      return {
+        primary: "Sistema Global",
+        secondary: "Administrador Master"
+      };
+    }
+    
+    return {
+      primary: currentSchool?.name || "Nenhuma escola",
+      secondary: userPurchasingCenter ? `Central: ${userPurchasingCenter}` : null
+    };
+  };
+
+  const contextDisplay = getContextDisplay();
+
   // Mobile sidebar
   const MobileSidebar = (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -187,11 +211,11 @@ export function Sidebar({ className }: SidebarProps) {
               <div className="flex items-center gap-3 justify-center">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-blue-200 truncate text-center">
-                    {currentSchool?.name}
+                    {contextDisplay.primary}
                   </p>
-                  {userPurchasingCenter && (
+                  {contextDisplay.secondary && (
                     <p className="text-xs text-blue-300 truncate text-center mt-1">
-                      Central: {userPurchasingCenter}
+                      {contextDisplay.secondary}
                     </p>
                   )}
                 </div>
@@ -302,7 +326,7 @@ export function Sidebar({ className }: SidebarProps) {
     >
       {/* Header */}
       <div className={cn(
-        "flex h-16 items-center border-b border-white/10 transition-all duration-300",
+        "flex h-16 items-center border-b border-white/10 transition-all duration-300 relative",
         isCollapsed ? "justify-center px-4" : "justify-between px-6"
       )}>
         {!isCollapsed ? (
@@ -311,11 +335,11 @@ export function Sidebar({ className }: SidebarProps) {
             <div className="flex items-center gap-2 mt-1">
               <div className="flex flex-col items-start">
                 <p className="text-xs text-blue-200 truncate">
-                  {currentSchool?.name}
+                  {contextDisplay.primary}
                 </p>
-                {userPurchasingCenter && (
+                {contextDisplay.secondary && (
                   <p className="text-xs text-blue-300 truncate">
-                    Central: {userPurchasingCenter}
+                    {contextDisplay.secondary}
                   </p>
                 )}
               </div>
@@ -331,7 +355,12 @@ export function Sidebar({ className }: SidebarProps) {
           size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
           title={isCollapsed ? "Expandir" : "Recolher"}
-          className="h-9 w-9 text-white hover:bg-white/10 absolute top-4 right-4"
+          className="h-9 w-9 text-white hover:bg-white/10 z-10"
+          style={{
+            position: 'absolute',
+            top: '8px',
+            right: '8px'
+          }}
         >
           {isCollapsed ? <ChevronDown className="h-5 w-5 rotate-90" /> : <ChevronDown className="h-5 w-5 -rotate-90" />}
         </Button>
