@@ -19,18 +19,15 @@ import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { ViewReportDialog } from "./ViewReportDialog";
 import { DeleteReportDialog } from "./DeleteReportDialog";
+import { InventoryReportModal } from "./InventoryReportModal";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { toast } from "@/hooks/use-toast";
-import { generateInventoryReportPDF } from "@/lib/inventory-pdf-utils";
-import { getAllProductsStock } from "@/lib/inventory-calculations";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface InventoryReportsProps {
   invoices: Invoice[];
 }
 
 export function InventoryReports({ invoices }: InventoryReportsProps) {
-  const { currentSchool, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [fromDate, setFromDate] = useState<Date | undefined>(
     new Date(new Date().setDate(new Date().getDate() - 30))
@@ -39,6 +36,7 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
   const [selectedReport, setSelectedReport] = useState<InventoryReport | PurchaseReport | null>(null);
   const [reportType, setReportType] = useState<'inventory' | 'purchases'>('inventory');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   const { data: manualMovements } = useLocalStorageSync<InventoryMovement>('inventory-movements', []);
 
@@ -175,102 +173,12 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
     setSelectedReport(null);
   };
 
-  const handleExportCsv = () => {
-    const data = reportType === 'inventory' ? filteredInventoryReports : filteredPurchaseReports;
-    const headers = reportType === 'inventory' 
-      ? ['Código', 'Produto', 'Última Entrada', 'Fornecedor', 'Quantidade', 'Custo Unit.', 'Custo Total']
-      : ['Código', 'Descrição', 'Fornecedor', 'Data Entrada', 'Quantidade', 'Unidade', 'Valor', 'Saldo'];
-    
-    const csvData = data.map(report => {
-      if (reportType === 'inventory') {
-        const invReport = report as InventoryReport;
-        return [
-          invReport.productCode,
-          invReport.productName,
-          format(invReport.lastEntryDate, 'dd/MM/yyyy'),
-          invReport.supplierName,
-          invReport.currentQuantity.toString(),
-          invReport.unitCost.toFixed(2),
-          invReport.totalCost.toFixed(2)
-        ];
-      } else {
-        const purchReport = report as PurchaseReport;
-        return [
-          purchReport.productCode,
-          purchReport.description,
-          purchReport.supplier,
-          format(purchReport.entryDate, 'dd/MM/yyyy'),
-          purchReport.quantity.toString(),
-          purchReport.unitOfMeasure,
-          purchReport.value.toFixed(2),
-          purchReport.currentBalance.toString()
-        ];
-      }
-    });
-    
-    const csvContent = [headers, ...csvData]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
-      .join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `relatorio-${reportType}-${format(new Date(), 'dd-MM-yyyy')}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast({
-      title: "Exportação concluída",
-      description: "Arquivo CSV gerado com sucesso.",
-    });
-  };
-
-  const handleExportPdf = () => {
-    if (!currentSchool || !user) {
-      toast({
-        title: "Erro",
-        description: "Informações do usuário não encontradas.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const stockData = getAllProductsStock(invoices, manualMovements);
-    
-    const reportTypeMapping = {
-      'inventory': 'current-stock' as const,
-      'purchases': 'movements' as const
-    };
-
-    generateInventoryReportPDF({
-      schoolName: currentSchool.name,
-      userName: user.name,
-      date: new Date().toLocaleDateString('pt-BR'),
-      reportType: reportTypeMapping[reportType],
-      stockData: reportType === 'inventory' ? stockData : undefined,
-      movements: reportType === 'purchases' ? manualMovements : undefined,
-      dateRange: fromDate && toDate ? { from: fromDate, to: toDate } : undefined
-    });
-    
-    toast({
-      title: "Relatório gerado",
-      description: "O relatório PDF foi gerado com sucesso.",
-    });
-  };
-
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle>Relatórios de Estoque</CardTitle>
         <div className="flex items-center gap-2">
-          <Button onClick={handleExportCsv} variant="outline" size="sm">
-            <FileDown className="h-4 w-4 mr-1" />
-            CSV
-          </Button>
-          <Button onClick={handleExportPdf} variant="outline" size="sm">
+          <Button onClick={() => setIsReportModalOpen(true)} variant="outline" size="sm">
             <FileDown className="h-4 w-4 mr-1" />
             PDF
           </Button>
@@ -498,6 +406,13 @@ export function InventoryReports({ invoices }: InventoryReportsProps) {
           report={selectedReport}
         />
       )}
+
+      <InventoryReportModal
+        open={isReportModalOpen}
+        onOpenChange={setIsReportModalOpen}
+        invoices={invoices}
+        movements={manualMovements}
+      />
     </Card>
   );
 }
