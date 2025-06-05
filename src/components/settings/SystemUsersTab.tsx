@@ -39,6 +39,11 @@ interface PurchasingCenter {
   id: string;
   name: string;
   schoolIds: string[];
+  data?: {
+    id: string;
+    name: string;
+    schoolIds: string[];
+  };
 }
 
 export function SystemUsersTab() {
@@ -50,7 +55,32 @@ export function SystemUsersTab() {
   
   const { data: systemUsers, saveData: setSystemUsers } = useLocalStorageSync<SystemUser>('systemUsers', []);
   const { data: schools } = useLocalStorageSync<School>('schools', []);
-  const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasingCenters', []);
+  const { data: purchasingCentersRaw } = useLocalStorageSync<PurchasingCenter>('purchasing-centers', []);
+
+  // Normalize purchasing centers data structure
+  const purchasingCenters = purchasingCentersRaw.map((centerItem: any) => {
+    // Check if it's wrapped format with data property
+    if (centerItem.data) {
+      return {
+        id: centerItem.data.id,
+        name: centerItem.data.name,
+        schoolIds: centerItem.data.schoolIds || []
+      };
+    }
+    // Direct format
+    return {
+      id: centerItem.id,
+      name: centerItem.name,
+      schoolIds: centerItem.schoolIds || []
+    };
+  });
+
+  console.log("👥 SystemUsersTab - Dados carregados:", {
+    systemUsers: systemUsers.length,
+    schools: schools.length,
+    purchasingCenters: purchasingCenters.length,
+    purchasingCentersRaw: purchasingCentersRaw.length
+  });
 
   const handleSaveUser = (userData: Omit<SystemUser, "id" | "createdAt" | "updatedAt">) => {
     const newUser: SystemUser = {
