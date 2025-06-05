@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useLocalStorageSync } from "./useLocalStorageSync";
 import { User, UserHierarchy, UserModulePermission } from "@/lib/types";
@@ -42,7 +41,8 @@ export function useUserPermissions() {
 
   const canAccessModule = (user: User, moduleId: string): boolean => {
     // Master users have access to everything
-    if (user.userType === 'master' || user.role === 'master') {
+    const isMasterUser = (user.userType as UserHierarchy) === 'master' || (user.role as string) === 'master';
+    if (isMasterUser) {
       return true;
     }
 
@@ -58,11 +58,11 @@ export function useUserPermissions() {
     // Apply hierarchy-based restrictions
     switch (moduleId) {
       case "8": // Configurações
-        return (user.userType === 'master' || user.role === 'master') || (user.userType === 'diretor_escolar' && user.canManageSchool);
+        return isMasterUser || ((user.userType as UserHierarchy) === 'diretor_escolar' && user.canManageSchool);
       case "7": // Contabilidade
-        return user.userType === 'master' || user.role === 'master';
+        return isMasterUser;
       case "6": // Contratos
-        return ['master', 'diretor_escolar', 'central_compras'].includes(user.userType) && hasExplicitPermission;
+        return (['master', 'diretor_escolar', 'central_compras'].includes(user.userType as UserHierarchy)) && hasExplicitPermission;
       case "4": // Financeiro
         return hasExplicitPermission && user.schoolId !== null;
       default:
