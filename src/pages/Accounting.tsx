@@ -3,14 +3,16 @@ import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccountingHeader } from "@/components/accounting/AccountingHeader";
-import { AccountingEntryForm } from "@/components/accounting/AccountingEntryForm";
+import { AccountingDashboard } from "@/components/accounting/AccountingDashboard";
+import { IntegratedEntryForm } from "@/components/accounting/IntegratedEntryForm";
 import { AccountingEntriesTab } from "@/components/accounting/AccountingEntriesTab";
+import { AdvancedBankReconciliationTab } from "@/components/accounting/AdvancedBankReconciliationTab";
 import { AccountConfigTab } from "@/components/accounting/AccountConfigTab";
 import { AccountingReportsTab } from "@/components/accounting/AccountingReportsTab";
 import { CloseExerciseTab } from "@/components/accounting/CloseExerciseTab";
 
 const Accounting = () => {
-  const [activeTab, setActiveTab] = useState("entries");
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   return (
     <AppLayout>
@@ -19,27 +21,37 @@ const Accounting = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Módulo de Contabilidade</h1>
-            <p className="text-gray-600 mt-1">Gerencie lançamentos contábeis e controle financeiro</p>
+            <p className="text-gray-600 mt-1">Sistema integrado de gestão contábil com automação avançada</p>
           </div>
           <AccountingHeader />
         </div>
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-5xl grid-cols-5 mb-6">
+          <TabsList className="grid w-full max-w-6xl grid-cols-7 mb-6">
+            <TabsTrigger value="dashboard" className="text-sm font-medium">Dashboard</TabsTrigger>
             <TabsTrigger value="entries" className="text-sm font-medium">Lançamentos</TabsTrigger>
-            <TabsTrigger value="entries-list" className="text-sm font-medium">Visualizar Lançamentos</TabsTrigger>
-            <TabsTrigger value="accounts" className="text-sm font-medium">Configuração de Contas</TabsTrigger>
+            <TabsTrigger value="entries-list" className="text-sm font-medium">Visualizar</TabsTrigger>
+            <TabsTrigger value="reconciliation" className="text-sm font-medium">Conciliação</TabsTrigger>
+            <TabsTrigger value="accounts" className="text-sm font-medium">Contas</TabsTrigger>
             <TabsTrigger value="reports" className="text-sm font-medium">Relatórios</TabsTrigger>
-            <TabsTrigger value="close" className="text-sm font-medium">Encerrar Exercício</TabsTrigger>
+            <TabsTrigger value="close" className="text-sm font-medium">Encerramento</TabsTrigger>
           </TabsList>
 
+          <TabsContent value="dashboard" className="mt-6">
+            <AccountingDashboard />
+          </TabsContent>
+
           <TabsContent value="entries" className="mt-6">
-            <AccountingEntryForm />
+            <IntegratedEntryForm />
           </TabsContent>
 
           <TabsContent value="entries-list" className="mt-6">
             <AccountingEntriesTab />
+          </TabsContent>
+
+          <TabsContent value="reconciliation" className="mt-6">
+            <AdvancedBankReconciliationTab />
           </TabsContent>
 
           <TabsContent value="accounts" className="mt-6">

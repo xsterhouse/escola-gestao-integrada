@@ -1,4 +1,3 @@
-
 export interface BankAccount {
   id: string;
   schoolId: string;
@@ -566,4 +565,130 @@ export interface TransferRecord {
   transferredBy: string;
   items: PlanningItem[];
   notes?: string;
+}
+
+// New accounting-specific types
+export interface AccountingEntry {
+  id: string;
+  schoolId: string;
+  date: Date;
+  debitAccount: string;
+  debitValue: number;
+  debitDescription: string;
+  creditAccount: string;
+  creditValue: number;
+  creditDescription: string;
+  history: string;
+  totalValue: number;
+  entryType: 'manual' | 'automatic' | 'closing';
+  sourceModule?: 'financial' | 'inventory' | 'contracts' | 'invoices';
+  sourceDocumentId?: string;
+  reconciled?: boolean;
+  reconciledAt?: Date;
+  reconciledBy?: string;
+  auditTrail: AccountingAuditEntry[];
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string;
+  approved?: boolean;
+  approvedBy?: string;
+  approvedAt?: Date;
+}
+
+export interface AccountingAccount {
+  id: string;
+  code: string;
+  description: string;
+  accountType: 'ativo' | 'passivo' | 'patrimonio_liquido' | 'receita' | 'despesa';
+  accountClass: 'circulante' | 'nao_circulante' | 'realizavel_longo_prazo' | 'imobilizado' | 'intangivel';
+  level: number;
+  parentId?: string;
+  isActive: boolean;
+  allowsEntry: boolean;
+  resourceTypes: string[];
+  legislationReference?: string;
+  balanceType: 'debtor' | 'creditor';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AccountingAuditEntry {
+  id: string;
+  entryId: string;
+  action: 'created' | 'updated' | 'deleted' | 'approved' | 'reconciled';
+  userId: string;
+  userName: string;
+  timestamp: Date;
+  oldValues?: any;
+  newValues?: any;
+  reason?: string;
+  ipAddress?: string;
+}
+
+export interface BankReconciliation {
+  id: string;
+  schoolId: string;
+  bankAccountId: string;
+  reconciliationDate: Date;
+  startDate: Date;
+  endDate: Date;
+  bookBalance: number;
+  bankBalance: number;
+  adjustments: BankAdjustment[];
+  reconciledItems: ReconciledItem[];
+  status: 'in_progress' | 'completed' | 'reviewed';
+  completedBy?: string;
+  completedAt?: Date;
+  reviewedBy?: string;
+  reviewedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BankAdjustment {
+  id: string;
+  reconciliationId: string;
+  description: string;
+  amount: number;
+  type: 'bank_charge' | 'interest' | 'error_correction' | 'other';
+  accountingEntryId?: string;
+  createdAt: Date;
+}
+
+export interface ReconciledItem {
+  id: string;
+  reconciliationId: string;
+  bankTransactionId: string;
+  accountingEntryId: string;
+  reconciledAmount: number;
+  reconciledAt: Date;
+  reconciledBy: string;
+}
+
+export interface AccountingReport {
+  id: string;
+  type: 'balancete' | 'livro_diario' | 'demonstracao_resultado' | 'balanco_patrimonial' | 'conciliacao_bancaria';
+  schoolId: string;
+  startDate: Date;
+  endDate: Date;
+  filters?: any;
+  data?: any;
+  generatedAt: Date;
+  generatedBy: string;
+  status: 'generating' | 'completed' | 'error';
+}
+
+export interface ClosingEntry {
+  id: string;
+  schoolId: string;
+  exerciseYear: number;
+  closingDate: Date;
+  resultType: 'superavit' | 'deficit';
+  resultAmount: number;
+  entries: AccountingEntry[];
+  validatedBy: string;
+  validatedAt: Date;
+  status: 'draft' | 'validated' | 'closed';
+  createdAt: Date;
+  updatedAt: Date;
 }
