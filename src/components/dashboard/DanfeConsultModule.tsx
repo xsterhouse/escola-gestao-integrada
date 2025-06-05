@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, FileText, Calendar, DollarSign, Building, Download, Save, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
+import { useAuth } from "@/contexts/AuthContext";
+import { Invoice } from "@/lib/types";
 
 export function DanfeConsultModule() {
   const [searchKey, setSearchKey] = useState("");
@@ -14,6 +16,11 @@ export function DanfeConsultModule() {
   const [isLoading, setIsLoading] = useState(false);
   const [savedResults, setSavedResults] = useState<any[]>([]);
   const { toast } = useToast();
+  const { currentSchool } = useAuth();
+
+  // Carregar dados reais de notas fiscais do sistema
+  const invoicesKey = currentSchool ? `invoices_${currentSchool.id}` : 'invoices';
+  const { data: systemInvoices } = useLocalStorageSync<Invoice>(invoicesKey, []);
 
   // Carregar dados salvos do localStorage na inicialização
   useEffect(() => {
@@ -23,72 +30,37 @@ export function DanfeConsultModule() {
     }
   }, []);
 
-  // Base de dados local para simular consulta real baseada na chave de acesso
-  const getNFeDataByKey = (accessKey: string) => {
-    console.log('🔍 Consultando NFe com chave:', accessKey);
+  // Buscar nota fiscal real pela chave de acesso
+  const findInvoiceByAccessKey = (accessKey: string): Invoice | null => {
+    console.log('🔍 Buscando nota fiscal real com chave:', accessKey);
+    console.log(`📊 Total de ${systemInvoices.length} notas fiscais disponíveis no sistema`);
     
-    // Validar formato da chave de acesso (44 dígitos)
-    if (accessKey.length !== 44) {
-      throw new Error('Chave de acesso deve ter 44 dígitos');
-    }
-    
-    // Extrair informações da chave de acesso
-    const uf = accessKey.substring(0, 2);
-    const ano = accessKey.substring(2, 4);
-    const mes = accessKey.substring(4, 6);
-    const cnpjEmitente = accessKey.substring(6, 20);
-    const modelo = accessKey.substring(20, 22);
-    const serie = accessKey.substring(22, 25);
-    const numero = accessKey.substring(25, 34);
-    
-    console.log('📊 Dados extraídos da chave:', {
-      uf, ano, mes, cnpjEmitente, modelo, serie, numero
-    });
-    
-    // Base de dados local para diferentes chaves específicas
-    const nfeDatabase: { [key: string]: any } = {
-      // Chave específica para J M Braga Comercial Brilhante
-      "17241037010127000100550010000135691550350150": {
-        supplier: "J M Braga Comercial Brilhante",
-        cnpj: "37.010.127/0001-00",
-        danfeNumber: "000013569",
-        totalValue: 1847.50,
-        issueDate: "2024-10-17",
-        status: "Autorizada"
+    // Procurar pela chave de acesso no xmlContent ou campos relacionados
+    const foundInvoice = systemInvoices.find(invoice => {
+      // Verificar se a chave está no xmlContent
+      if (invoice.xmlContent && invoice.xmlContent.includes(accessKey)) {
+        return true;
       }
-    };
-    
-    // Verificar se existe dados específicos para esta chave
-    if (nfeDatabase[accessKey]) {
-      console.log('✅ Dados específicos encontrados para a chave');
-      return nfeDatabase[accessKey];
+      
+      // Verificar se a chave corresponde ao ID da nota ou DANFE
+      if (invoice.id === accessKey || invoice.danfeNumber === accessKey) {
+        return true;
+      }
+      
+      return false;
+    });
+
+    if (foundInvoice) {
+      console.log('✅ Nota fiscal encontrada:', foundInvoice.danfeNumber, '-', foundInvoice.supplier.name);
+    } else {
+      console.log('❌ Nenhuma nota fiscal encontrada para esta chave de acesso');
     }
-    
-    // Gerar dados baseados na estrutura da chave para outras chaves
-    const supplierNames = [
-      "Comercial Silva & Cia Ltda",
-      "Distribuidora Santos ME",
-      "Empresa Oliveira S/A",
-      "Fornecedor Pereira Ltda",
-      "Atacadista Costa & Filhos"
-    ];
-    
-    // Usar hash da chave para garantir consistência
-    const keyHash = accessKey.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const supplierIndex = keyHash % supplierNames.length;
-    
-    return {
-      supplier: supplierNames[supplierIndex],
-      cnpj: cnpjEmitente.substring(0, 2) + "." + cnpjEmitente.substring(2, 5) + "." + cnpjEmitente.substring(5, 8) + "/" + cnpjEmitente.substring(8, 12) + "-" + cnpjEmitente.substring(12, 14),
-      danfeNumber: numero.substring(0, 9),
-      totalValue: parseFloat((keyHash % 10000 + 100).toFixed(2)),
-      issueDate: `20${ano}-${mes.padStart(2, '0')}-${Math.floor(keyHash % 28 + 1).toString().padStart(2, '0')}`,
-      status: "Autorizada"
-    };
+
+    return foundInvoice || null;
   };
 
-  // Gerar XML simulado baseado nos dados da NFe
-  const generateXmlContent = (nfeData: any, accessKey: string) => {
+  // Gerar XML content caso não exista
+  const generateXmlFromInvoice = (invoice: Invoice, accessKey: string): string => {
     const currentDate = new Date().toISOString();
     
     return `<?xml version="1.0" encoding="UTF-8"?>
@@ -101,8 +73,8 @@ export function DanfeConsultModule() {
         <natOp>Venda de mercadoria</natOp>
         <mod>55</mod>
         <serie>1</serie>
-        <nNF>${nfeData.danfeNumber}</nNF>
-        <dhEmi>${currentDate}</dhEmi>
+        <nNF>${invoice.danfeNumber}</nNF>
+        <dhEmi>${invoice.issueDate}</dhEmi>
         <tpNF>1</tpNF>
         <idDest>1</idDest>
         <cMunFG>1721000</cMunFG>
@@ -115,11 +87,11 @@ export function DanfeConsultModule() {
         <indPres>1</indPres>
       </ide>
       <emit>
-        <CNPJ>${nfeData.cnpj.replace(/[^\d]/g, '')}</CNPJ>
-        <xNome>${nfeData.supplier}</xNome>
+        <CNPJ>${invoice.supplier.cnpj.replace(/[^\d]/g, '')}</CNPJ>
+        <xNome>${invoice.supplier.name}</xNome>
         <enderEmit>
-          <xLgr>Rua das Empresas</xLgr>
-          <nro>123</nro>
+          <xLgr>${invoice.supplier.address || 'Endereço não informado'}</xLgr>
+          <nro>S/N</nro>
           <xBairro>Centro</xBairro>
           <cMun>1721000</cMun>
           <xMun>Palmas</xMun>
@@ -129,12 +101,12 @@ export function DanfeConsultModule() {
         <IE>29170166000</IE>
       </emit>
       <dest>
-        <CNPJ>12345678000190</CNPJ>
-        <xNome>Cliente Exemplo</xNome>
+        <CNPJ>${currentSchool?.cnpj?.replace(/[^\d]/g, '') || '12345678000190'}</CNPJ>
+        <xNome>${currentSchool?.name || 'Escola Municipal'}</xNome>
         <enderDest>
-          <xLgr>Rua do Cliente</xLgr>
-          <nro>456</nro>
-          <xBairro>Jardim</xBairro>
+          <xLgr>${currentSchool?.address || 'Endereço da Escola'}</xLgr>
+          <nro>S/N</nro>
+          <xBairro>Centro</xBairro>
           <cMun>1721000</cMun>
           <xMun>Palmas</xMun>
           <UF>TO</UF>
@@ -143,21 +115,22 @@ export function DanfeConsultModule() {
         <indIEDest>1</indIEDest>
         <IE>123456789</IE>
       </dest>
-      <det nItem="1">
+      ${invoice.items.map((item, index) => `
+      <det nItem="${index + 1}">
         <prod>
-          <cProd>001</cProd>
+          <cProd>${String(index + 1).padStart(3, '0')}</cProd>
           <cEAN></cEAN>
-          <xProd>Produto Exemplo</xProd>
+          <xProd>${item.description}</xProd>
           <NCM>12345678</NCM>
           <CFOP>5102</CFOP>
-          <uCom>UN</uCom>
-          <qCom>1.0000</qCom>
-          <vUnCom>${nfeData.totalValue.toFixed(4)}</vUnCom>
-          <vProd>${nfeData.totalValue.toFixed(2)}</vProd>
+          <uCom>${item.unitOfMeasure}</uCom>
+          <qCom>${item.quantity.toFixed(4)}</qCom>
+          <vUnCom>${item.unitPrice.toFixed(4)}</vUnCom>
+          <vProd>${item.totalPrice.toFixed(2)}</vProd>
           <cEANTrib></cEANTrib>
-          <uTrib>UN</uTrib>
-          <qTrib>1.0000</qTrib>
-          <vUnTrib>${nfeData.totalValue.toFixed(4)}</vUnTrib>
+          <uTrib>${item.unitOfMeasure}</uTrib>
+          <qTrib>${item.quantity.toFixed(4)}</qTrib>
+          <vUnTrib>${item.unitPrice.toFixed(4)}</vUnTrib>
         </prod>
         <imposto>
           <ICMS>
@@ -165,24 +138,24 @@ export function DanfeConsultModule() {
               <orig>0</orig>
               <CST>00</CST>
               <modBC>3</modBC>
-              <vBC>${nfeData.totalValue.toFixed(2)}</vBC>
+              <vBC>${item.totalPrice.toFixed(2)}</vBC>
               <pICMS>17.00</pICMS>
-              <vICMS>${(nfeData.totalValue * 0.17).toFixed(2)}</vICMS>
+              <vICMS>${(item.totalPrice * 0.17).toFixed(2)}</vICMS>
             </ICMS00>
           </ICMS>
         </imposto>
-      </det>
+      </det>`).join('')}
       <total>
         <ICMSTot>
-          <vBC>${nfeData.totalValue.toFixed(2)}</vBC>
-          <vICMS>${(nfeData.totalValue * 0.17).toFixed(2)}</vICMS>
+          <vBC>${invoice.totalValue.toFixed(2)}</vBC>
+          <vICMS>${(invoice.totalValue * 0.17).toFixed(2)}</vICMS>
           <vICMSDeson>0.00</vICMSDeson>
           <vFCP>0.00</vFCP>
           <vBCST>0.00</vBCST>
           <vST>0.00</vST>
           <vFCPST>0.00</vFCPST>
           <vFCPSTRet>0.00</vFCPSTRet>
-          <vProd>${nfeData.totalValue.toFixed(2)}</vProd>
+          <vProd>${invoice.totalValue.toFixed(2)}</vProd>
           <vFrete>0.00</vFrete>
           <vSeg>0.00</vSeg>
           <vDesc>0.00</vDesc>
@@ -192,7 +165,7 @@ export function DanfeConsultModule() {
           <vPIS>0.00</vPIS>
           <vCOFINS>0.00</vCOFINS>
           <vOutro>0.00</vOutro>
-          <vNF>${nfeData.totalValue.toFixed(2)}</vNF>
+          <vNF>${invoice.totalValue.toFixed(2)}</vNF>
         </ICMSTot>
       </total>
     </infNFe>
@@ -210,68 +183,6 @@ export function DanfeConsultModule() {
     </infProt>
   </protNFe>
 </nfeProc>`;
-  };
-
-  const handleSearch = async () => {
-    if (!searchKey.trim()) return;
-    
-    setIsLoading(true);
-    
-    try {
-      console.log('🚀 Iniciando busca da NFe...');
-      
-      // Simular delay de rede
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Obter dados baseados na chave de acesso
-      const nfeData = getNFeDataByKey(searchKey);
-      
-      // Gerar XML simulado
-      const xmlContent = generateXmlContent(nfeData, searchKey);
-      
-      const result = {
-        id: Date.now().toString(),
-        accessKey: searchKey,
-        danfeNumber: nfeData.danfeNumber,
-        supplier: nfeData.supplier,
-        cnpj: nfeData.cnpj,
-        issueDate: nfeData.issueDate,
-        totalValue: nfeData.totalValue,
-        status: nfeData.status,
-        xmlContent: xmlContent
-      };
-      
-      setSearchResults([result]);
-      
-      // Salvar automaticamente no localStorage
-      const existingSaved = JSON.parse(localStorage.getItem('savedDanfeResults') || '[]');
-      const newSaved = [...existingSaved, result].filter((item, index, self) => 
-        index === self.findIndex(t => t.accessKey === item.accessKey)
-      );
-      
-      localStorage.setItem('savedDanfeResults', JSON.stringify(newSaved));
-      setSavedResults(newSaved);
-      
-      console.log('✅ Busca concluída com sucesso');
-      
-      toast({
-        title: "NFe encontrada",
-        description: `DANFE ${result.danfeNumber} - ${result.supplier}`,
-      });
-      
-    } catch (error) {
-      console.error('❌ Erro na busca:', error);
-      
-      toast({
-        title: "Erro na consulta",
-        description: error instanceof Error ? error.message : "Verifique a chave de acesso",
-        variant: "destructive"
-      });
-      
-      setSearchResults([]);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   // Etapa 1: Validar XML antes de processar - CORRIGIDA
@@ -343,6 +254,83 @@ export function DanfeConsultModule() {
     } catch (error) {
       console.error('❌ Erro completo no processamento:', error);
       throw new Error(error instanceof Error ? error.message : 'Erro desconhecido ao gerar PDF');
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchKey.trim()) return;
+    
+    setIsLoading(true);
+    
+    try {
+      console.log('🚀 Iniciando busca de NFe REAL...');
+      
+      // Simular delay de rede
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Buscar nota fiscal real no sistema
+      const foundInvoice = findInvoiceByAccessKey(searchKey);
+      
+      if (!foundInvoice) {
+        throw new Error('Nota fiscal não encontrada no sistema. Verifique se a nota foi importada corretamente.');
+      }
+      
+      // Usar xmlContent real ou gerar XML com dados reais
+      const xmlContent = foundInvoice.xmlContent || generateXmlFromInvoice(foundInvoice, searchKey);
+      
+      // Mapear status da nota fiscal
+      const getStatusText = (status: string) => {
+        switch (status) {
+          case 'aprovada': return 'Autorizada';
+          case 'pendente': return 'Pendente';
+          case 'rejeitada': return 'Rejeitada';
+          default: return 'Autorizada';
+        }
+      };
+      
+      const result = {
+        id: foundInvoice.id,
+        accessKey: searchKey,
+        danfeNumber: foundInvoice.danfeNumber,
+        supplier: foundInvoice.supplier.name,
+        cnpj: foundInvoice.supplier.cnpj,
+        issueDate: foundInvoice.issueDate.toISOString().split('T')[0],
+        totalValue: foundInvoice.totalValue,
+        status: getStatusText(foundInvoice.status),
+        xmlContent: xmlContent,
+        realInvoice: foundInvoice // Incluir dados completos da nota fiscal
+      };
+      
+      setSearchResults([result]);
+      
+      // Salvar automaticamente no localStorage
+      const existingSaved = JSON.parse(localStorage.getItem('savedDanfeResults') || '[]');
+      const newSaved = [...existingSaved, result].filter((item, index, self) => 
+        index === self.findIndex(t => t.accessKey === item.accessKey)
+      );
+      
+      localStorage.setItem('savedDanfeResults', JSON.stringify(newSaved));
+      setSavedResults(newSaved);
+      
+      console.log('✅ Busca concluída com dados REAIS da nota fiscal');
+      
+      toast({
+        title: "NFe encontrada (Dados Reais)",
+        description: `DANFE ${result.danfeNumber} - ${result.supplier} - ${result.realInvoice.items.length} itens`,
+      });
+      
+    } catch (error) {
+      console.error('❌ Erro na busca:', error);
+      
+      toast({
+        title: "Erro na consulta",
+        description: error instanceof Error ? error.message : "Verifique a chave de acesso",
+        variant: "destructive"
+      });
+      
+      setSearchResults([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -478,7 +466,7 @@ export function DanfeConsultModule() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-blue-600" />
-            Consulta DANFE
+            Consulta DANFE - Dados Reais do Sistema
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -510,13 +498,25 @@ export function DanfeConsultModule() {
                   Chave de acesso deve ter 44 dígitos (atual: {searchKey.length})
                 </p>
               )}
+              
+              {/* Sistema Info */}
+              <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
+                <p><strong>Notas disponíveis no sistema:</strong> {systemInvoices.length}</p>
+                <p><strong>Escola atual:</strong> {currentSchool?.name || 'Não selecionada'}</p>
+                {systemInvoices.length === 0 && (
+                  <p className="text-orange-600 mt-1">⚠ Nenhuma nota fiscal encontrada. Importe XMLs primeiro no módulo de estoque.</p>
+                )}
+              </div>
             </div>
 
             {/* Results Section - Right Side */}
             <div className="space-y-3">
               {searchResults.length > 0 && (
                 <>
-                  <h4 className="font-medium text-gray-900">Resultados da busca:</h4>
+                  <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                    <Badge variant="outline" className="text-green-600 border-green-600">DADOS REAIS</Badge>
+                    Resultados da busca:
+                  </h4>
                   {searchResults.map((result) => (
                     <Card key={result.id} className="border-l-4 border-l-green-500">
                       <CardContent className="p-4">
@@ -527,12 +527,19 @@ export function DanfeConsultModule() {
                             <Badge variant="outline" className="text-green-600 border-green-600">
                               {result.status}
                             </Badge>
+                            <Badge variant="outline" className="text-blue-600 border-blue-600">
+                              {result.realInvoice?.items?.length || 0} itens
+                            </Badge>
                           </div>
                           
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
                               <Building className="h-4 w-4 text-gray-500" />
                               <span className="text-sm">{result.supplier}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-600">CNPJ:</span>
+                              <span className="text-sm">{result.cnpj}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4 text-gray-500" />
@@ -543,6 +550,23 @@ export function DanfeConsultModule() {
                               <span className="text-sm font-medium">{formatCurrency(result.totalValue)}</span>
                             </div>
                           </div>
+                          
+                          {/* Mostrar alguns itens da nota */}
+                          {result.realInvoice?.items && result.realInvoice.items.length > 0 && (
+                            <div className="bg-gray-50 p-2 rounded text-xs">
+                              <p className="font-medium mb-1">Primeiros itens:</p>
+                              {result.realInvoice.items.slice(0, 2).map((item: any, index: number) => (
+                                <div key={index} className="text-gray-600">
+                                  • {item.description} - Qtd: {item.quantity} {item.unitOfMeasure}
+                                </div>
+                              ))}
+                              {result.realInvoice.items.length > 2 && (
+                                <div className="text-gray-500 mt-1">
+                                  ... e mais {result.realInvoice.items.length - 2} itens
+                                </div>
+                              )}
+                            </div>
+                          )}
                           
                           <div className="pt-3 border-t">
                             <p className="text-xs text-gray-500">
@@ -560,14 +584,17 @@ export function DanfeConsultModule() {
                 <div className="text-center py-8 text-gray-500">
                   <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>Nenhuma DANFE encontrada para esta chave de acesso.</p>
-                  <p className="text-sm">Verifique se a chave foi digitada corretamente.</p>
+                  <p className="text-sm">Verifique se a nota foi importada no sistema.</p>
                 </div>
               )}
 
               {!searchKey && !isLoading && (
                 <div className="text-center py-8 text-gray-400">
                   <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Digite uma chave de acesso para iniciar a busca</p>
+                  <p>Digite uma chave de acesso para buscar nos dados reais</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {systemInvoices.length} nota(s) fiscal(is) disponível(is) no sistema
+                  </p>
                 </div>
               )}
             </div>
@@ -582,6 +609,7 @@ export function DanfeConsultModule() {
             <CardTitle className="flex items-center gap-2">
               <Save className="h-5 w-5 text-green-600" />
               DANFEs Salvos ({savedResults.length})
+              <Badge variant="outline" className="text-blue-600 border-blue-600">DADOS REAIS</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -594,6 +622,7 @@ export function DanfeConsultModule() {
                     <TableHead>Data Emissão</TableHead>
                     <TableHead>Valor Total</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Itens</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -607,6 +636,11 @@ export function DanfeConsultModule() {
                       <TableCell>
                         <Badge variant="outline" className="text-green-600 border-green-600">
                           {result.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-blue-600 border-blue-600">
+                          {result.realInvoice?.items?.length || 0}
                         </Badge>
                       </TableCell>
                       <TableCell>
