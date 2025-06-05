@@ -107,19 +107,15 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
           // Create new product
           const newProduct: Product = {
             id: uuidv4(),
-            schoolId: "current-school",
-            name: item.description,
             description: item.description,
-            category: "Importado de XML",
-            quantity: item.quantity,
-            unitOfMeasure: item.unitOfMeasure,
+            unit: item.unitOfMeasure,
+            quantity: item.quantity.toString(),
             unitPrice: item.unitPrice,
-            minimumStock: 10,
-            maximumStock: 1000,
-            location: "Estoque Principal",
-            barcode: "",
-            status: "ativo",
+            currentStock: item.quantity,
+            minStock: 10,
+            maxStock: 1000,
             supplier: invoice.supplier.name,
+            familyAgriculture: false,
             createdAt: new Date(),
             updatedAt: new Date(),
           };
@@ -191,7 +187,6 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
       // Create invoice object
       const invoice: Invoice = {
         id: uuidv4(),
-        schoolId: "current-school",
         supplier: parsedData.supplier,
         danfeNumber: parsedData.danfeNumber,
         issueDate: parsedData.issueDate,
@@ -279,7 +274,6 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
       
       const invoice: Invoice = {
         id: uuidv4(),
-        schoolId: "current-school",
         supplier: parsedData.supplier,
         danfeNumber: parsedData.danfeNumber,
         issueDate: parsedData.issueDate,

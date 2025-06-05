@@ -10,17 +10,22 @@ import { SystemUserDetailsModal } from "@/components/settings/SystemUserDetailsM
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { saveUserPassword } from "@/contexts/AuthContext";
-import { Eye, Pencil, Ban, ShieldCheck, Plus, User, Trash2 } from "lucide-react";
+import { Eye, Pencil, Ban, ShieldCheck, Plus, User, Trash2, Building, ShoppingCart } from "lucide-react";
 
 interface SystemUser {
   id: string;
   name: string;
   matricula: string;
   password: string;
+  userType: "funcionario" | "central_compras";
+  hierarchyLevel: number;
   schoolId: string | null;
   purchasingCenterIds?: string[];
   isLinkedToPurchasing: boolean;
   status: "active" | "blocked";
+  dataScope: "school" | "purchasing_center";
+  canCreateUsers: boolean;
+  canManageSchool: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,6 +63,8 @@ export function SystemUsersTab() {
     
     console.log(`💾 Salvando usuário: ${newUser.name} com ID: ${newUser.id}`);
     console.log(`🔐 Salvando senha para usuário ID: ${newUser.id}`);
+    console.log(`👥 Tipo de usuário: ${newUser.userType}`);
+    console.log(`🏢 Escopo de dados: ${newUser.dataScope}`);
     
     // Salvar a senha no sistema de autenticação
     saveUserPassword(newUser.id, userData.password);
@@ -70,9 +77,11 @@ export function SystemUsersTab() {
     setSystemUsers(updatedUsers);
     setIsModalOpen(false);
     
+    const userTypeLabel = newUser.userType === "central_compras" ? "Central de Compras" : "Escola";
+    
     toast({
       title: "Usuário criado",
-      description: "O usuário do sistema foi criado com sucesso.",
+      description: `Usuário ${userTypeLabel} criado com sucesso.`,
     });
   };
 
@@ -143,19 +152,52 @@ export function SystemUsersTab() {
   };
 
   const getSchoolName = (schoolId: string | null) => {
-    if (!schoolId) return "Nenhuma escola";
+    if (!schoolId) return "—";
     const school = schools.find(s => s.id === schoolId);
     return school ? school.name : "Escola não encontrada";
   };
 
   const getPurchasingCentersNames = (centerIds?: string[]) => {
-    if (!centerIds || centerIds.length === 0) return "Nenhuma";
+    if (!centerIds || centerIds.length === 0) return "—";
     
     const centerNames = purchasingCenters
       .filter(pc => centerIds.includes(pc.id))
       .map(pc => pc.name);
     
-    return centerNames.length > 0 ? centerNames.join(", ") : "Nenhuma";
+    return centerNames.length > 0 ? centerNames.join(", ") : "—";
+  };
+
+  const getUserTypeDisplay = (user: SystemUser) => {
+    if (user.userType === "central_compras") {
+      return (
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+          <ShoppingCart className="h-3 w-3 mr-1" />
+          Central de Compras
+        </Badge>
+      );
+    }
+    
+    return (
+      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+        <Building className="h-3 w-3 mr-1" />
+        Escola
+      </Badge>
+    );
+  };
+
+  const getLinkedInfo = (user: SystemUser) => {
+    if (user.userType === "central_compras") {
+      return getPurchasingCentersNames(user.purchasingCenterIds);
+    }
+    
+    const schoolName = getSchoolName(user.schoolId);
+    const centerNames = getPurchasingCentersNames(user.purchasingCenterIds);
+    
+    if (centerNames !== "—") {
+      return `${schoolName} + ${centerNames}`;
+    }
+    
+    return schoolName;
   };
 
   return (
@@ -167,7 +209,7 @@ export function SystemUsersTab() {
             Usuários do Sistema
           </CardTitle>
           <CardDescription>
-            Gerencie os usuários do sistema. Total: {systemUsers.length}
+            Gerencie usuários de escolas e centrais de compras. Total: {systemUsers.length}
           </CardDescription>
         </div>
         <Button 
@@ -191,8 +233,8 @@ export function SystemUsersTab() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Matrícula</TableHead>
-              <TableHead>Escola</TableHead>
-              <TableHead>Centrais de Compras</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead>Vinculação</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -209,8 +251,10 @@ export function SystemUsersTab() {
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell className="font-mono">{user.matricula}</TableCell>
-                  <TableCell className="text-sm">{getSchoolName(user.schoolId)}</TableCell>
-                  <TableCell className="text-sm">{getPurchasingCentersNames(user.purchasingCenterIds)}</TableCell>
+                  <TableCell>{getUserTypeDisplay(user)}</TableCell>
+                  <TableCell className="text-sm max-w-xs truncate" title={getLinkedInfo(user)}>
+                    {getLinkedInfo(user)}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={user.status === "active" ? "default" : "destructive"}>
                       {user.status === "active" ? "Ativo" : "Bloqueado"}

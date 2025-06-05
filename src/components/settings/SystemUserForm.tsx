@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Eye, EyeOff, Building, ShoppingCart } from "lucide-react";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 
 interface SystemUserFormProps {
@@ -24,6 +25,7 @@ interface PurchasingCenter {
 
 export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserFormProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [userType, setUserType] = useState<"school" | "purchasing_center">("school");
   const [formData, setFormData] = useState({
     name: "",
     matricula: "",
@@ -38,13 +40,25 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
   const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasing-centers', []);
 
   // Filter purchasing centers based on selected school
-  const availablePurchasingCenters = purchasingCenters.filter(center => 
-    formData.schoolId && formData.schoolId !== "none" ? center.schoolIds?.includes(formData.schoolId) : true
-  );
+  const availablePurchasingCenters = userType === "purchasing_center" 
+    ? purchasingCenters 
+    : purchasingCenters.filter(center => 
+        formData.schoolId && formData.schoolId !== "none" ? center.schoolIds?.includes(formData.schoolId) : true
+      );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleUserTypeChange = (type: "school" | "purchasing_center") => {
+    setUserType(type);
+    setFormData(prev => ({ 
+      ...prev, 
+      schoolId: "",
+      purchasingCenterIds: [],
+      isLinkedToPurchasing: type === "purchasing_center"
+    }));
   };
 
   const handleSchoolChange = (schoolId: string) => {
@@ -52,7 +66,7 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
       ...prev, 
       schoolId,
       purchasingCenterIds: [], // Reset purchasing centers when school changes
-      isLinkedToPurchasing: false
+      isLinkedToPurchasing: userType === "purchasing_center"
     }));
   };
 
@@ -92,17 +106,27 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
       return;
     }
 
-    if (!formData.schoolId || formData.schoolId === "none") {
+    if (userType === "school" && (!formData.schoolId || formData.schoolId === "none")) {
       alert("Selecione uma escola");
       return;
     }
 
-    if (formData.purchasingCenterIds.length === 0) {
+    if (userType === "purchasing_center" && formData.purchasingCenterIds.length === 0) {
       alert("Selecione pelo menos uma central de compras");
       return;
     }
 
-    onSave(formData);
+    // Prepare user data based on type
+    const userData = {
+      ...formData,
+      userType: userType === "purchasing_center" ? "central_compras" : "funcionario",
+      hierarchyLevel: userType === "purchasing_center" ? 3 : 4,
+      dataScope: userType === "purchasing_center" ? "purchasing_center" : "school",
+      canCreateUsers: false,
+      canManageSchool: false,
+    };
+
+    onSave(userData);
     handleClose();
   };
 
@@ -117,6 +141,7 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
       isLinkedToPurchasing: false,
       status: "active"
     });
+    setUserType("school");
     onClose();
   };
 
@@ -128,6 +153,26 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
         </DialogHeader>
         
         <div className="space-y-4 py-4">
+          <div className="space-y-3">
+            <Label>Tipo de Usuário *</Label>
+            <RadioGroup value={userType} onValueChange={handleUserTypeChange}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="school" id="school" />
+                <Label htmlFor="school" className="flex items-center gap-2">
+                  <Building className="h-4 w-4" />
+                  Usuário de Escola
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="purchasing_center" id="purchasing_center" />
+                <Label htmlFor="purchasing_center" className="flex items-center gap-2">
+                  <ShoppingCart className="h-4 w-4" />
+                  Usuário de Central de Compras
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="name">Nome Completo *</Label>
             <Input
@@ -152,25 +197,59 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="school">Escola *</Label>
-            <Select value={formData.schoolId} onValueChange={handleSchoolChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione uma escola" />
-              </SelectTrigger>
-              <SelectContent>
-                {schools.map((school) => (
-                  <SelectItem key={school.id} value={school.id}>
-                    {school.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {userType === "school" && (
+            <div className="space-y-2">
+              <Label htmlFor="school">Escola *</Label>
+              <Select value={formData.schoolId} onValueChange={handleSchoolChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma escola" />
+                </SelectTrigger>
+                <SelectContent>
+                  {schools.map((school) => (
+                    <SelectItem key={school.id} value={school.id}>
+                      {school.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-          {formData.schoolId && formData.schoolId !== "none" && (
+          {userType === "purchasing_center" && (
             <div className="space-y-2">
               <Label>Centrais de Compras *</Label>
+              {availablePurchasingCenters.length > 0 ? (
+                <div className="space-y-2 border rounded-md p-3 max-h-32 overflow-y-auto">
+                  {availablePurchasingCenters.map((center) => (
+                    <div key={center.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`center-${center.id}`}
+                        checked={formData.purchasingCenterIds.includes(center.id)}
+                        onCheckedChange={(checked) => 
+                          handlePurchasingCenterChange(center.id, checked as boolean)
+                        }
+                      />
+                      <Label 
+                        htmlFor={`center-${center.id}`}
+                        className="text-sm font-normal"
+                      >
+                        {center.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 p-3 border rounded-md bg-gray-50">
+                  Nenhuma central de compras disponível. 
+                  Configure as centrais de compras primeiro na aba "Central de Compras".
+                </div>
+              )}
+            </div>
+          )}
+
+          {userType === "school" && formData.schoolId && formData.schoolId !== "none" && (
+            <div className="space-y-2">
+              <Label>Centrais de Compras (Opcional)</Label>
               {availablePurchasingCenters.length > 0 ? (
                 <div className="space-y-2 border rounded-md p-3">
                   {availablePurchasingCenters.map((center) => (
@@ -193,8 +272,7 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
                 </div>
               ) : (
                 <div className="text-sm text-gray-500 p-3 border rounded-md bg-gray-50">
-                  Nenhuma central de compras disponível para esta escola. 
-                  Configure as centrais de compras primeiro na aba "Central de Compras".
+                  Nenhuma central de compras disponível para esta escola.
                 </div>
               )}
             </div>
