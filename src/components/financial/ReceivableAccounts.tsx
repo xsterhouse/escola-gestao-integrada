@@ -22,12 +22,11 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { Plus, Filter, Trash2, Edit2, Download, CheckCircle, Search, LayoutGrid, Table } from "lucide-react";
+import { Plus, Download, Search } from "lucide-react";
 import { exportToCsv, generatePDF } from "@/lib/pdf-utils";
 import { ReceiptRegistrationDialog } from "./ReceiptRegistrationDialog";
 import { ReceivableInstallmentDialog } from "./ReceivableInstallmentDialog";
 import { EditReceivableDialog } from "./EditReceivableDialog";
-import { ReceivableCard } from "./ReceivableCard";
 import { ReceivableAccountsTable } from "./ReceivableAccountsTable";
 import { toast } from "sonner";
 import { CompletePartialPaymentDialog } from "./CompletePartialPaymentDialog";
@@ -62,8 +61,6 @@ export function ReceivableAccounts({
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  const [groupBy, setGroupBy] = useState<'description' | 'origin' | 'resourceType'>('description');
   const [isCompletePartialPaymentOpen, setIsCompletePartialPaymentOpen] = useState<boolean>(false);
   
   // Form states for new receivable
@@ -358,16 +355,6 @@ export function ReceivableAccounts({
     
     return includeAccount;
   });
-
-  // Group accounts for card view
-  const groupedAccounts = filteredAccounts.reduce((groups, account) => {
-    const key = account[groupBy];
-    if (!groups[key]) {
-      groups[key] = [];
-    }
-    groups[key].push(account);
-    return groups;
-  }, {} as Record<string, ReceivableAccount[]>);
   
   // Calculate summary data
   const totalAmount = filteredAccounts.reduce((sum, account) => sum + (account.originalValue || account.value), 0);
@@ -438,38 +425,6 @@ export function ReceivableAccounts({
               <SelectItem value="received">Recebido</SelectItem>
             </SelectContent>
           </Select>
-
-          {viewMode === 'cards' && (
-            <Select value={groupBy} onValueChange={(value: 'description' | 'origin' | 'resourceType') => setGroupBy(value)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Agrupar por" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="description">Descrição</SelectItem>
-                <SelectItem value="origin">Origem</SelectItem>
-                <SelectItem value="resourceType">Tipo de Recurso</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-
-          <div className="flex border rounded-lg">
-            <Button
-              variant={viewMode === 'cards' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('cards')}
-              className="rounded-r-none"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('table')}
-              className="rounded-l-none"
-            >
-              <Table className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
         
         <div className="flex gap-2">
@@ -484,48 +439,24 @@ export function ReceivableAccounts({
         </div>
       </div>
       
-      {/* Content based on view mode */}
-      {viewMode === 'cards' ? (
-        <div className="space-y-4">
-          {Object.entries(groupedAccounts).length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8">
-                <p className="text-muted-foreground">Nenhuma receita encontrada.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            Object.entries(groupedAccounts).map(([groupKey, accounts]) => (
-              <ReceivableCard
-                key={groupKey}
-                groupKey={groupKey}
-                accounts={accounts}
-                groupType={groupBy}
-                onEditReceivable={openEditReceivable}
-                onDeleteReceivable={handleDeleteReceivable}
-                onOpenReceiptConfirm={openReceiptConfirm}
-              />
-            ))
-          )}
-        </div>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Contas a Receber</CardTitle>
-            <CardDescription>
-              Gerencie todas as receitas da sua escola.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ReceivableAccountsTable
-              accounts={filteredAccounts}
-              onEditReceivable={openEditReceivable}
-              onDeleteReceivable={handleDeleteReceivable}
-              onOpenReceiptConfirm={openReceiptConfirm}
-              onCompletePartialPayment={handleCompletePartialPayment}
-            />
-          </CardContent>
-        </Card>
-      )}
+      {/* Table View */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Contas a Receber</CardTitle>
+          <CardDescription>
+            Gerencie todas as receitas da sua escola.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ReceivableAccountsTable
+            accounts={filteredAccounts}
+            onEditReceivable={openEditReceivable}
+            onDeleteReceivable={handleDeleteReceivable}
+            onOpenReceiptConfirm={openReceiptConfirm}
+            onCompletePartialPayment={handleCompletePartialPayment}
+          />
+        </CardContent>
+      </Card>
       
       {/* Add Receivable Dialog */}
       <Dialog open={isAddReceivableOpen} onOpenChange={setIsAddReceivableOpen}>
