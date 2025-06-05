@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -55,6 +54,28 @@ export function DivergenceEditModal({
     setEditedItems(updatedItems);
   };
 
+  const getSchoolIdFromPlanning = (ataNumber: string): string | null => {
+    try {
+      // Try to find the school ID by looking through all planning data
+      const allSchools = JSON.parse(localStorage.getItem("schools") || "[]");
+      
+      for (const school of allSchools) {
+        const schoolPlanning = JSON.parse(localStorage.getItem(`plans_${school.id}`) || "[]");
+        const planningWithATA = schoolPlanning.find((p: any) => p.ataNumber === ataNumber);
+        if (planningWithATA) {
+          return school.id;
+        }
+      }
+      
+      // Fallback: use current user's school ID if available
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      return currentUser.schoolId || null;
+    } catch (error) {
+      console.error("Error finding school ID for ATA:", error);
+      return null;
+    }
+  };
+
   const revalidateContract = async () => {
     if (!contract.ataId) return false;
 
@@ -72,8 +93,19 @@ export function DivergenceEditModal({
         return false;
       }
 
+      // Get school ID for the ATA
+      const schoolId = getSchoolIdFromPlanning(contract.ataId);
+      if (!schoolId) {
+        toast({
+          title: "Erro na Revalidação",
+          description: "Não foi possível encontrar a escola associada à ATA",
+          variant: "destructive",
+        });
+        return false;
+      }
+
       // Get planning items
-      const ataPlanning = JSON.parse(localStorage.getItem(`plans_${ata.schoolId}`) || "[]");
+      const ataPlanning = JSON.parse(localStorage.getItem(`plans_${schoolId}`) || "[]");
       const planningItems = ataPlanning.find(p => p.ataNumber === contract.ataId)?.items || [];
 
       // Revalidate items

@@ -161,6 +161,28 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
     return divergences;
   };
 
+  const getSchoolIdFromPlanning = (ataNumber: string): string | null => {
+    try {
+      // Try to find the school ID by looking through all planning data
+      const allSchools = JSON.parse(localStorage.getItem("schools") || "[]");
+      
+      for (const school of allSchools) {
+        const schoolPlanning = JSON.parse(localStorage.getItem(`plans_${school.id}`) || "[]");
+        const planningWithATA = schoolPlanning.find((p: any) => p.ataNumber === ataNumber);
+        if (planningWithATA) {
+          return school.id;
+        }
+      }
+      
+      // Fallback: use current user's school ID if available
+      const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+      return currentUser.schoolId || null;
+    } catch (error) {
+      console.error("Error finding school ID for ATA:", error);
+      return null;
+    }
+  };
+
   const validateAndImport = async () => {
     if (!ataId.trim()) {
       toast({
@@ -215,8 +237,19 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
         return;
       }
 
+      // Get school ID for the ATA
+      const schoolId = getSchoolIdFromPlanning(ataId);
+      if (!schoolId) {
+        toast({
+          title: "Erro na Validação",
+          description: `Não foi possível encontrar a escola associada à ATA ${ataId}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Get ATA planning items
-      const ataPlanning = JSON.parse(localStorage.getItem(`plans_${ata.schoolId}`) || "[]");
+      const ataPlanning = JSON.parse(localStorage.getItem(`plans_${schoolId}`) || "[]");
       const planningItems = ataPlanning.find(p => p.ataNumber === ataId)?.items || [];
 
       if (planningItems.length === 0) {
