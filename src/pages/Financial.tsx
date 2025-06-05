@@ -249,28 +249,46 @@ export default function Financial() {
   const handleUpdateReceivableAccount = (updatedReceivable: ReceivableAccount, bankAccountId?: string) => {
     const previousReceivable = receivableAccounts.find(r => r.id === updatedReceivable.id);
     
-    // Special handling for completing partial payments
-    if (updatedReceivable.isCompletingPartialPayment) {
+    console.log('handleUpdateReceivableAccount called with:', {
+      updatedReceivable,
+      bankAccountId,
+      previousReceivable
+    });
+
+    // Handle completing a partial payment (quitação do saldo restante)
+    if (previousReceivable?.isPartialPayment && !updatedReceivable.isPartialPayment && bankAccountId) {
+      const originalValue = previousReceivable.originalValue || previousReceivable.value;
+      const alreadyReceived = previousReceivable.receivedAmount || 0;
+      const remainingAmount = originalValue - alreadyReceived;
+
+      console.log('Processing completion of partial payment:', {
+        originalValue,
+        alreadyReceived,
+        remainingAmount
+      });
+
       const bankAccount = bankAccounts.find(ba => ba.id === bankAccountId);
-      if (bankAccount) {
+      if (bankAccount && remainingAmount > 0) {
         const newTransaction: BankTransaction = {
           id: uuidv4(),
           schoolId: "current-school-id",
-          bankAccountId: bankAccountId!,
+          bankAccountId,
           date: new Date(),
-          description: `Quitação do Saldo Restante: ${previousReceivable?.description}`,
-          value: updatedReceivable.value, // This is the remaining amount
+          description: `Quitação do Saldo Restante: ${previousReceivable.description}`,
+          value: remainingAmount,
           transactionType: 'credito',
           reconciliationStatus: 'conciliado',
-          category: previousReceivable?.resourceType || '',
+          category: previousReceivable.resourceType || '',
           resourceType: bankAccount.managementType,
           source: 'receivable',
           documentId: updatedReceivable.id,
           createdAt: new Date(),
           updatedAt: new Date(),
-          isPartialPayment: false, // This completes the payment
+          isPartialPayment: false,
           originalReceivableId: updatedReceivable.id
         };
+
+        console.log('Creating completion transaction:', newTransaction);
 
         setBankTransactions(prev => [...prev, newTransaction]);
         
@@ -279,26 +297,22 @@ export default function Financial() {
           ba.id === bankAccountId 
             ? { 
                 ...ba, 
-                currentBalance: ba.currentBalance + updatedReceivable.value,
+                currentBalance: ba.currentBalance + remainingAmount,
                 updatedAt: new Date()
               }
             : ba
         ));
       }
       
-      // Remove the special flag before updating
-      const cleanedReceivable = { ...updatedReceivable };
-      delete cleanedReceivable.isCompletingPartialPayment;
-      
-      // Update receivable accounts - the receivable should already be updated from the dialog
+      // Update receivable accounts with the completed payment
       setReceivableAccounts(prev => 
-        prev.map(r => r.id === cleanedReceivable.id ? cleanedReceivable : r)
+        prev.map(r => r.id === updatedReceivable.id ? updatedReceivable : r)
       );
       
       return;
     }
     
-    // If receivable was just marked as received and has a bank account, create automatic transaction
+    // Handle initial partial or full payment
     if (previousReceivable?.status === 'pendente' && 
         updatedReceivable.status === 'recebido' && 
         bankAccountId) {
@@ -308,6 +322,13 @@ export default function Financial() {
       const receivedAmount = updatedReceivable.receivedAmount || updatedReceivable.value;
       const isPartialPayment = receivedAmount < originalValue;
       const remainingAmount = originalValue - receivedAmount;
+
+      console.log('Processing initial payment:', {
+        originalValue,
+        receivedAmount,
+        isPartialPayment,
+        remainingAmount
+      });
 
       const bankAccount = bankAccounts.find(ba => ba.id === bankAccountId);
       if (bankAccount) {
@@ -333,6 +354,8 @@ export default function Financial() {
           remainingAmount: isPartialPayment ? remainingAmount : undefined,
           originalReceivableId: updatedReceivable.id
         };
+
+        console.log('Creating initial payment transaction:', newTransaction);
 
         setBankTransactions(prev => [...prev, newTransaction]);
         

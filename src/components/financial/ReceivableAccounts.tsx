@@ -116,7 +116,6 @@ export function ReceivableAccounts({
   };
   
   const handleAddReceivable = () => {
-    // Check for installments
     if (formData.installments > 1) {
       setIsInstallmentConfigOpen(true);
       return;
@@ -240,16 +239,9 @@ export function ReceivableAccounts({
       );
       setReceivableAccounts(updatedAccounts);
 
-      // Call the onUpdateReceivable callback for the remaining amount with special flag
+      // Call the onUpdateReceivable callback with the updated receivable
       if (onUpdateReceivable) {
-        const remainingReceivable = {
-          ...data.receivable,
-          value: data.remainingAmount,
-          receivedAmount: data.remainingAmount,
-          status: 'recebido' as const,
-          isCompletingPartialPayment: true // Special flag to indicate this is completing a partial payment
-        };
-        onUpdateReceivable(remainingReceivable, data.bankAccountId);
+        onUpdateReceivable(data.receivable, data.bankAccountId);
       }
 
       setIsCompletePartialPaymentOpen(false);

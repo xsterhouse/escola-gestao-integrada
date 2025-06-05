@@ -47,8 +47,11 @@ export function CompletePartialPaymentDialog({
     // Create updated receivable with full payment completed
     const updatedReceivable: ReceivableAccount = {
       ...receivable,
-      receivedAmount: originalValue,
-      isPartialPayment: false,
+      receivedAmount: originalValue, // Now fully paid
+      isPartialPayment: false, // No longer partial
+      status: 'recebido' as const,
+      receivedDate: new Date(),
+      bankAccountId: selectedBankAccount,
       updatedAt: new Date()
     };
 
