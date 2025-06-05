@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useLocalStorageSync } from "./useLocalStorageSync";
-import { User, UserHierarchy, UserModulePermission } from "@/types/user";
+import { User, UserHierarchy, UserModulePermission } from "@/lib/types";
 import { dataIsolationService } from "@/services/dataIsolationService";
 
 export function useUserPermissions() {

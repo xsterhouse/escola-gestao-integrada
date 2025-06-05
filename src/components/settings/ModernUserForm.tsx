@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { User, School, ModulePermission } from "@/lib/types";
-import { UserRole } from "@/types/user";
+import { UserRole } from "@/lib/types";
 import { saveUserPassword } from "@/contexts/AuthContext";
 import { Eye, EyeOff, Shield, Users } from "lucide-react";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
@@ -146,6 +146,8 @@ export function ModernUserForm({
         matricula: formData.matricula,
         email: formData.email,
         role: formData.role,
+        userType: "funcionario", // Default type, will be updated based on profile
+        hierarchyLevel: 4, // Default level, will be updated based on profile
         profileId: formData.profileId,
         schoolId: formData.schoolId || null,
         permissions: permissions.map(p => ({ 
@@ -154,6 +156,9 @@ export function ModernUserForm({
           hasAccess: p.read || p.create || p.update || p.delete 
         })),
         status: "active",
+        dataScope: "school",
+        canCreateUsers: false,
+        canManageSchool: false,
       };
 
       if (!initialData) {
