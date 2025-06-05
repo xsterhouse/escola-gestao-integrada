@@ -22,12 +22,11 @@ export function IntegratedEntryForm() {
     debitAccount: "",
     debitValue: "",
     debitDescription: "",
-    debitHistory: "", // Novo campo para histórico do débito
+    debitHistory: "",
     creditAccount: "",
     creditValue: "",
     creditDescription: "",
-    creditHistory: "", // Novo campo para histórico do crédito
-    history: "", // Mantido para compatibilidade
+    creditHistory: "",
     totalValue: "",
     entryType: "manual" as const
   });
@@ -48,7 +47,6 @@ export function IntegratedEntryForm() {
   }, []);
 
   const loadPendingItems = () => {
-    // Carregar itens pendentes de lançamento automático
     const invoices = JSON.parse(localStorage.getItem('invoices') || '[]')
       .filter((invoice: Invoice) => 
         invoice.status === 'aprovada' && 
@@ -81,6 +79,138 @@ export function IntegratedEntryForm() {
     });
   };
 
+  const createEntryBase = (entryType: 'debit' | 'credit' | 'complete') => {
+    const baseEntry = {
+      id: `${entryType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      schoolId: user?.schoolId || '',
+      date: new Date(formData.date),
+      entryType: 'manual' as const,
+      auditTrail: [{
+        id: Date.now().toString(),
+        entryId: '',
+        action: 'created' as const,
+        userId: user?.id || '',
+        userName: user?.name || '',
+        timestamp: new Date(),
+        reason: `Lançamento ${entryType === 'complete' ? 'completo' : entryType} criado manualmente`
+      }],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: user?.id || ''
+    };
+
+    baseEntry.auditTrail[0].entryId = baseEntry.id;
+    return baseEntry;
+  };
+
+  const handleSaveDebitOnly = () => {
+    if (!formData.date || !formData.debitAccount || !formData.debitHistory) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha data, conta de débito e histórico do débito.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isValidAccountFormat(formData.debitAccount) || !validateAccountCode(formData.debitAccount)) {
+      toast({
+        title: "Conta de débito inválida",
+        description: "O código da conta de débito deve seguir o formato 0.0.00.00.0000 com valores válidos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
+    const debitValue = parseFloat(formData.debitValue.replace(/\D/g, '')) / 100 || 0;
+
+    const newEntry: AccountingEntry = {
+      ...createEntryBase('debit'),
+      debitAccount: formData.debitAccount,
+      debitValue: debitValue,
+      debitDescription: formData.debitDescription,
+      debitHistory: formData.debitHistory,
+      creditAccount: '',
+      creditValue: 0,
+      creditDescription: '',
+      creditHistory: '',
+      history: `Débito: ${formData.debitHistory}`,
+      totalValue: debitValue,
+    };
+
+    entries.push(newEntry);
+    localStorage.setItem('accountingEntries', JSON.stringify(entries));
+
+    toast({
+      title: "Lançamento de débito salvo",
+      description: "O lançamento de débito foi registrado com sucesso.",
+    });
+
+    // Reset debit fields only
+    setFormData(prev => ({
+      ...prev,
+      debitAccount: "",
+      debitValue: "",
+      debitDescription: "",
+      debitHistory: ""
+    }));
+  };
+
+  const handleSaveCreditOnly = () => {
+    if (!formData.date || !formData.creditAccount || !formData.creditHistory) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha data, conta de crédito e histórico do crédito.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isValidAccountFormat(formData.creditAccount) || !validateAccountCode(formData.creditAccount)) {
+      toast({
+        title: "Conta de crédito inválida", 
+        description: "O código da conta de crédito deve seguir o formato 0.0.00.00.0000 com valores válidos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
+    const creditValue = parseFloat(formData.creditValue.replace(/\D/g, '')) / 100 || 0;
+
+    const newEntry: AccountingEntry = {
+      ...createEntryBase('credit'),
+      debitAccount: '',
+      debitValue: 0,
+      debitDescription: '',
+      debitHistory: '',
+      creditAccount: formData.creditAccount,
+      creditValue: creditValue,
+      creditDescription: formData.creditDescription,
+      creditHistory: formData.creditHistory,
+      history: `Crédito: ${formData.creditHistory}`,
+      totalValue: creditValue,
+    };
+
+    entries.push(newEntry);
+    localStorage.setItem('accountingEntries', JSON.stringify(entries));
+
+    toast({
+      title: "Lançamento de crédito salvo",
+      description: "O lançamento de crédito foi registrado com sucesso.",
+    });
+
+    // Reset credit fields only
+    setFormData(prev => ({
+      ...prev,
+      creditAccount: "",
+      creditValue: "",
+      creditDescription: "",
+      creditHistory: ""
+    }));
+  };
+
   const handleSaveManualEntry = () => {
     if (!formData.date || !formData.totalValue || (!formData.debitHistory || !formData.creditHistory) || !formData.debitAccount || !formData.creditAccount) {
       toast({
@@ -91,7 +221,6 @@ export function IntegratedEntryForm() {
       return;
     }
 
-    // Validar formato das contas
     if (!isValidAccountFormat(formData.debitAccount) || !validateAccountCode(formData.debitAccount)) {
       toast({
         title: "Conta de débito inválida",
@@ -112,44 +241,28 @@ export function IntegratedEntryForm() {
 
     const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
     const newEntry: AccountingEntry = {
-      id: Date.now().toString(),
-      schoolId: user?.schoolId || '',
-      date: new Date(formData.date),
+      ...createEntryBase('complete'),
       debitAccount: formData.debitAccount,
       debitValue: parseFloat(formData.debitValue.replace(/\D/g, '')) / 100 || 0,
       debitDescription: formData.debitDescription,
-      debitHistory: formData.debitHistory, // Novo campo
+      debitHistory: formData.debitHistory,
       creditAccount: formData.creditAccount,
       creditValue: parseFloat(formData.creditValue.replace(/\D/g, '')) / 100 || 0,
       creditDescription: formData.creditDescription,
-      creditHistory: formData.creditHistory, // Novo campo
-      history: `D: ${formData.debitHistory} | C: ${formData.creditHistory}`, // Combinação para compatibilidade
+      creditHistory: formData.creditHistory,
+      history: `D: ${formData.debitHistory} | C: ${formData.creditHistory}`,
       totalValue: parseFloat(formData.totalValue.replace(/\D/g, '')) / 100,
-      entryType: 'manual',
-      auditTrail: [{
-        id: Date.now().toString(),
-        entryId: '',
-        action: 'created',
-        userId: user?.id || '',
-        userName: user?.name || '',
-        timestamp: new Date(),
-        reason: 'Lançamento manual criado'
-      }],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: user?.id || ''
     };
 
-    newEntry.auditTrail[0].entryId = newEntry.id;
     entries.push(newEntry);
     localStorage.setItem('accountingEntries', JSON.stringify(entries));
 
     toast({
-      title: "Lançamento salvo",
-      description: "O lançamento manual foi registrado com sucesso.",
+      title: "Lançamento completo salvo",
+      description: "O lançamento completo foi registrado com sucesso.",
     });
 
-    // Reset form
+    // Reset all form fields
     setFormData({
       date: new Date().toISOString().split('T')[0],
       debitAccount: "",
@@ -160,7 +273,6 @@ export function IntegratedEntryForm() {
       creditValue: "",
       creditDescription: "",
       creditHistory: "",
-      history: "",
       totalValue: "",
       entryType: "manual"
     });
@@ -205,7 +317,7 @@ export function IntegratedEntryForm() {
         description: `${entriesToGenerate.length} lançamentos foram criados automaticamente.`,
       });
 
-      loadPendingItems(); // Recarregar itens pendentes
+      loadPendingItems();
     } else {
       toast({
         title: "Nenhum lançamento pendente",
@@ -472,28 +584,34 @@ export function IntegratedEntryForm() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="history" className="text-sm font-medium text-gray-700">
-                  Histórico *
-                </Label>
-                <Textarea
-                  id="history"
-                  placeholder="Descreva o histórico do lançamento contábil..."
-                  value={formData.history}
-                  onChange={(e) => setFormData(prev => ({ ...prev, history: e.target.value }))}
-                  className="min-h-[100px] resize-none rounded-lg border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                />
-              </div>
-
+              {/* Botões de Salvamento */}
               <div className="pt-6 border-t border-gray-200">
-                <Button
-                  onClick={handleSaveManualEntry}
-                  className="h-12 px-8 text-white text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg"
-                  style={{ backgroundColor: '#041c43' }}
-                >
-                  <Save className="mr-2 h-5 w-5" />
-                  Salvar Lançamento Manual
-                </Button>
+                <div className="flex flex-wrap gap-4 justify-center">
+                  <Button
+                    onClick={handleSaveDebitOnly}
+                    className="h-12 px-6 text-white text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg bg-red-600 hover:bg-red-700"
+                  >
+                    <Save className="mr-2 h-5 w-5" />
+                    Salvar Débito
+                  </Button>
+
+                  <Button
+                    onClick={handleSaveCreditOnly}
+                    className="h-12 px-6 text-white text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg bg-green-600 hover:bg-green-700"
+                  >
+                    <Save className="mr-2 h-5 w-5" />
+                    Salvar Crédito
+                  </Button>
+
+                  <Button
+                    onClick={handleSaveManualEntry}
+                    className="h-12 px-6 text-white text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg"
+                    style={{ backgroundColor: '#041c43' }}
+                  >
+                    <Save className="mr-2 h-5 w-5" />
+                    Salvar Lançamento Completo
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
