@@ -4,14 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PaymentAccount, Invoice } from "@/lib/types";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { PayableAccountsTable } from "./PayableAccountsTable";
 import {
   Dialog,
   DialogContent,
@@ -505,98 +498,15 @@ export function PayableAccounts({
         </div>
       </div>
       
-      {/* Payable Accounts Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Contas a Pagar</CardTitle>
-          <CardDescription>
-            Gerencie todas as contas a pagar da sua escola.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Fornecedor</TableHead>
-                <TableHead>Tipo de Despesa</TableHead>
-                <TableHead>Vencimento</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAccounts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center">
-                    Nenhuma conta encontrada.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredAccounts.map(account => (
-                  <TableRow key={account.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {account.description}
-                        {account.isDuplicate && (
-                          <span className="px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded-full">
-                            Duplicado
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{account.supplier}</TableCell>
-                    <TableCell>{account.expenseType}</TableCell>
-                    <TableCell>{format(new Date(account.dueDate), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>{formatCurrency(account.value)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <div className={`mr-2 h-2 w-2 rounded-full ${
-                          account.status === 'pago' ? 'bg-green-500' : 'bg-amber-500'
-                        }`} />
-                        {account.status === 'pago' ? 'Pago' : 'A Pagar'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {account.status === 'a_pagar' && (
-                          <>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => openPaymentConfirm(account)}
-                              title="Registrar Pagamento"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => openEditPayment(account)}
-                              title="Editar"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleDeletePayment(account)}
-                          title={account.status === 'pago' ? 'Remover Pagamento' : 'Excluir'}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Nova tabela organizada */}
+      <PayableAccountsTable
+        accounts={filteredAccounts}
+        invoices={savedInvoices}
+        onPaymentConfirm={openPaymentConfirm}
+        onEditPayment={openEditPayment}
+        onDeletePayment={handleDeletePayment}
+        formatCurrency={formatCurrency}
+      />
       
       {/* Add Payment Dialog */}
       <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
