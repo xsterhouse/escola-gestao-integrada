@@ -22,14 +22,19 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock data for the demo
+// Mock data for the demo - agora com hierarquia
 const MOCK_MASTER_USER: User = {
   id: "1",
   name: "Admin Master",
   matricula: "ADMIN001",
   email: "admin@sigre.net.br",
   role: "master",
+  userType: "master",
+  hierarchyLevel: 1,
   schoolId: null,
+  dataScope: "global",
+  canCreateUsers: true,
+  canManageSchool: true,
   permissions: [
     { id: "1", name: "dashboard", hasAccess: true },
     { id: "2", name: "products", hasAccess: true },
@@ -148,7 +153,7 @@ const getStoredUsers = (): User[] => {
     }
   }
   
-  // Default mock users if nothing in localStorage
+  // Default mock users com nova hierarquia
   const defaultUsers: User[] = [
     {
       id: "2",
@@ -156,7 +161,12 @@ const getStoredUsers = (): User[] => {
       matricula: "ESC001",
       email: "joao@escola1.com",
       role: "admin",
+      userType: "diretor_escolar",
+      hierarchyLevel: 2,
       schoolId: "1",
+      dataScope: "school",
+      canCreateUsers: true,
+      canManageSchool: true,
       permissions: [
         { id: "1", name: "dashboard", hasAccess: true },
         { id: "2", name: "products", hasAccess: true },
@@ -172,7 +182,12 @@ const getStoredUsers = (): User[] => {
       matricula: "ESC002",
       email: "maria@escola2.com",
       role: "admin",
+      userType: "diretor_escolar",
+      hierarchyLevel: 2,
       schoolId: "2",
+      dataScope: "school",
+      canCreateUsers: true,
+      canManageSchool: true,
       permissions: [
         { id: "1", name: "dashboard", hasAccess: true },
         { id: "2", name: "products", hasAccess: true },
@@ -221,13 +236,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
+      
+      // Migrate old users to new hierarchy format
+      if (!parsedUser.userType) {
+        parsedUser.userType = parsedUser.role === "master" ? "master" : "diretor_escolar";
+        parsedUser.hierarchyLevel = parsedUser.role === "master" ? 1 : 2;
+        parsedUser.dataScope = parsedUser.role === "master" ? "global" : "school";
+        parsedUser.canCreateUsers = parsedUser.role === "master" || parsedUser.role === "admin";
+        parsedUser.canManageSchool = parsedUser.role === "master" || parsedUser.role === "admin";
+      }
+      
       setUser(parsedUser);
+      
+      // Initialize data isolation service
+      import("@/services/dataIsolationService").then(({ dataIsolationService }) => {
+        dataIsolationService.setContext(parsedUser);
+      });
       
       // Get current schools from localStorage
       const currentSchools = getStoredSchools();
       
-      // Set available schools based on user role
-      if (parsedUser.role === "master") {
+      // Set available schools based on user hierarchy
+      if (parsedUser.userType === "master") {
         setAvailableSchools(currentSchools);
       } else if (parsedUser.schoolId) {
         const userSchool = currentSchools.find(school => school.id === parsedUser.schoolId);
@@ -282,6 +312,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const currentSchools = getStoredSchools();
         setAvailableSchools(currentSchools);
         
+        // Initialize data isolation service for master user
+        const { dataIsolationService } = await import("@/services/dataIsolationService");
+        dataIsolationService.setContext(MOCK_MASTER_USER);
+        
         if (remember) {
           localStorage.setItem("sigre_user", JSON.stringify(MOCK_MASTER_USER));
         }
@@ -322,6 +356,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: `${systemUser.matricula}@sigre.system`,
             role: "user",
             schoolId: systemUser.schoolId,
+            userType: "funcionario",
+            hierarchyLevel: 4,
+            dataScope: "school",
+            canCreateUsers: false,
+            canManageSchool: false,
             permissions: [
               { id: "1", name: "dashboard", hasAccess: true },
               { id: "2", name: "products", hasAccess: systemUser.isLinkedToPurchasing },
@@ -362,6 +401,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (schoolUser) {
         console.log(`👤 Usuário encontrado: ${schoolUser.name} (ID: ${schoolUser.id})`);
+        
+        // Migrate user to new hierarchy if needed
+        if (!schoolUser.userType) {
+          schoolUser.userType = schoolUser.role === "admin" ? "diretor_escolar" : "funcionario";
+          schoolUser.hierarchyLevel = schoolUser.role === "admin" ? 2 : 4;
+          schoolUser.dataScope = "school";
+          schoolUser.canCreateUsers = schoolUser.role === "admin";
+          schoolUser.canManageSchool = schoolUser.role === "admin";
+        }
+        
+        // Initialize data isolation service
+        const { dataIsolationService } = await import("@/services/dataIsolationService");
+        dataIsolationService.setContext(schoolUser);
         
         // Verificar se existe senha salva para este usuário
         const storedPassword = userPasswords[schoolUser.id];
@@ -416,6 +468,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    // Clear data isolation context
+    import("@/services/dataIsolationService").then(({ dataIsolationService }) => {
+      dataIsolationService.clearContext();
+    });
+    
     setUser(null);
     setCurrentSchool(null);
     setAvailableSchools([]);
