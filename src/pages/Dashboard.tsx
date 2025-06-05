@@ -1,17 +1,18 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportXmlModal } from "@/components/dashboard/ImportXmlModal";
-import { DanfeConsultModule } from "@/components/dashboard/DanfeConsultModule";
+import { FinancialChartsModule } from "@/components/dashboard/FinancialChartsModule";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   FileText, 
   Package, 
   DollarSign,
   Import,
-  Search
+  BarChart3
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -94,7 +95,7 @@ const Dashboard = () => {
         <Tabs defaultValue="actions" className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="actions">Ações Rápidas</TabsTrigger>
-            <TabsTrigger value="danfe">Consulta DANFE</TabsTrigger>
+            <TabsTrigger value="financial">Análise Financeira</TabsTrigger>
           </TabsList>
 
           <TabsContent value="actions" className="mt-4 space-y-6">
@@ -210,14 +211,14 @@ const Dashboard = () => {
               </Card>
             </div>
 
-            {/* DANFE Consultation Module - Now below the metrics cards */}
+            {/* Financial Charts Module */}
             <div className="mt-8">
-              <DanfeConsultModule />
+              <FinancialChartsModule />
             </div>
           </TabsContent>
 
-          <TabsContent value="danfe" className="mt-4">
-            <DanfeConsultModule />
+          <TabsContent value="financial" className="mt-4">
+            <FinancialChartsModule />
           </TabsContent>
         </Tabs>
       </div>
