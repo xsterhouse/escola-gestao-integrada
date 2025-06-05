@@ -104,7 +104,7 @@ export function ImportInvoiceFromXmlDialog({
               </SelectTrigger>
               <SelectContent>
                 {filteredInvoices.length === 0 ? (
-                  <SelectItem value="" disabled>
+                  <SelectItem value="no-invoices" disabled>
                     {searchTerm ? "Nenhuma nota fiscal encontrada" : "Carregando notas fiscais..."}
                   </SelectItem>
                 ) : (
