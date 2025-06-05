@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserHierarchy } from "@/types/user";
+import { UserHierarchy } from "@/lib/types";
 import { Shield, Crown, User, Building, ShoppingCart } from "lucide-react";
 
 interface HierarchyPermissionsEditorProps {

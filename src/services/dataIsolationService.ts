@@ -1,4 +1,5 @@
-import { User, UserHierarchy } from "@/types/user";
+
+import { User, UserHierarchy } from "@/lib/types";
 
 export interface DataIsolationContext {
   userId: string;
