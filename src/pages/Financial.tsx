@@ -267,32 +267,34 @@ export default function Financial() {
         remainingAmount
       });
 
-      const bankAccount = bankAccounts.find(ba => ba.id === bankAccountId);
-      if (bankAccount && remainingAmount > 0) {
-        const newTransaction: BankTransaction = {
-          id: uuidv4(),
-          schoolId: "current-school-id",
-          bankAccountId,
-          date: new Date(),
-          description: `Quitação do Saldo Restante: ${previousReceivable.description}`,
-          value: remainingAmount,
-          transactionType: 'credito',
+      // Find the existing partial payment transaction
+      const existingPartialTransaction = bankTransactions.find(transaction => 
+        transaction.documentId === updatedReceivable.id && 
+        transaction.reconciliationStatus === 'pgt_parcial' &&
+        transaction.source === 'receivable'
+      );
+
+      if (existingPartialTransaction && remainingAmount > 0) {
+        console.log('Found existing partial transaction, updating it:', existingPartialTransaction);
+
+        // Update the existing transaction to reflect the full payment
+        const updatedTransaction: BankTransaction = {
+          ...existingPartialTransaction,
+          value: originalValue, // Update to full amount
+          description: `Recebimento: ${previousReceivable.description}`, // Remove "Parcial" from description
           reconciliationStatus: 'conciliado',
-          category: previousReceivable.resourceType || '',
-          resourceType: bankAccount.managementType,
-          source: 'receivable',
-          documentId: updatedReceivable.id,
-          createdAt: new Date(),
-          updatedAt: new Date(),
           isPartialPayment: false,
-          originalReceivableId: updatedReceivable.id
+          partialAmount: undefined,
+          remainingAmount: undefined,
+          updatedAt: new Date()
         };
 
-        console.log('Creating completion transaction:', newTransaction);
-
-        setBankTransactions(prev => [...prev, newTransaction]);
+        // Update the transactions list
+        setBankTransactions(prev => prev.map(t => 
+          t.id === existingPartialTransaction.id ? updatedTransaction : t
+        ));
         
-        // Update bank account balance
+        // Update bank account balance (add only the remaining amount since partial was already added)
         setBankAccounts(prev => prev.map(ba => 
           ba.id === bankAccountId 
             ? { 
@@ -302,6 +304,8 @@ export default function Financial() {
               }
             : ba
         ));
+
+        console.log('Updated existing transaction and bank balance');
       }
       
       // Update receivable accounts with the completed payment
