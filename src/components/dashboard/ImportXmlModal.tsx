@@ -19,15 +19,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Upload, FileText, CheckCircle, AlertCircle, Download } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Upload, FileText, CheckCircle, AlertCircle, Download, Package, DollarSign, FileX } from "lucide-react";
 import { Supplier, Invoice, InvoiceItem } from "@/lib/types";
 import { v4 as uuidv4 } from "uuid";
 
 const importFormSchema = z.object({
   files: z.any().optional(),
   description: z.string().optional(),
+  targetModule: z.enum(["inventory", "financial", "contracts"], {
+    required_error: "Selecione um módulo para importação",
+  }),
 });
 
 interface XmlData {
@@ -44,6 +49,7 @@ interface ImportResult {
   danfeNumber?: string;
   error?: string;
   data?: XmlData;
+  module?: string;
 }
 
 interface ImportXmlModalProps {
@@ -51,9 +57,34 @@ interface ImportXmlModalProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+const moduleOptions = [
+  {
+    value: "inventory",
+    label: "Estoque/Inventário",
+    description: "Importar para controle de estoque",
+    icon: Package,
+    route: "/inventory"
+  },
+  {
+    value: "financial",
+    label: "Financeiro",
+    description: "Importar para contas a pagar",
+    icon: DollarSign,
+    route: "/financial"
+  },
+  {
+    value: "contracts",
+    label: "Contratos",
+    description: "Importar para gestão de contratos",
+    icon: FileX,
+    route: "/contracts"
+  }
+];
+
 export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
   const { toast } = useToast();
   const { currentSchool } = useAuth();
+  const navigate = useNavigate();
   const [internalOpen, setInternalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
@@ -69,6 +100,7 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
     defaultValues: {
       files: null,
       description: "",
+      targetModule: undefined,
     },
   });
 
@@ -137,9 +169,7 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
     });
   };
 
-  const saveInvoiceToStorage = (xmlData: XmlData): string => {
-    if (!currentSchool) throw new Error("Escola não identificada");
-
+  const saveToInventoryModule = (xmlData: XmlData): string => {
     const invoiceId = uuidv4();
     
     // Update item IDs with invoice reference
@@ -161,7 +191,7 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
       updatedAt: new Date(),
     };
 
-    // Save to localStorage
+    // Save to inventory storage
     const storageKey = `invoices_${currentSchool.id}`;
     const existingInvoices = JSON.parse(localStorage.getItem(storageKey) || "[]");
     existingInvoices.push(invoice);
@@ -180,7 +210,69 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
     return invoiceId;
   };
 
-  const processFiles = async (files: FileList) => {
+  const saveToFinancialModule = (xmlData: XmlData): string => {
+    const payableId = uuidv4();
+    
+    const payableAccount = {
+      id: payableId,
+      supplier: xmlData.supplier.name,
+      description: `Nota Fiscal ${xmlData.danfeNumber}`,
+      totalValue: xmlData.totalValue,
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      status: "pendente",
+      danfeNumber: xmlData.danfeNumber,
+      createdAt: new Date(),
+    };
+
+    // Save to financial storage
+    const storageKey = `payableAccounts_${currentSchool.id}`;
+    const existingPayables = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    existingPayables.push(payableAccount);
+    localStorage.setItem(storageKey, JSON.stringify(existingPayables));
+
+    return payableId;
+  };
+
+  const saveToContractsModule = (xmlData: XmlData): string => {
+    const contractId = uuidv4();
+    
+    const contract = {
+      id: contractId,
+      supplier: xmlData.supplier.name,
+      description: `Contrato baseado em NF ${xmlData.danfeNumber}`,
+      totalValue: xmlData.totalValue,
+      startDate: xmlData.issueDate,
+      endDate: new Date(xmlData.issueDate.getTime() + 365 * 24 * 60 * 60 * 1000), // 1 year
+      status: "ativo",
+      danfeNumber: xmlData.danfeNumber,
+      createdAt: new Date(),
+    };
+
+    // Save to contracts storage
+    const storageKey = `contracts_${currentSchool.id}`;
+    const existingContracts = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    existingContracts.push(contract);
+    localStorage.setItem(storageKey, JSON.stringify(existingContracts));
+
+    return contractId;
+  };
+
+  const saveInvoiceToStorage = (xmlData: XmlData, targetModule: string): string => {
+    if (!currentSchool) throw new Error("Escola não identificada");
+
+    switch (targetModule) {
+      case "inventory":
+        return saveToInventoryModule(xmlData);
+      case "financial":
+        return saveToFinancialModule(xmlData);
+      case "contracts":
+        return saveToContractsModule(xmlData);
+      default:
+        throw new Error("Módulo de destino inválido");
+    }
+  };
+
+  const processFiles = async (files: FileList, targetModule: string) => {
     if (!files || files.length === 0) return;
 
     setIsProcessing(true);
@@ -201,26 +293,28 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
         const content = await file.text();
         const xmlData = await parseXMLContent(content, file.name);
         
-        setProcessingStep(`Salvando dados de ${file.name}...`);
+        setProcessingStep(`Salvando dados de ${file.name} no módulo ${moduleOptions.find(m => m.value === targetModule)?.label}...`);
         await new Promise(resolve => setTimeout(resolve, 300));
         
-        const invoiceId = saveInvoiceToStorage(xmlData);
+        const recordId = saveInvoiceToStorage(xmlData, targetModule);
         
         results.push({
           success: true,
           fileName: file.name,
           danfeNumber: xmlData.danfeNumber,
-          data: xmlData
+          data: xmlData,
+          module: targetModule
         });
 
-        console.log(`✅ Nota fiscal ${xmlData.danfeNumber} importada com sucesso - ID: ${invoiceId}`);
+        console.log(`✅ Nota fiscal ${xmlData.danfeNumber} importada com sucesso para ${targetModule} - ID: ${recordId}`);
         
       } catch (error) {
         console.error(`❌ Erro ao processar ${file.name}:`, error);
         results.push({
           success: false,
           fileName: file.name,
-          error: error.message
+          error: error.message,
+          module: targetModule
         });
       }
 
@@ -233,11 +327,12 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
 
     const successCount = results.filter(r => r.success).length;
     const errorCount = results.filter(r => !r.success).length;
+    const selectedModule = moduleOptions.find(m => m.value === targetModule);
 
     if (successCount > 0) {
       toast({
         title: "Importação concluída",
-        description: `${successCount} nota(s) fiscal(is) importada(s) com sucesso. ${errorCount > 0 ? `${errorCount} arquivo(s) com erro.` : ''}`,
+        description: `${successCount} nota(s) fiscal(is) importada(s) para ${selectedModule?.label} com sucesso. ${errorCount > 0 ? `${errorCount} arquivo(s) com erro.` : ''}`,
       });
     } else {
       toast({
@@ -258,7 +353,16 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
       return;
     }
 
-    await processFiles(data.files);
+    if (!data.targetModule) {
+      toast({
+        title: "Erro",
+        description: "Selecione um módulo de destino.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await processFiles(data.files, data.targetModule);
   };
 
   const handleClose = () => {
@@ -267,6 +371,14 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
       form.reset();
       setImportResults([]);
       setImportProgress(0);
+    }
+  };
+
+  const handleNavigateToModule = (moduleName: string) => {
+    const module = moduleOptions.find(m => m.value === moduleName);
+    if (module) {
+      navigate(module.route);
+      handleClose();
     }
   };
 
@@ -279,16 +391,18 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
       danfe: result.danfeNumber,
       fornecedor: result.data?.supplier.name,
       valor: result.data?.totalValue,
+      modulo: moduleOptions.find(m => m.value === result.module)?.label,
       dataImportacao: new Date().toLocaleDateString('pt-BR')
     }));
 
     const csvContent = [
-      ['Arquivo', 'DANFE', 'Fornecedor', 'Valor', 'Data Importação'],
+      ['Arquivo', 'DANFE', 'Fornecedor', 'Valor', 'Módulo', 'Data Importação'],
       ...reportData.map(row => [
         row.arquivo,
         row.danfe,
         row.fornecedor,
         `R$ ${row.valor?.toFixed(2)}`,
+        row.modulo,
         row.dataImportacao
       ])
     ].map(row => row.join(';')).join('\n');
@@ -311,12 +425,46 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
               Importar Notas Fiscais XML
             </DialogTitle>
             <DialogDescription>
-              Selecione um ou múltiplos arquivos XML de notas fiscais para importação.
+              Selecione um módulo de destino e os arquivos XML de notas fiscais para importação.
             </DialogDescription>
           </DialogHeader>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="targetModule"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Módulo de Destino *</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isProcessing}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione onde importar os dados" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {moduleOptions.map((module) => {
+                            const IconComponent = module.icon;
+                            return (
+                              <SelectItem key={module.value} value={module.value}>
+                                <div className="flex items-center gap-2">
+                                  <IconComponent className="h-4 w-4" />
+                                  <div>
+                                    <div className="font-medium">{module.label}</div>
+                                    <div className="text-xs text-muted-foreground">{module.description}</div>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="files"
@@ -379,17 +527,34 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
                         {importResults.filter(r => r.success).length} sucessos, {importResults.filter(r => !r.success).length} erros
                       </CardDescription>
                     </div>
-                    {importResults.some(r => r.success) && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={exportResults}
-                        className="flex items-center gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        Exportar Relatório
-                      </Button>
-                    )}
+                    <div className="flex gap-2">
+                      {importResults.some(r => r.success) && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={exportResults}
+                          className="flex items-center gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          Exportar Relatório
+                        </Button>
+                      )}
+                      {importResults.some(r => r.success) && (
+                        <Button 
+                          variant="default" 
+                          size="sm"
+                          onClick={() => {
+                            const successResult = importResults.find(r => r.success);
+                            if (successResult) {
+                              handleNavigateToModule(successResult.module);
+                            }
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          Ir para Módulo
+                        </Button>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <Table>
@@ -398,6 +563,7 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
                           <TableHead>Status</TableHead>
                           <TableHead>Arquivo</TableHead>
                           <TableHead>DANFE</TableHead>
+                          <TableHead>Módulo</TableHead>
                           <TableHead>Detalhes</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -420,6 +586,22 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
                             <TableCell className="font-medium">{result.fileName}</TableCell>
                             <TableCell>
                               {result.danfeNumber || "—"}
+                            </TableCell>
+                            <TableCell>
+                              {result.module ? (
+                                <div className="flex items-center gap-1">
+                                  {(() => {
+                                    const module = moduleOptions.find(m => m.value === result.module);
+                                    const IconComponent = module?.icon;
+                                    return (
+                                      <>
+                                        {IconComponent && <IconComponent className="h-3 w-3" />}
+                                        <span className="text-xs">{module?.label}</span>
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                              ) : "—"}
                             </TableCell>
                             <TableCell>
                               {result.success ? (
@@ -488,12 +670,46 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
             Importar Notas Fiscais XML
           </DialogTitle>
           <DialogDescription>
-            Selecione um ou múltiplos arquivos XML de notas fiscais para importação.
+            Selecione um módulo de destino e os arquivos XML de notas fiscais para importação.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="targetModule"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Módulo de Destino *</FormLabel>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isProcessing}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione onde importar os dados" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {moduleOptions.map((module) => {
+                          const IconComponent = module.icon;
+                          return (
+                            <SelectItem key={module.value} value={module.value}>
+                              <div className="flex items-center gap-2">
+                                <IconComponent className="h-4 w-4" />
+                                <div>
+                                  <div className="font-medium">{module.label}</div>
+                                  <div className="text-xs text-muted-foreground">{module.description}</div>
+                                </div>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="files"
@@ -556,17 +772,34 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
                       {importResults.filter(r => r.success).length} sucessos, {importResults.filter(r => !r.success).length} erros
                     </CardDescription>
                   </div>
-                  {importResults.some(r => r.success) && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={exportResults}
-                      className="flex items-center gap-2"
-                    >
-                      <Download className="h-4 w-4" />
-                      Exportar Relatório
-                    </Button>
-                  )}
+                  <div className="flex gap-2">
+                    {importResults.some(r => r.success) && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={exportResults}
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Exportar Relatório
+                      </Button>
+                    )}
+                    {importResults.some(r => r.success) && (
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={() => {
+                          const successResult = importResults.find(r => r.success);
+                          if (successResult) {
+                            handleNavigateToModule(successResult.module);
+                          }
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        Ir para Módulo
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -575,6 +808,7 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
                         <TableHead>Status</TableHead>
                         <TableHead>Arquivo</TableHead>
                         <TableHead>DANFE</TableHead>
+                        <TableHead>Módulo</TableHead>
                         <TableHead>Detalhes</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -597,6 +831,22 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
                           <TableCell className="font-medium">{result.fileName}</TableCell>
                           <TableCell>
                             {result.danfeNumber || "—"}
+                          </TableCell>
+                          <TableCell>
+                            {result.module ? (
+                              <div className="flex items-center gap-1">
+                                {(() => {
+                                  const module = moduleOptions.find(m => m.value === result.module);
+                                  const IconComponent = module?.icon;
+                                  return (
+                                    <>
+                                      {IconComponent && <IconComponent className="h-3 w-3" />}
+                                      <span className="text-xs">{module?.label}</span>
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            ) : "—"}
                           </TableCell>
                           <TableCell>
                             {result.success ? (
