@@ -34,6 +34,9 @@ export function AccountingReportsTab() {
   // Load schools from localStorage
   const { data: schools } = useLocalStorageSync<School>('schools', []);
 
+  // Filter schools to ensure only valid schools with non-empty IDs are used
+  const validSchools = schools.filter(school => school.id && school.id.trim() !== '');
+
   const accountTypes = [
     { value: "all", label: "Todos os tipos" },
     { value: "ativo", label: "Ativo" },
@@ -451,7 +454,7 @@ export function AccountingReportsTab() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as Escolas</SelectItem>
-                      {schools.map(school => (
+                      {validSchools.map(school => (
                         <SelectItem key={school.id} value={school.id}>
                           {school.name}
                         </SelectItem>
