@@ -1,9 +1,9 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { BankAccount, BankTransaction } from "@/lib/types";
 import {
   Table,
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Search, Download, Check, RefreshCw, Filter, Plus, FileText, Eye, Trash2 } from "lucide-react";
+import { Search, Download, Check, RefreshCw, Filter, Plus, FileText, Eye, Trash2, Building2, CreditCard } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -177,8 +177,11 @@ export function BankReconciliation({
     return { ...transaction, balance };
   });
   
-  // Calculate financial summary for displayed transactions
-  const displayedInitialBalance = bankAccounts.find(a => a.id === selectedAccount)?.initialBalance || 0;
+  // Get selected account information
+  const selectedAccountData = bankAccounts.find(a => a.id === selectedAccount);
+  
+  // Calculate financial summary for displayed transactions (fix initial balance calculation)
+  const displayedInitialBalance = selectedAccountData?.initialBalance || 0;
   const displayedTotalRevenues = filteredTransactions
     .filter(t => t.transactionType === "credito")
     .reduce((sum, t) => sum + t.value, 0);
@@ -186,12 +189,64 @@ export function BankReconciliation({
     .filter(t => t.transactionType === "debito")
     .reduce((sum, t) => sum + t.value, 0);
   const displayedFinalBalance = displayedInitialBalance + displayedTotalRevenues - displayedTotalExpenses;
-  
-  // Get selected account information
-  const selectedAccountData = bankAccounts.find(a => a.id === selectedAccount);
+
+  // Get management type badge color
+  const getManagementTypeBadgeColor = (managementType?: string) => {
+    switch (managementType) {
+      case 'PDDE':
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'PNAE':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'PNATE':
+        return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'Recursos Próprios':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
   
   return (
     <div className="space-y-6">
+      {/* Selected Account Information Header */}
+      {selectedAccountData && (
+        <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-semibold text-blue-900">{selectedAccountData.bankName}</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm text-blue-700">
+                    {selectedAccountData.accountType === 'movimento' ? 'Conta Movimento' : 'Conta Aplicação'}
+                  </span>
+                </div>
+                {selectedAccountData.managementType && (
+                  <Badge 
+                    variant="outline" 
+                    className={`${getManagementTypeBadgeColor(selectedAccountData.managementType)} font-medium`}
+                  >
+                    {selectedAccountData.managementType}
+                  </Badge>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Saldo Atual</p>
+                <p className="text-xl font-bold text-blue-900">
+                  {formatCurrency(selectedAccountData.currentBalance)}
+                </p>
+              </div>
+            </div>
+            {selectedAccountData.description && (
+              <p className="text-sm text-blue-600 mt-2">{selectedAccountData.description}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Financial Summary */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -200,6 +255,11 @@ export function BankReconciliation({
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{formatCurrency(displayedInitialBalance)}</p>
+            {selectedAccountData && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {selectedAccountData.managementType || 'Gestão não informada'}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -241,24 +301,21 @@ export function BankReconciliation({
                 <SelectItem value="all">Todas as contas</SelectItem>
                 {bankAccounts.filter(account => account.id && account.id.trim() !== "").map(account => (
                   <SelectItem key={account.id} value={account.id}>
-                    {account.bankName} - {account.accountType === 'movimento' ? 'Movimento' : 'Aplicação'} ({account.managementType || 'Sem gestão'})
+                    <div className="flex items-center gap-2">
+                      <span>{account.bankName} - {account.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}</span>
+                      {account.managementType && (
+                        <Badge 
+                          variant="outline" 
+                          className={`${getManagementTypeBadgeColor(account.managementType)} text-xs`}
+                        >
+                          {account.managementType}
+                        </Badge>
+                      )}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {selectedAccountData && (
-              <div className="mt-1 p-2 bg-blue-50 rounded border">
-                <p className="text-sm font-medium text-blue-800">
-                  {selectedAccountData.bankName}
-                </p>
-                <p className="text-xs text-blue-600">
-                  Gestão: {selectedAccountData.managementType || 'Não informado'}
-                </p>
-                <p className="text-xs text-blue-600">
-                  {selectedAccountData.description}
-                </p>
-              </div>
-            )}
           </div>
           
           <div className="w-full md:w-auto">
@@ -365,6 +422,11 @@ export function BankReconciliation({
           <CardTitle>Conciliação Bancária</CardTitle>
           <CardDescription>
             Visualize e concilie os lançamentos bancários com seus registros internos.
+            {selectedAccountData && (
+              <span className="block mt-1 text-blue-600">
+                Conta selecionada: {selectedAccountData.bankName} - {selectedAccountData.managementType || 'Gestão não informada'}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -377,6 +439,7 @@ export function BankReconciliation({
                 <TableHead>Valor</TableHead>
                 <TableHead>Saldo</TableHead>
                 <TableHead>Tipo</TableHead>
+                <TableHead>Gestão</TableHead>
                 <TableHead>Situação</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
@@ -384,8 +447,11 @@ export function BankReconciliation({
             <TableBody>
               {transactionsWithBalance.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center">
-                    Nenhuma transação encontrada.
+                  <TableCell colSpan={9} className="text-center">
+                    {selectedAccount ? 
+                      "Nenhuma transação encontrada para esta conta." : 
+                      "Selecione uma conta bancária para visualizar as transações."
+                    }
                   </TableCell>
                 </TableRow>
               ) : (
@@ -412,6 +478,16 @@ export function BankReconciliation({
                         {formatCurrency(transaction.balance)}
                       </TableCell>
                       <TableCell>{transaction.transactionType === 'credito' ? 'Crédito' : 'Débito'}</TableCell>
+                      <TableCell>
+                        {account?.managementType && (
+                          <Badge 
+                            variant="outline" 
+                            className={`${getManagementTypeBadgeColor(account.managementType)} text-xs`}
+                          >
+                            {account.managementType}
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center">
                           <div className={`mr-2 h-2 w-2 rounded-full ${
