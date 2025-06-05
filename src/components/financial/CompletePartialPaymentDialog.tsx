@@ -13,7 +13,7 @@ interface CompletePartialPaymentDialogProps {
   onClose: () => void;
   receivable: ReceivableAccount | null;
   bankAccounts: BankAccount[];
-  onConfirm: (data: { bankAccountId: string; remainingAmount: number }) => void;
+  onConfirm: (data: { bankAccountId: string; remainingAmount: number; receivable: ReceivableAccount }) => void;
 }
 
 export function CompletePartialPaymentDialog({
@@ -44,9 +44,18 @@ export function CompletePartialPaymentDialog({
     const receivedAmount = receivable.receivedAmount || 0;
     const remainingAmount = originalValue - receivedAmount;
 
+    // Create updated receivable with full payment completed
+    const updatedReceivable: ReceivableAccount = {
+      ...receivable,
+      receivedAmount: originalValue,
+      isPartialPayment: false,
+      updatedAt: new Date()
+    };
+
     onConfirm({
       bankAccountId: selectedBankAccount,
       remainingAmount,
+      receivable: updatedReceivable
     });
   };
 

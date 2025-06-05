@@ -232,29 +232,22 @@ export function ReceivableAccounts({
     setIsCompletePartialPaymentOpen(true);
   };
 
-  const handleConfirmCompletePayment = (data: { bankAccountId: string; remainingAmount: number }) => {
+  const handleConfirmCompletePayment = (data: { bankAccountId: string; remainingAmount: number; receivable: ReceivableAccount }) => {
     if (selectedAccount) {
-      // Update the current account to show it's fully paid
-      const updatedAccount = { 
-        ...selectedAccount, 
-        receivedAmount: (selectedAccount.originalValue || selectedAccount.value),
-        isPartialPayment: false,
-        updatedAt: new Date()
-      };
-
-      // Update the receivable account
+      // Update the receivable account list with the completed payment
       const updatedAccounts = receivableAccounts.map(account => 
-        account.id === selectedAccount.id ? updatedAccount : account
+        account.id === selectedAccount.id ? data.receivable : account
       );
       setReceivableAccounts(updatedAccounts);
 
-      // Call the onUpdateReceivable callback for the remaining amount
+      // Call the onUpdateReceivable callback for the remaining amount with special flag
       if (onUpdateReceivable) {
         const remainingReceivable = {
-          ...selectedAccount,
+          ...data.receivable,
           value: data.remainingAmount,
           receivedAmount: data.remainingAmount,
-          status: 'recebido' as const
+          status: 'recebido' as const,
+          isCompletingPartialPayment: true // Special flag to indicate this is completing a partial payment
         };
         onUpdateReceivable(remainingReceivable, data.bankAccountId);
       }

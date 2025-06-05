@@ -249,6 +249,55 @@ export default function Financial() {
   const handleUpdateReceivableAccount = (updatedReceivable: ReceivableAccount, bankAccountId?: string) => {
     const previousReceivable = receivableAccounts.find(r => r.id === updatedReceivable.id);
     
+    // Special handling for completing partial payments
+    if (updatedReceivable.isCompletingPartialPayment) {
+      const bankAccount = bankAccounts.find(ba => ba.id === bankAccountId);
+      if (bankAccount) {
+        const newTransaction: BankTransaction = {
+          id: uuidv4(),
+          schoolId: "current-school-id",
+          bankAccountId: bankAccountId!,
+          date: new Date(),
+          description: `Quitação do Saldo Restante: ${previousReceivable?.description}`,
+          value: updatedReceivable.value, // This is the remaining amount
+          transactionType: 'credito',
+          reconciliationStatus: 'conciliado',
+          category: previousReceivable?.resourceType || '',
+          resourceType: bankAccount.managementType,
+          source: 'receivable',
+          documentId: updatedReceivable.id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isPartialPayment: false, // This completes the payment
+          originalReceivableId: updatedReceivable.id
+        };
+
+        setBankTransactions(prev => [...prev, newTransaction]);
+        
+        // Update bank account balance
+        setBankAccounts(prev => prev.map(ba => 
+          ba.id === bankAccountId 
+            ? { 
+                ...ba, 
+                currentBalance: ba.currentBalance + updatedReceivable.value,
+                updatedAt: new Date()
+              }
+            : ba
+        ));
+      }
+      
+      // Remove the special flag before updating
+      const cleanedReceivable = { ...updatedReceivable };
+      delete cleanedReceivable.isCompletingPartialPayment;
+      
+      // Update receivable accounts - the receivable should already be updated from the dialog
+      setReceivableAccounts(prev => 
+        prev.map(r => r.id === cleanedReceivable.id ? cleanedReceivable : r)
+      );
+      
+      return;
+    }
+    
     // If receivable was just marked as received and has a bank account, create automatic transaction
     if (previousReceivable?.status === 'pendente' && 
         updatedReceivable.status === 'recebido' && 

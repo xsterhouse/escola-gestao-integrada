@@ -79,6 +79,8 @@ export interface ReceivableAccount {
   receivedAmount?: number;
   isPartialPayment?: boolean;
   parentReceivableId?: string;
+  // Special flag for internal logic (not persisted)
+  isCompletingPartialPayment?: boolean;
 }
 
 export interface FinancialSummary {
