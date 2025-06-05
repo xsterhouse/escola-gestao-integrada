@@ -18,45 +18,117 @@ export function DanfeConsultModule() {
   const { toast } = useToast();
   const { currentSchool } = useAuth();
 
-  // Carregar dados reais de notas fiscais do sistema
+  // Carregar dados reais de notas fiscais do sistema com debugging
   const invoicesKey = currentSchool ? `invoices_${currentSchool.id}` : 'invoices';
-  const { data: systemInvoices } = useLocalStorageSync<Invoice>(invoicesKey, []);
+  const { data: systemInvoices, loadData: reloadInvoices } = useLocalStorageSync<Invoice>(invoicesKey, []);
 
-  // Carregar dados salvos do localStorage na inicialização
+  // Log detalhado dos dados carregados
   useEffect(() => {
-    const saved = localStorage.getItem('savedDanfeResults');
-    if (saved) {
-      setSavedResults(JSON.parse(saved));
-    }
-  }, []);
-
-  // Buscar nota fiscal real pela chave de acesso
-  const findInvoiceByAccessKey = (accessKey: string): Invoice | null => {
-    console.log('🔍 Buscando nota fiscal real com chave:', accessKey);
-    console.log(`📊 Total de ${systemInvoices.length} notas fiscais disponíveis no sistema`);
+    console.log('🔍 DANFE MODULE - Debug Info:');
+    console.log(`📊 Escola atual: ${currentSchool?.name || 'Não selecionada'}`);
+    console.log(`🔑 Chave localStorage: ${invoicesKey}`);
+    console.log(`📦 Total de notas carregadas: ${systemInvoices.length}`);
     
-    // Procurar pela chave de acesso no xmlContent ou campos relacionados
-    const foundInvoice = systemInvoices.find(invoice => {
-      // Verificar se a chave está no xmlContent
-      if (invoice.xmlContent && invoice.xmlContent.includes(accessKey)) {
-        return true;
-      }
-      
-      // Verificar se a chave corresponde ao ID da nota ou DANFE
-      if (invoice.id === accessKey || invoice.danfeNumber === accessKey) {
-        return true;
-      }
-      
-      return false;
-    });
-
-    if (foundInvoice) {
-      console.log('✅ Nota fiscal encontrada:', foundInvoice.danfeNumber, '-', foundInvoice.supplier.name);
+    if (systemInvoices.length > 0) {
+      console.log('📋 Primeiras 3 notas fiscais:');
+      systemInvoices.slice(0, 3).forEach((invoice, index) => {
+        console.log(`  ${index + 1}. DANFE: ${invoice.danfeNumber} - ${invoice.supplier.name}`);
+        console.log(`     - XML disponível: ${invoice.xmlContent ? 'SIM' : 'NÃO'}`);
+        console.log(`     - Status: ${invoice.status}`);
+      });
     } else {
-      console.log('❌ Nenhuma nota fiscal encontrada para esta chave de acesso');
+      console.log('⚠ Nenhuma nota fiscal encontrada no localStorage');
+      // Tentar recarregar dados
+      console.log('🔄 Tentando recarregar dados...');
+      reloadInvoices();
     }
+  }, [systemInvoices, currentSchool, invoicesKey]);
 
-    return foundInvoice || null;
+  // Função melhorada para extrair chave de acesso do XML
+  const extractAccessKeyFromXml = (xmlContent: string): string | null => {
+    try {
+      console.log('🔍 Extraindo chave de acesso do XML...');
+      
+      // Padrão 1: Atributo Id na tag infNFe
+      const idMatch = xmlContent.match(/<infNFe[^>]*Id="NFe(\d{44})"/i);
+      if (idMatch) {
+        console.log('✅ Chave encontrada no atributo Id:', idMatch[1]);
+        return idMatch[1];
+      }
+      
+      // Padrão 2: Tag chNFe
+      const chNFeMatch = xmlContent.match(/<chNFe>(\d{44})<\/chNFe>/i);
+      if (chNFeMatch) {
+        console.log('✅ Chave encontrada na tag chNFe:', chNFeMatch[1]);
+        return chNFeMatch[1];
+      }
+      
+      // Padrão 3: Qualquer sequência de 44 dígitos
+      const keyMatch = xmlContent.match(/\b(\d{44})\b/);
+      if (keyMatch) {
+        console.log('✅ Chave encontrada (padrão genérico):', keyMatch[1]);
+        return keyMatch[1];
+      }
+      
+      console.log('❌ Nenhuma chave de acesso encontrada no XML');
+      return null;
+    } catch (error) {
+      console.error('❌ Erro ao extrair chave do XML:', error);
+      return null;
+    }
+  };
+
+  // Buscar nota fiscal real pela chave de acesso - MELHORADA
+  const findInvoiceByAccessKey = (accessKey: string): Invoice | null => {
+    console.log('🔍 Buscando nota fiscal com chave:', accessKey);
+    console.log(`📊 Analisando ${systemInvoices.length} notas fiscais no sistema`);
+    
+    if (systemInvoices.length === 0) {
+      console.log('❌ Nenhuma nota fiscal disponível para busca');
+      return null;
+    }
+    
+    // Método 1: Buscar pela chave no xmlContent
+    const foundByXml = systemInvoices.find(invoice => {
+      if (!invoice.xmlContent) return false;
+      
+      const extractedKey = extractAccessKeyFromXml(invoice.xmlContent);
+      return extractedKey === accessKey;
+    });
+    
+    if (foundByXml) {
+      console.log('✅ Nota encontrada via XML - DANFE:', foundByXml.danfeNumber);
+      return foundByXml;
+    }
+    
+    // Método 2: Buscar pelo número da DANFE
+    const foundByDanfe = systemInvoices.find(invoice => 
+      invoice.danfeNumber === accessKey
+    );
+    
+    if (foundByDanfe) {
+      console.log('✅ Nota encontrada via número DANFE:', foundByDanfe.danfeNumber);
+      return foundByDanfe;
+    }
+    
+    // Método 3: Buscar pelo ID
+    const foundById = systemInvoices.find(invoice => 
+      invoice.id === accessKey
+    );
+    
+    if (foundById) {
+      console.log('✅ Nota encontrada via ID:', foundById.danfeNumber);
+      return foundById;
+    }
+    
+    console.log('❌ Nota fiscal não encontrada com a chave fornecida');
+    console.log('🔍 Chaves disponíveis no sistema:');
+    systemInvoices.forEach((invoice, index) => {
+      const xmlKey = invoice.xmlContent ? extractAccessKeyFromXml(invoice.xmlContent) : 'N/A';
+      console.log(`  ${index + 1}. DANFE: ${invoice.danfeNumber} | XML Key: ${xmlKey} | ID: ${invoice.id}`);
+    });
+    
+    return null;
   };
 
   // Gerar XML content caso não exista
@@ -189,36 +261,57 @@ export function DanfeConsultModule() {
   const validateXmlContent = (xmlContent: string): boolean => {
     console.log('🔍 Etapa 1: Validando XML...');
     
+    // Verificar se o XML não está vazio
+    if (!xmlContent || xmlContent.trim().length === 0) {
+      console.error('❌ XML vazio ou inválido');
+      return false;
+    }
+    
+    // Verificar se é um XML válido
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+      const parserError = xmlDoc.querySelector('parsererror');
+      
+      if (parserError) {
+        console.error('❌ Erro de parsing do XML:', parserError.textContent);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Erro ao validar XML:', error);
+      return false;
+    }
+    
     // Verificar campos obrigatórios do XML NFe com verificação mais flexível
-    const requiredFields = [
-      { field: 'protNFe', pattern: /<protNFe/i },
-      { field: 'det', pattern: /<det\s/i },
-      { field: 'dest', pattern: /<dest>/i },
-      { field: 'emit', pattern: /<emit>/i },
-      { field: 'infNFe', pattern: /<infNFe/i }
+    const requiredPatterns = [
+      { field: 'infNFe', pattern: /<infNFe/i },
+      { field: 'emit ou dest', pattern: /<emit>|<dest>/i },
+      { field: 'det', pattern: /<det[\s>]/i }
     ];
     
-    for (const req of requiredFields) {
+    for (const req of requiredPatterns) {
       if (!req.pattern.test(xmlContent)) {
         console.error(`❌ Campo obrigatório não encontrado: ${req.field}`);
         return false;
       }
     }
     
-    console.log('✅ XML validado com sucesso - todos os campos obrigatórios encontrados');
+    console.log('✅ XML validado com sucesso - estrutura NFe detectada');
     return true;
   };
 
-  // Etapa 2: Gerar DANFE via API
+  // Etapa 2: Gerar DANFE via API - CORRIGIDA
   const generatePdfFromXml = async (xmlContent: string): Promise<string> => {
     try {
       console.log('🔧 Etapa 2: Enviando XML para API do DANFE...');
+      console.log('📊 Tamanho do XML:', xmlContent.length, 'caracteres');
       
       // Validar XML antes de enviar
       if (!validateXmlContent(xmlContent)) {
-        throw new Error('XML inválido - campos obrigatórios não encontrados');
+        throw new Error('XML inválido - não contém estrutura NFe válida');
       }
       
+      console.log('🌐 Fazendo requisição para API...');
       const response = await fetch('https://ws.meudanfe.com/api/v1/get/nfe/xmltodanfepdf/API', {
         method: 'POST',
         headers: {
@@ -227,29 +320,27 @@ export function DanfeConsultModule() {
         body: xmlContent
       });
 
-      console.log('📊 Etapa 3: Verificando Status da Resposta...');
+      console.log('📊 Etapa 3: Status da resposta:', response.status);
       
-      // Etapa 3: Verificar Status
       if (response.status === 200) {
-        console.log('✅ Status 200 - Continuando processamento...');
+        console.log('✅ Status 200 - Processando resposta...');
         
         let pdfBase64 = await response.text();
-        
-        console.log('🧹 Etapa 4: Tratando PDF em Base64...');
+        console.log('📄 Resposta recebida, tamanho:', pdfBase64.length);
         
         // Etapa 4: Remover aspas duplas se estiverem presentes
         pdfBase64 = pdfBase64.replace(/^"|"$/g, "");
-        
-        console.log('🔗 Etapa 5: Gerando URL de visualização...');
-        console.log('✅ PDF gerado com sucesso via API');
+        console.log('🧹 PDF limpo, tamanho final:', pdfBase64.length);
         
         return pdfBase64;
       } else if (response.status === 500) {
-        console.error('❌ Status 500 - Falha na API');
+        const errorText = await response.text();
+        console.error('❌ Status 500 - Erro da API:', errorText);
         throw new Error('Falha ao gerar PDF do DANFE! Confira o seu XML');
       } else {
-        console.error(`❌ Status ${response.status} - Erro inesperado`);
-        throw new Error(`Erro na API: Status ${response.status}`);
+        const errorText = await response.text();
+        console.error(`❌ Status ${response.status} - Erro:`, errorText);
+        throw new Error(`Erro na API: Status ${response.status} - ${errorText}`);
       }
     } catch (error) {
       console.error('❌ Erro completo no processamento:', error);
@@ -263,20 +354,35 @@ export function DanfeConsultModule() {
     setIsLoading(true);
     
     try {
-      console.log('🚀 Iniciando busca de NFe REAL...');
+      console.log('🚀 Iniciando busca de NFe com chave:', searchKey);
+      console.log('📊 Sistema tem', systemInvoices.length, 'notas fiscais disponíveis');
       
-      // Simular delay de rede
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Verificar se há notas no sistema
+      if (systemInvoices.length === 0) {
+        throw new Error('Nenhuma nota fiscal encontrada no sistema. Importe XMLs primeiro no módulo de estoque.');
+      }
       
       // Buscar nota fiscal real no sistema
       const foundInvoice = findInvoiceByAccessKey(searchKey);
       
       if (!foundInvoice) {
-        throw new Error('Nota fiscal não encontrada no sistema. Verifique se a nota foi importada corretamente.');
+        throw new Error(`Nota fiscal não encontrada no sistema. Verifique se a chave "${searchKey}" está correta ou se a nota foi importada.`);
       }
       
+      console.log('✅ Nota fiscal encontrada:', foundInvoice.danfeNumber);
+      
       // Usar xmlContent real ou gerar XML com dados reais
-      const xmlContent = foundInvoice.xmlContent || generateXmlFromInvoice(foundInvoice, searchKey);
+      let xmlContent = foundInvoice.xmlContent;
+      
+      if (!xmlContent) {
+        console.log('⚠ XML não disponível, gerando a partir dos dados da nota...');
+        xmlContent = generateXmlFromInvoice(foundInvoice, searchKey);
+      }
+      
+      // Validar XML antes de prosseguir
+      if (!validateXmlContent(xmlContent)) {
+        throw new Error('XML da nota fiscal está inválido ou corrompido.');
+      }
       
       // Mapear status da nota fiscal
       const getStatusText = (status: string) => {
@@ -298,7 +404,7 @@ export function DanfeConsultModule() {
         totalValue: foundInvoice.totalValue,
         status: getStatusText(foundInvoice.status),
         xmlContent: xmlContent,
-        realInvoice: foundInvoice // Incluir dados completos da nota fiscal
+        realInvoice: foundInvoice
       };
       
       setSearchResults([result]);
@@ -312,7 +418,7 @@ export function DanfeConsultModule() {
       localStorage.setItem('savedDanfeResults', JSON.stringify(newSaved));
       setSavedResults(newSaved);
       
-      console.log('✅ Busca concluída com dados REAIS da nota fiscal');
+      console.log('✅ Busca concluída com sucesso');
       
       toast({
         title: "NFe encontrada (Dados Reais)",
@@ -334,6 +440,14 @@ export function DanfeConsultModule() {
     }
   };
 
+  // Carregar dados salvos do localStorage na inicialização
+  useEffect(() => {
+    const saved = localStorage.getItem('savedDanfeResults');
+    if (saved) {
+      setSavedResults(JSON.parse(saved));
+    }
+  }, []);
+
   const handleExportPDF = async (result: any) => {
     try {
       toast({
@@ -341,14 +455,8 @@ export function DanfeConsultModule() {
         description: "Aguarde enquanto o PDF do DANFE está sendo gerado...",
       });
 
-      // Gera o PDF usando a nova API seguindo o fluxo completo
       const pdfBase64 = await generatePdfFromXml(result.xmlContent);
       
-      // Etapa 5: Criar URL para visualização no navegador
-      const dataUrl = `data:application/pdf;base64,${pdfBase64}`;
-      console.log('🔗 URL de visualização criada:', dataUrl.substring(0, 50) + '...');
-      
-      // Converter base64 para blob para download
       const binaryString = atob(pdfBase64);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
@@ -358,7 +466,6 @@ export function DanfeConsultModule() {
       const blob = new Blob([bytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       
-      // Criar link de download
       const a = document.createElement('a');
       a.href = url;
       a.download = `danfe_${result.danfeNumber}_${result.accessKey}.pdf`;
@@ -366,8 +473,6 @@ export function DanfeConsultModule() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
-      console.log('✅ Etapa 6: PDF exportado e disponibilizado para download');
       
       toast({
         title: "PDF exportado com sucesso",
@@ -383,12 +488,10 @@ export function DanfeConsultModule() {
     }
   };
 
-  // Função melhorada para exportar XML com todas as informações REAIS
   const handleExportXML = (result: any) => {
     try {
       console.log('📄 Iniciando exportação de XML com todas as informações REAIS...');
       
-      // Validar se o XML contém todas as informações necessárias
       if (!validateXmlContent(result.xmlContent)) {
         toast({
           title: "XML incompleto",
@@ -398,7 +501,6 @@ export function DanfeConsultModule() {
         return;
       }
       
-      // Criar blob com o conteúdo XML completo
       const blob = new Blob([result.xmlContent], { 
         type: 'application/xml;charset=utf-8' 
       });
@@ -407,7 +509,6 @@ export function DanfeConsultModule() {
       const a = document.createElement('a');
       a.href = url;
       
-      // Nome do arquivo mais descritivo incluindo dados REAIS
       const fileName = `NFe_${result.danfeNumber}_${result.accessKey}_${result.supplier.replace(/[^a-zA-Z0-9]/g, '_')}.xml`;
       a.download = fileName;
       
@@ -415,8 +516,6 @@ export function DanfeConsultModule() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
-      console.log('✅ XML exportado com sucesso com dados REAIS:', fileName);
       
       toast({
         title: "Exportação XML concluída",
@@ -476,12 +575,11 @@ export function DanfeConsultModule() {
               <div className="flex gap-2">
                 <div className="flex-1">
                   <Input
-                    placeholder="Digite a chave de acesso do XML (44 dígitos)"
+                    placeholder="Digite a chave de acesso do XML (44 dígitos) ou número da DANFE"
                     value={searchKey}
                     onChange={(e) => setSearchKey(e.target.value)}
                     onKeyPress={handleKeyPress}
                     className="w-full"
-                    maxLength={44}
                   />
                 </div>
                 <Button 
@@ -493,18 +591,26 @@ export function DanfeConsultModule() {
                   {isLoading ? "Buscando..." : "Buscar"}
                 </Button>
               </div>
-              {searchKey && searchKey.length !== 44 && (
-                <p className="text-sm text-orange-600">
-                  Chave de acesso deve ter 44 dígitos (atual: {searchKey.length})
-                </p>
-              )}
               
-              {/* Sistema Info */}
+              {/* Sistema Info - Melhorado */}
               <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
-                <p><strong>Notas disponíveis no sistema:</strong> {systemInvoices.length}</p>
-                <p><strong>Escola atual:</strong> {currentSchool?.name || 'Não selecionada'}</p>
+                <p><strong>📊 Status do Sistema:</strong></p>
+                <p>• Notas disponíveis: {systemInvoices.length}</p>
+                <p>• Escola atual: {currentSchool?.name || 'Não selecionada'}</p>
+                <p>• Chave localStorage: {invoicesKey}</p>
                 {systemInvoices.length === 0 && (
-                  <p className="text-orange-600 mt-1">⚠ Nenhuma nota fiscal encontrada. Importe XMLs primeiro no módulo de estoque.</p>
+                  <div className="text-orange-600 mt-2 p-2 bg-orange-50 rounded">
+                    <p>⚠ <strong>Nenhuma nota fiscal encontrada!</strong></p>
+                    <p>• Importe XMLs primeiro no módulo de estoque</p>
+                    <p>• Verifique se a escola está selecionada</p>
+                  </div>
+                )}
+                {systemInvoices.length > 0 && (
+                  <div className="text-green-600 mt-2 p-2 bg-green-50 rounded">
+                    <p>✅ Sistema pronto para consultas</p>
+                    <p>• Use a chave de acesso completa (44 dígitos)</p>
+                    <p>• Ou digite o número da DANFE</p>
+                  </div>
                 )}
               </div>
             </div>
