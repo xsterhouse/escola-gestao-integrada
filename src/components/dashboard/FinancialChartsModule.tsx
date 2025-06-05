@@ -167,19 +167,17 @@ export function FinancialChartsModule() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={superavitChartConfig} className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={financialData}>
-                  <XAxis dataKey="month" />
-                  <YAxis tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`} />
-                  <ChartTooltip 
-                    content={<ChartTooltipContent 
-                      formatter={(value, name) => [formatCurrency(Number(value)), name]}
-                    />} 
-                  />
-                  <Bar dataKey="receitas" fill="#22c55e" name="Receitas" />
-                  <Bar dataKey="despesas" fill="#ef4444" name="Despesas" />
-                </BarChart>
-              </ResponsiveContainer>
+              <BarChart data={financialData}>
+                <XAxis dataKey="month" />
+                <YAxis tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`} />
+                <ChartTooltip 
+                  content={<ChartTooltipContent 
+                    formatter={(value, name) => [formatCurrency(Number(value)), name]}
+                  />} 
+                />
+                <Bar dataKey="receitas" fill="#22c55e" name="Receitas" />
+                <Bar dataKey="despesas" fill="#ef4444" name="Despesas" />
+              </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
@@ -208,11 +206,6 @@ export function FinancialChartsModule() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <ChartTooltip 
-                    content={<ChartTooltipContent 
-                      formatter={(value) => formatCurrency(Number(value))}
-                    />} 
-                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
