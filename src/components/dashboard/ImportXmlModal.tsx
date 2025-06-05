@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -47,14 +46,23 @@ interface ImportResult {
   data?: XmlData;
 }
 
-export function ImportXmlModal() {
+interface ImportXmlModalProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
   const { toast } = useToast();
   const { currentSchool } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [importResults, setImportResults] = useState<ImportResult[]>([]);
   const [processingStep, setProcessingStep] = useState("");
+
+  // Use external state if provided, otherwise use internal state
+  const isOpen = open !== undefined ? open : internalOpen;
+  const setIsOpen = onOpenChange || setInternalOpen;
 
   const form = useForm<z.infer<typeof importFormSchema>>({
     resolver: zodResolver(importFormSchema),
@@ -255,7 +263,7 @@ export function ImportXmlModal() {
 
   const handleClose = () => {
     if (!isProcessing) {
-      setOpen(false);
+      setIsOpen(false);
       form.reset();
       setImportResults([]);
       setImportProgress(0);
@@ -292,8 +300,174 @@ export function ImportXmlModal() {
     link.click();
   };
 
+  // If external control is provided, render only the DialogContent
+  if (open !== undefined) {
+    return (
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Importar Notas Fiscais XML
+            </DialogTitle>
+            <DialogDescription>
+              Selecione um ou múltiplos arquivos XML de notas fiscais para importação.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="files"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Arquivos XML</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="file"
+                        multiple
+                        accept=".xml"
+                        onChange={(e) => field.onChange(e.target.files)}
+                        disabled={isProcessing}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações (Opcional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Adicione observações sobre esta importação..."
+                        {...field}
+                        disabled={isProcessing}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {isProcessing && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">Processando Arquivos</CardTitle>
+                    <CardDescription>{processingStep}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Progress value={importProgress} className="mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      {Math.round(importProgress)}% concluído
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {importResults.length > 0 && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">Resultados da Importação</CardTitle>
+                      <CardDescription>
+                        {importResults.filter(r => r.success).length} sucessos, {importResults.filter(r => !r.success).length} erros
+                      </CardDescription>
+                    </div>
+                    {importResults.some(r => r.success) && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={exportResults}
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Exportar Relatório
+                      </Button>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Arquivo</TableHead>
+                          <TableHead>DANFE</TableHead>
+                          <TableHead>Detalhes</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {importResults.map((result, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              {result.success ? (
+                                <Badge variant="default" className="bg-green-100 text-green-800">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Sucesso
+                                </Badge>
+                              ) : (
+                                <Badge variant="destructive">
+                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                  Erro
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-medium">{result.fileName}</TableCell>
+                            <TableCell>
+                              {result.danfeNumber || "—"}
+                            </TableCell>
+                            <TableCell>
+                              {result.success ? (
+                                <div className="text-sm">
+                                  <div>Fornecedor: {result.data?.supplier.name}</div>
+                                  <div>Valor: R$ {result.data?.totalValue.toFixed(2)}</div>
+                                  <div>Itens: {result.data?.items.length}</div>
+                                </div>
+                              ) : (
+                                <div className="text-sm text-red-600">
+                                  {result.error}
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="flex justify-end space-x-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleClose}
+                  disabled={isProcessing}
+                >
+                  {importResults.length > 0 ? "Fechar" : "Cancelar"}
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? "Processando..." : "Importar"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Original trigger-based modal for backward compatibility
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={internalOpen} onOpenChange={handleClose}>
       <DialogTrigger asChild>
         <Card className="p-6 border-dashed border-2 hover:border-primary/50 hover:bg-muted/50 transition-colors cursor-pointer">
           <div className="flex flex-col items-center text-center space-y-2">

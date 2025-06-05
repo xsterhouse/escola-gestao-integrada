@@ -222,7 +222,10 @@ const Dashboard = () => {
         </Tabs>
       </div>
 
-      <ImportXmlModal />
+      <ImportXmlModal 
+        open={isImportModalOpen} 
+        onOpenChange={setIsImportModalOpen} 
+      />
     </AppLayout>
   );
 };
