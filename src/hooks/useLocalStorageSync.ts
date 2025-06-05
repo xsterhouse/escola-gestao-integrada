@@ -10,6 +10,8 @@ export function useLocalStorageSync<T>(key: string, initialValue: T[]) {
   // Update key ref when key changes
   useEffect(() => {
     keyRef.current = key;
+    // Reset initialization when key changes
+    initializedRef.current = false;
   }, [key]);
 
   // Load data from localStorage - stable function
@@ -18,6 +20,8 @@ export function useLocalStorageSync<T>(key: string, initialValue: T[]) {
     
     try {
       const stored = localStorage.getItem(keyRef.current);
+      console.log(`📖 Carregando dados de: ${keyRef.current}`, stored ? 'dados encontrados' : 'sem dados');
+      
       if (stored) {
         const parsed = JSON.parse(stored);
         setData(Array.isArray(parsed) ? parsed : []);
@@ -25,7 +29,7 @@ export function useLocalStorageSync<T>(key: string, initialValue: T[]) {
         setData([]);
       }
     } catch (error) {
-      console.error(`Erro ao carregar ${keyRef.current}:`, error);
+      console.error(`❌ Erro ao carregar ${keyRef.current}:`, error);
       setData([]);
     }
   }, []);
@@ -37,23 +41,25 @@ export function useLocalStorageSync<T>(key: string, initialValue: T[]) {
       localStorage.setItem(keyRef.current, JSON.stringify(newData));
       setData(newData);
       
+      console.log(`💾 Dados salvos em: ${keyRef.current} - ${newData.length} itens`);
+      
       // Small delay to reset the flag after the storage event has been processed
       setTimeout(() => {
         isUpdatingRef.current = false;
       }, 50);
     } catch (error) {
-      console.error(`Erro ao salvar ${keyRef.current}:`, error);
+      console.error(`❌ Erro ao salvar ${keyRef.current}:`, error);
       isUpdatingRef.current = false;
     }
   }, []);
 
-  // Initialize data only once
+  // Initialize data when key changes or on first load
   useEffect(() => {
     if (!initializedRef.current) {
       loadData();
       initializedRef.current = true;
     }
-  }, [loadData]);
+  }, [loadData, key]); // Include key in dependencies to reload when key changes
 
   // Listen to storage changes from other tabs only (native browser event)
   useEffect(() => {
@@ -63,8 +69,9 @@ export function useLocalStorageSync<T>(key: string, initialValue: T[]) {
         try {
           const parsed = JSON.parse(e.newValue);
           setData(Array.isArray(parsed) ? parsed : []);
+          console.log(`🔄 Dados sincronizados de outra aba: ${keyRef.current}`);
         } catch (error) {
-          console.error(`Erro ao processar mudança de storage para ${keyRef.current}:`, error);
+          console.error(`❌ Erro ao processar mudança de storage para ${keyRef.current}:`, error);
         }
       }
     };

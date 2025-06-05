@@ -11,22 +11,35 @@ import { AddInvoiceDialog } from "@/components/inventory/AddInvoiceDialog";
 import { ImportXmlDialog } from "@/components/inventory/ImportXmlDialog";
 import { Invoice, DeletionHistory } from "@/lib/types";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
+import { useAuth } from "@/contexts/AuthContext";
 import { v4 as uuidv4 } from "uuid";
 
 export default function Inventory() {
-  const { data: invoices, saveData: setInvoices } = useLocalStorageSync<Invoice>('invoices', []);
-  const { data: deletionHistory, saveData: setDeletionHistory } = useLocalStorageSync<DeletionHistory>('deletion-history', []);
+  const { currentSchool } = useAuth();
+  
+  // Use standardized keys with schoolId
+  const invoicesKey = currentSchool ? `invoices_${currentSchool.id}` : 'invoices';
+  const deletionHistoryKey = currentSchool ? `deletion-history_${currentSchool.id}` : 'deletion-history';
+  
+  const { data: invoices, saveData: setInvoices } = useLocalStorageSync<Invoice>(invoicesKey, []);
+  const { data: deletionHistory, saveData: setDeletionHistory } = useLocalStorageSync<DeletionHistory>(deletionHistoryKey, []);
   const [isAddInvoiceOpen, setIsAddInvoiceOpen] = useState(false);
   const [isImportXmlOpen, setIsImportXmlOpen] = useState(false);
   
+  console.log(`📋 Carregando inventário com chave: ${invoicesKey} - ${invoices.length} notas fiscais`);
+  
   const handleAddInvoice = (invoice: Invoice) => {
-    setInvoices([...invoices, invoice]);
+    const updatedInvoices = [...invoices, invoice];
+    setInvoices(updatedInvoices);
     setIsAddInvoiceOpen(false);
+    console.log(`✅ Nova nota fiscal adicionada: ${invoice.id}`);
   };
 
   const handleXmlImport = (invoice: Invoice) => {
-    setInvoices([...invoices, invoice]);
+    const updatedInvoices = [...invoices, invoice];
+    setInvoices(updatedInvoices);
     setIsImportXmlOpen(false);
+    console.log(`✅ XML importado: ${invoice.id}`);
   };
 
   const handleUpdateInvoice = (updatedInvoice: Invoice) => {
@@ -34,6 +47,7 @@ export default function Inventory() {
       invoice.id === updatedInvoice.id ? updatedInvoice : invoice
     );
     setInvoices(updatedInvoices);
+    console.log(`📝 Nota fiscal atualizada: ${updatedInvoice.id}`);
   };
 
   const handleDeleteInvoice = (invoiceId: string, reason: string, deletedBy: string) => {
@@ -58,11 +72,14 @@ export default function Inventory() {
       };
       
       // Adicionar ao histórico de exclusões
-      setDeletionHistory([...deletionHistory, deletionRecord]);
+      const updatedDeletionHistory = [...deletionHistory, deletionRecord];
+      setDeletionHistory(updatedDeletionHistory);
       
       // Remover a nota fiscal da lista
       const updatedInvoices = invoices.filter(invoice => invoice.id !== invoiceId);
       setInvoices(updatedInvoices);
+      
+      console.log(`🗑️ Nota fiscal excluída: ${invoiceId} - Motivo: ${reason}`);
     }
   };
 

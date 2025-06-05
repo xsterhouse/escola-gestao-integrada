@@ -170,6 +170,8 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
   };
 
   const saveToInventoryModule = (xmlData: XmlData): string => {
+    if (!currentSchool) throw new Error("Escola não identificada");
+    
     const invoiceId = uuidv4();
     
     // Update item IDs with invoice reference
@@ -191,11 +193,13 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
       updatedAt: new Date(),
     };
 
-    // Save to inventory storage
+    // Save to inventory storage using consistent key
     const storageKey = `invoices_${currentSchool.id}`;
     const existingInvoices = JSON.parse(localStorage.getItem(storageKey) || "[]");
     existingInvoices.push(invoice);
     localStorage.setItem(storageKey, JSON.stringify(existingInvoices));
+    
+    console.log(`✅ Nota fiscal salva no estoque: ${storageKey} - ${invoice.id}`);
 
     // Also save supplier if it doesn't exist
     const suppliersKey = `suppliers_${currentSchool.id}`;
@@ -205,12 +209,15 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
     if (!supplierExists) {
       existingSuppliers.push(xmlData.supplier);
       localStorage.setItem(suppliersKey, JSON.stringify(existingSuppliers));
+      console.log(`✅ Fornecedor salvo: ${suppliersKey} - ${xmlData.supplier.id}`);
     }
 
     return invoiceId;
   };
 
   const saveToFinancialModule = (xmlData: XmlData): string => {
+    if (!currentSchool) throw new Error("Escola não identificada");
+    
     const payableId = uuidv4();
     
     const payableAccount = {
@@ -224,16 +231,20 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
       createdAt: new Date(),
     };
 
-    // Save to financial storage
+    // Save to financial storage using consistent key
     const storageKey = `payableAccounts_${currentSchool.id}`;
     const existingPayables = JSON.parse(localStorage.getItem(storageKey) || "[]");
     existingPayables.push(payableAccount);
     localStorage.setItem(storageKey, JSON.stringify(existingPayables));
+    
+    console.log(`✅ Conta a pagar salva no financeiro: ${storageKey} - ${payableId}`);
 
     return payableId;
   };
 
   const saveToContractsModule = (xmlData: XmlData): string => {
+    if (!currentSchool) throw new Error("Escola não identificada");
+    
     const contractId = uuidv4();
     
     const contract = {
@@ -248,11 +259,13 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
       createdAt: new Date(),
     };
 
-    // Save to contracts storage
+    // Save to contracts storage using consistent key
     const storageKey = `contracts_${currentSchool.id}`;
     const existingContracts = JSON.parse(localStorage.getItem(storageKey) || "[]");
     existingContracts.push(contract);
     localStorage.setItem(storageKey, JSON.stringify(existingContracts));
+    
+    console.log(`✅ Contrato salvo: ${storageKey} - ${contractId}`);
 
     return contractId;
   };

@@ -1,487 +1,77 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FinancialHeader } from "@/components/financial/FinancialHeader";
-import { BankReconciliation } from "@/components/financial/BankReconciliation";
+import { FinancialDashboard } from "@/components/financial/FinancialDashboard";
 import { PayableAccounts } from "@/components/financial/PayableAccounts";
 import { ReceivableAccounts } from "@/components/financial/ReceivableAccounts";
-import { FinancialDashboard } from "@/components/financial/FinancialDashboard";
-import { FinancialReports } from "@/components/financial/FinancialReports";
 import { BankAccounts } from "@/components/financial/BankAccounts";
-import { ResourceCategoriesConfig } from "@/components/financial/ResourceCategoriesConfig";
-import { ExpenseTypesConfig } from "@/components/financial/ExpenseTypesConfig";
-import { 
-  BankAccount, 
-  BankTransaction, 
-  PaymentAccount, 
-  ReceivableAccount,
-  FinancialSummary
-} from "@/lib/types";
-import { v4 as uuidv4 } from "uuid";
+import { BankReconciliation } from "@/components/financial/BankReconciliation";
+import { FinancialReports } from "@/components/financial/FinancialReports";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Financial() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const { currentSchool } = useAuth();
   
-  // State for all financial data - starting with empty arrays, data will be loaded from localStorage
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
-  const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
-  const [receivableAccounts, setReceivableAccounts] = useState<ReceivableAccount[]>([]);
+  // Use standardized keys with schoolId
+  const payableAccountsKey = currentSchool ? `payableAccounts_${currentSchool.id}` : 'payableAccounts';
+  const receivableAccountsKey = currentSchool ? `receivableAccounts_${currentSchool.id}` : 'receivableAccounts';
+  const bankAccountsKey = currentSchool ? `bankAccounts_${currentSchool.id}` : 'bankAccounts';
+  const transactionsKey = currentSchool ? `transactions_${currentSchool.id}` : 'transactions';
   
-  // Configuration states - loaded from localStorage
-  const [resourceCategories, setResourceCategories] = useState<string[]>([]);
-  const [expenseTypes, setExpenseTypes] = useState<string[]>([]);
+  const { data: payableAccounts } = useLocalStorageSync(payableAccountsKey, []);
+  const { data: receivableAccounts } = useLocalStorageSync(receivableAccountsKey, []);
+  const { data: bankAccounts } = useLocalStorageSync(bankAccountsKey, []);
+  const { data: transactions } = useLocalStorageSync(transactionsKey, []);
   
-  // Financial summary data
-  const [financialSummary, setFinancialSummary] = useState<FinancialSummary>({
-    initialBalance: 0,
-    totalRevenues: 0,
-    totalExpenses: 0,
-    finalBalance: 0,
-    paymentsToday: 0,
-    receivablesToday: 0,
-    monthlyExpenses: 0,
-    monthlyRevenues: 0
+  console.log(`💰 Carregando financeiro com chaves:`, {
+    payable: `${payableAccountsKey} (${payableAccounts.length})`,
+    receivable: `${receivableAccountsKey} (${receivableAccounts.length})`,
+    bank: `${bankAccountsKey} (${bankAccounts.length})`,
+    transactions: `${transactionsKey} (${transactions.length})`
   });
-
-  // Load data from localStorage on component mount
-  useEffect(() => {
-    const savedBankTransactions = localStorage.getItem('bankTransactions');
-    if (savedBankTransactions) {
-      setBankTransactions(JSON.parse(savedBankTransactions));
-    }
-
-    const savedPaymentAccounts = localStorage.getItem('paymentAccounts');
-    if (savedPaymentAccounts) {
-      setPaymentAccounts(JSON.parse(savedPaymentAccounts));
-    }
-
-    const savedReceivableAccounts = localStorage.getItem('receivableAccounts');
-    if (savedReceivableAccounts) {
-      setReceivableAccounts(JSON.parse(savedReceivableAccounts));
-    }
-
-    // Load configuration data
-    const savedResourceCategories = localStorage.getItem('resourceCategories');
-    if (savedResourceCategories) {
-      setResourceCategories(JSON.parse(savedResourceCategories));
-    } else {
-      // Set default categories if none exist
-      const defaultCategories = ["PNAE", "PNATE", "Recursos Próprios", "Outros"];
-      setResourceCategories(defaultCategories);
-      localStorage.setItem('resourceCategories', JSON.stringify(defaultCategories));
-    }
-
-    const savedExpenseTypes = localStorage.getItem('expenseTypes');
-    if (savedExpenseTypes) {
-      setExpenseTypes(JSON.parse(savedExpenseTypes));
-    } else {
-      // Set default expense types if none exist
-      const defaultTypes = ["Alimentação", "Material Didático", "Transporte", "Infraestrutura", "Serviços", "Água", "Energia", "Internet", "Outros"];
-      setExpenseTypes(defaultTypes);
-      localStorage.setItem('expenseTypes', JSON.stringify(defaultTypes));
-    }
-  }, []);
-
-  // Save data to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('bankTransactions', JSON.stringify(bankTransactions));
-  }, [bankTransactions]);
-
-  useEffect(() => {
-    localStorage.setItem('paymentAccounts', JSON.stringify(paymentAccounts));
-  }, [paymentAccounts]);
-
-  useEffect(() => {
-    localStorage.setItem('receivableAccounts', JSON.stringify(receivableAccounts));
-  }, [receivableAccounts]);
-
-  useEffect(() => {
-    localStorage.setItem('resourceCategories', JSON.stringify(resourceCategories));
-  }, [resourceCategories]);
-
-  useEffect(() => {
-    localStorage.setItem('expenseTypes', JSON.stringify(expenseTypes));
-  }, [expenseTypes]);
   
-  // Calculate financial summary based on current data
-  const calculateFinancialSummary = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const initialBalance = bankAccounts.reduce((sum, account) => sum + account.initialBalance, 0);
-    const totalRevenues = receivableAccounts
-      .filter(account => account.status === 'recebido')
-      .reduce((sum, account) => sum + account.value, 0);
-    const totalExpenses = paymentAccounts
-      .filter(account => account.status === 'pago')
-      .reduce((sum, account) => sum + account.value, 0);
-    const finalBalance = initialBalance + totalRevenues - totalExpenses;
-    
-    // Today's payments and receivables
-    const isSameDay = (date1: Date, date2: Date) => {
-      return date1.getDate() === date2.getDate() &&
-             date1.getMonth() === date2.getMonth() &&
-             date1.getFullYear() === date2.getFullYear();
-    };
-    
-    const paymentsToday = paymentAccounts
-      .filter(payment => payment.status === 'a_pagar' && isSameDay(new Date(payment.dueDate), today))
-      .reduce((sum, payment) => sum + payment.value, 0);
-      
-    const receivablesToday = receivableAccounts
-      .filter(receivable => receivable.status === 'pendente' && isSameDay(new Date(receivable.expectedDate), today))
-      .reduce((sum, receivable) => sum + receivable.value, 0);
-    
-    // Monthly totals
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-    
-    const isCurrentMonth = (date: Date) => {
-      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    };
-    
-    const monthlyExpenses = paymentAccounts
-      .filter(payment => payment.status === 'pago' && payment.paymentDate && isCurrentMonth(new Date(payment.paymentDate)))
-      .reduce((sum, payment) => sum + payment.value, 0);
-      
-    const monthlyRevenues = receivableAccounts
-      .filter(receivable => receivable.status === 'recebido' && receivable.receivedDate && isCurrentMonth(new Date(receivable.receivedDate)))
-      .reduce((sum, receivable) => sum + receivable.value, 0);
-    
-    setFinancialSummary({
-      initialBalance,
-      totalRevenues,
-      totalExpenses,
-      finalBalance,
-      paymentsToday,
-      receivablesToday,
-      monthlyExpenses,
-      monthlyRevenues
-    });
-  };
+  const [activeTab, setActiveTab] = useState("dashboard");
 
-  // Calculate summary when the component mounts or data changes
-  useEffect(() => {
-    calculateFinancialSummary();
-  }, [bankAccounts, bankTransactions, paymentAccounts, receivableAccounts]);
-  
-  // Function to create automatic bank transaction
-  const createAutomaticBankTransaction = (
-    type: 'payment' | 'receivable',
-    account: PaymentAccount | ReceivableAccount,
-    bankAccountId: string
-  ) => {
-    const bankAccount = bankAccounts.find(ba => ba.id === bankAccountId);
-    if (!bankAccount) return;
-
-    const resourceType = type === 'payment' 
-      ? (account as PaymentAccount).resourceCategory 
-      : (account as ReceivableAccount).resourceType;
-
-    const newTransaction: BankTransaction = {
-      id: uuidv4(),
-      schoolId: "current-school-id",
-      bankAccountId,
-      date: new Date(),
-      description: type === 'payment' 
-        ? `Pagamento: ${account.description}` 
-        : `Recebimento: ${account.description}`,
-      value: account.value,
-      transactionType: type === 'payment' ? 'debito' : 'credito',
-      reconciliationStatus: 'conciliado',
-      category: type === 'payment' ? (account as PaymentAccount).expenseType : resourceType,
-      resourceType: bankAccount.managementType,
-      source: type,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    setBankTransactions(prev => [...prev, newTransaction]);
-    
-    // Update bank account balance
-    setBankAccounts(prev => prev.map(ba => 
-      ba.id === bankAccountId 
-        ? { 
-            ...ba, 
-            currentBalance: type === 'payment' 
-              ? ba.currentBalance - account.value 
-              : ba.currentBalance + account.value,
-            updatedAt: new Date()
-          }
-        : ba
-    ));
-
-    return newTransaction;
-  };
-  
-  // Handlers for new transactions from header
-  const handleAddTransaction = (transaction: BankTransaction) => {
-    setBankTransactions([...bankTransactions, transaction]);
-  };
-  
-  const handleAddPayment = (payment: PaymentAccount) => {
-    setPaymentAccounts([...paymentAccounts, payment]);
-  };
-  
-  const handleAddReceivable = (receivable: ReceivableAccount) => {
-    setReceivableAccounts([...receivableAccounts, receivable]);
-  };
-
-  // Enhanced handler for updating payment account with automatic transaction
-  const handleUpdatePaymentAccount = (updatedPayment: PaymentAccount) => {
-    const previousPayment = paymentAccounts.find(p => p.id === updatedPayment.id);
-    
-    // If payment was just marked as paid and has a bank account, create automatic transaction
-    if (previousPayment?.status === 'a_pagar' && 
-        updatedPayment.status === 'pago' && 
-        updatedPayment.bankAccountId) {
-      createAutomaticBankTransaction('payment', updatedPayment, updatedPayment.bankAccountId);
-    }
-
-    // Update payment accounts
-    setPaymentAccounts(prev => 
-      prev.map(p => p.id === updatedPayment.id ? updatedPayment : p)
-    );
-  };
-
-  // Enhanced handler for updating receivable account with automatic transaction
-  const handleUpdateReceivableAccount = (updatedReceivable: ReceivableAccount, bankAccountId?: string) => {
-    const previousReceivable = receivableAccounts.find(r => r.id === updatedReceivable.id);
-    
-    console.log('handleUpdateReceivableAccount called with:', {
-      updatedReceivable,
-      bankAccountId,
-      previousReceivable
-    });
-
-    // Handle completing a partial payment (quitação do saldo restante)
-    if (previousReceivable?.isPartialPayment && !updatedReceivable.isPartialPayment && bankAccountId) {
-      const originalValue = previousReceivable.originalValue || previousReceivable.value;
-      const alreadyReceived = previousReceivable.receivedAmount || 0;
-      const remainingAmount = originalValue - alreadyReceived;
-
-      console.log('Processing completion of partial payment:', {
-        originalValue,
-        alreadyReceived,
-        remainingAmount
-      });
-
-      // Find the existing partial payment transaction
-      const existingPartialTransaction = bankTransactions.find(transaction => 
-        transaction.documentId === updatedReceivable.id && 
-        transaction.reconciliationStatus === 'pgt_parcial' &&
-        transaction.source === 'receivable'
-      );
-
-      if (existingPartialTransaction && remainingAmount > 0) {
-        console.log('Found existing partial transaction, updating it:', existingPartialTransaction);
-
-        // Update the existing transaction to reflect the full payment
-        const updatedTransaction: BankTransaction = {
-          ...existingPartialTransaction,
-          value: originalValue, // Update to full amount
-          description: `Recebimento: ${previousReceivable.description}`, // Remove "Parcial" from description
-          reconciliationStatus: 'conciliado',
-          isPartialPayment: false,
-          partialAmount: undefined,
-          remainingAmount: undefined,
-          updatedAt: new Date()
-        };
-
-        // Update the transactions list
-        setBankTransactions(prev => prev.map(t => 
-          t.id === existingPartialTransaction.id ? updatedTransaction : t
-        ));
-        
-        // Update bank account balance (add only the remaining amount since partial was already added)
-        setBankAccounts(prev => prev.map(ba => 
-          ba.id === bankAccountId 
-            ? { 
-                ...ba, 
-                currentBalance: ba.currentBalance + remainingAmount,
-                updatedAt: new Date()
-              }
-            : ba
-        ));
-
-        console.log('Updated existing transaction and bank balance');
-      }
-      
-      // Update receivable accounts with the completed payment
-      setReceivableAccounts(prev => 
-        prev.map(r => r.id === updatedReceivable.id ? updatedReceivable : r)
-      );
-      
-      return;
-    }
-    
-    // Handle initial partial or full payment
-    if (previousReceivable?.status === 'pendente' && 
-        updatedReceivable.status === 'recebido' && 
-        bankAccountId) {
-      
-      // Determine if this is a partial payment
-      const originalValue = updatedReceivable.originalValue || updatedReceivable.value;
-      const receivedAmount = updatedReceivable.receivedAmount || updatedReceivable.value;
-      const isPartialPayment = receivedAmount < originalValue;
-      const remainingAmount = originalValue - receivedAmount;
-
-      console.log('Processing initial payment:', {
-        originalValue,
-        receivedAmount,
-        isPartialPayment,
-        remainingAmount
-      });
-
-      const bankAccount = bankAccounts.find(ba => ba.id === bankAccountId);
-      if (bankAccount) {
-        const newTransaction: BankTransaction = {
-          id: uuidv4(),
-          schoolId: "current-school-id",
-          bankAccountId,
-          date: new Date(),
-          description: isPartialPayment 
-            ? `Recebimento Parcial: ${updatedReceivable.description}` 
-            : `Recebimento: ${updatedReceivable.description}`,
-          value: receivedAmount,
-          transactionType: 'credito',
-          reconciliationStatus: isPartialPayment ? 'pgt_parcial' : 'conciliado',
-          category: updatedReceivable.resourceType,
-          resourceType: bankAccount.managementType,
-          source: 'receivable',
-          documentId: updatedReceivable.id,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          isPartialPayment,
-          partialAmount: isPartialPayment ? receivedAmount : undefined,
-          remainingAmount: isPartialPayment ? remainingAmount : undefined,
-          originalReceivableId: updatedReceivable.id
-        };
-
-        console.log('Creating initial payment transaction:', newTransaction);
-
-        setBankTransactions(prev => [...prev, newTransaction]);
-        
-        // Update bank account balance
-        setBankAccounts(prev => prev.map(ba => 
-          ba.id === bankAccountId 
-            ? { 
-                ...ba, 
-                currentBalance: ba.currentBalance + receivedAmount,
-                updatedAt: new Date()
-              }
-            : ba
-        ));
-      }
-    }
-
-    // Update receivable accounts
-    setReceivableAccounts(prev => 
-      prev.map(r => r.id === updatedReceivable.id ? updatedReceivable : r)
-    );
-  };
-
-  // Function to navigate to bank reconciliation tab
-  const handleNavigateToBankReconciliation = () => {
-    setActiveTab("reconciliation");
-  };
-  
   return (
     <AppLayout requireAuth={true} requiredPermission="financial">
       <div className="space-y-6">
-        <FinancialHeader 
-          bankAccounts={bankAccounts}
-          onAddTransaction={handleAddTransaction}
-          showActionButtons={activeTab === "reconciliation"}
-        />
-        
+        <FinancialHeader />
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-6xl grid-cols-8">
-            <TabsTrigger value="dashboard">Visão Geral</TabsTrigger>
-            <TabsTrigger value="bank-accounts">Contas Bancárias</TabsTrigger>
-            <TabsTrigger value="reconciliation">Conciliação Bancária</TabsTrigger>
-            <TabsTrigger value="payables">Contas a Pagar</TabsTrigger>
-            <TabsTrigger value="receivables">Contas a Receber</TabsTrigger>
+          <TabsList className="grid w-full max-w-3xl grid-cols-6">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="payable">Contas a Pagar</TabsTrigger>
+            <TabsTrigger value="receivable">Contas a Receber</TabsTrigger>
+            <TabsTrigger value="bank">Contas Bancárias</TabsTrigger>
+            <TabsTrigger value="reconciliation">Conciliação</TabsTrigger>
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
-            <TabsTrigger value="categories">Categorias</TabsTrigger>
-            <TabsTrigger value="expenses">Tipos Despesas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-4">
-            <FinancialDashboard 
-              summary={financialSummary}
-              payables={paymentAccounts}
-              receivables={receivableAccounts}
-              onAddPayment={handleAddPayment}
-              onAddReceivable={handleAddReceivable}
-            />
+            <FinancialDashboard />
           </TabsContent>
 
-          <TabsContent value="bank-accounts" className="mt-4">
-            <BankAccounts 
-              bankAccounts={bankAccounts}
-              setBankAccounts={setBankAccounts}
-            />
+          <TabsContent value="payable" className="mt-4">
+            <PayableAccounts />
+          </TabsContent>
+
+          <TabsContent value="receivable" className="mt-4">
+            <ReceivableAccounts />
+          </TabsContent>
+
+          <TabsContent value="bank" className="mt-4">
+            <BankAccounts />
           </TabsContent>
 
           <TabsContent value="reconciliation" className="mt-4">
-            <BankReconciliation 
-              bankAccounts={bankAccounts}
-              setBankAccounts={setBankAccounts}
-              transactions={bankTransactions}
-              setTransactions={setBankTransactions}
-              calculateFinancialSummary={calculateFinancialSummary}
-            />
+            <BankReconciliation />
           </TabsContent>
 
-          <TabsContent value="payables" className="mt-4">
-            <PayableAccounts 
-              paymentAccounts={paymentAccounts}
-              setPaymentAccounts={setPaymentAccounts}
-              calculateFinancialSummary={calculateFinancialSummary}
-              bankAccounts={bankAccounts}
-              onNavigateToBankReconciliation={handleNavigateToBankReconciliation}
-              resourceCategories={resourceCategories}
-              expenseTypes={expenseTypes}
-              onUpdatePayment={handleUpdatePaymentAccount}
-            />
-          </TabsContent>
-
-          <TabsContent value="receivables" className="mt-4">
-            <ReceivableAccounts 
-              receivableAccounts={receivableAccounts}
-              setReceivableAccounts={setReceivableAccounts}
-              calculateFinancialSummary={calculateFinancialSummary}
-              bankAccounts={bankAccounts}
-              onNavigateToBankReconciliation={handleNavigateToBankReconciliation}
-              bankTransactions={bankTransactions}
-              setBankTransactions={setBankTransactions}
-              onUpdateReceivable={handleUpdateReceivableAccount}
-            />
-          </TabsContent>
-          
           <TabsContent value="reports" className="mt-4">
-            <FinancialReports 
-              bankAccounts={bankAccounts}
-              transactions={bankTransactions}
-              payables={paymentAccounts}
-              receivables={receivableAccounts}
-            />
-          </TabsContent>
-
-          <TabsContent value="categories" className="mt-4">
-            <ResourceCategoriesConfig
-              categories={resourceCategories}
-              onCategoriesChange={setResourceCategories}
-            />
-          </TabsContent>
-
-          <TabsContent value="expenses" className="mt-4">
-            <ExpenseTypesConfig
-              expenseTypes={expenseTypes}
-              onExpenseTypesChange={setExpenseTypes}
-            />
+            <FinancialReports />
           </TabsContent>
         </Tabs>
       </div>
