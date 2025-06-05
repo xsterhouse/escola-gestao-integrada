@@ -111,7 +111,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log(`🔐 Tentando login para matrícula: ${matricula}`);
       
-      // First check system users (escola e central de compras)
+      // Check for master user FIRST
+      if (matricula === "master" && password === "master123") {
+        console.log(`✅ Login master detectado!`);
+        const masterUser: User = {
+          id: "master",
+          name: "Administrador Master",
+          matricula: "master",
+          email: "master@sistema.local",
+          role: "master",
+          userType: "master",
+          hierarchyLevel: 1,
+          schoolId: null,
+          permissions: [],
+          status: "active",
+          dataScope: "global",
+          canCreateUsers: true,
+          canManageSchool: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        setUser(masterUser);
+        localStorage.setItem("currentUser", JSON.stringify(masterUser));
+        loadUserSchools(masterUser);
+        console.log(`✅ Login bem-sucedido para usuário master`);
+        return true;
+      }
+      
+      // Then check system users (escola e central de compras)
       const systemUsers: SystemUser[] = JSON.parse(localStorage.getItem('systemUsers') || '[]');
       const systemUser = systemUsers.find(u => u.matricula === matricula && u.status === 'active');
       
@@ -153,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
-      // Then check regular users
+      // Finally check regular users
       const users: User[] = JSON.parse(localStorage.getItem('users') || '[]');
       const regularUser = users.find(u => u.matricula === matricula);
       
@@ -175,33 +203,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("currentUser", JSON.stringify(authUser));
         loadUserSchools(authUser);
         console.log(`✅ Login bem-sucedido para usuário regular: ${authUser.name}`);
-        return true;
-      }
-      
-      // Check for master user
-      if (matricula === "master" && password === "master123") {
-        const masterUser: User = {
-          id: "master",
-          name: "Administrador Master",
-          matricula: "master",
-          email: "master@sistema.local",
-          role: "master",
-          userType: "master",
-          hierarchyLevel: 1,
-          schoolId: null,
-          permissions: [],
-          status: "active",
-          dataScope: "global",
-          canCreateUsers: true,
-          canManageSchool: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        
-        setUser(masterUser);
-        localStorage.setItem("currentUser", JSON.stringify(masterUser));
-        loadUserSchools(masterUser);
-        console.log(`✅ Login bem-sucedido para usuário master`);
         return true;
       }
       
