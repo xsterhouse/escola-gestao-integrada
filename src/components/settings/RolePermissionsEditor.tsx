@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Settings } from "lucide-react";
-import { UserRole, DetailedPermission } from "@/types/user";
+import { UserRole, DetailedPermission } from "@/lib/types";
 
 interface RolePermissionsEditorProps {
   role: UserRole;

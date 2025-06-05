@@ -42,7 +42,7 @@ export function useUserPermissions() {
 
   const canAccessModule = (user: User, moduleId: string): boolean => {
     // Master users have access to everything
-    if (user.userType === 'master') {
+    if (user.userType === 'master' || user.role === 'master') {
       return true;
     }
 
@@ -58,9 +58,9 @@ export function useUserPermissions() {
     // Apply hierarchy-based restrictions
     switch (moduleId) {
       case "8": // Configurações
-        return user.userType === 'master' || (user.userType === 'diretor_escolar' && user.canManageSchool);
+        return (user.userType === 'master' || user.role === 'master') || (user.userType === 'diretor_escolar' && user.canManageSchool);
       case "7": // Contabilidade
-        return user.userType === 'master';
+        return user.userType === 'master' || user.role === 'master';
       case "6": // Contratos
         return ['master', 'diretor_escolar', 'central_compras'].includes(user.userType) && hasExplicitPermission;
       case "4": // Financeiro
