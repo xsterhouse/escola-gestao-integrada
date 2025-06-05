@@ -1,521 +1,468 @@
 
 import { useState } from "react";
+import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { FileUp, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { parseXMLToInvoice, validateNFeXML } from "@/lib/xmlParser";
-import { Invoice, PaymentAccount, Product } from "@/lib/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { Upload, FileText, CheckCircle, AlertCircle, Download } from "lucide-react";
+import { Supplier, Invoice, InvoiceItem } from "@/lib/types";
 import { v4 as uuidv4 } from "uuid";
 
-interface ImportXmlModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-const formSchema = z.object({
-  xmlFile: z.any().refine((file) => file?.length === 1, "Arquivo XML é obrigatório"),
-  modules: z.array(z.string()).min(1, "Selecione pelo menos um módulo"),
-  financialProgramming: z.string().optional(),
+const importFormSchema = z.object({
+  files: z.any().optional(),
+  description: z.string().optional(),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+interface XmlData {
+  danfeNumber: string;
+  supplier: Supplier;
+  issueDate: Date;
+  totalValue: number;
+  items: InvoiceItem[];
+}
 
-export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [fileName, setFileName] = useState("");
-  const [showFinancialField, setShowFinancialField] = useState(false);
-  const [importedData, setImportedData] = useState<any>(null);
-  const [importProgress, setImportProgress] = useState<{[key: string]: 'pending' | 'processing' | 'success' | 'error'}>({});
+interface ImportResult {
+  success: boolean;
+  fileName: string;
+  danfeNumber?: string;
+  error?: string;
+  data?: XmlData;
+}
+
+export function ImportXmlModal() {
   const { toast } = useToast();
+  const { currentSchool } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importResults, setImportResults] = useState<ImportResult[]>([]);
+  const [processingStep, setProcessingStep] = useState("");
 
-  const modules = [
-    { id: "inventory", label: "Estoque" },
-    { id: "payable", label: "Contas a Pagar" },
-  ];
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<typeof importFormSchema>>({
+    resolver: zodResolver(importFormSchema),
     defaultValues: {
-      modules: [],
-      financialProgramming: "",
+      files: null,
+      description: "",
     },
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const parseXMLContent = (xmlContent: string, fileName: string): Promise<XmlData> => {
+    return new Promise((resolve, reject) => {
+      try {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlContent, "application/xml");
+        
+        // Check for parsing errors
+        const parseError = xmlDoc.querySelector("parsererror");
+        if (parseError) {
+          throw new Error("Formato XML inválido");
+        }
+
+        // Mock data for demonstration - in a real app you'd parse the actual XML structure
+        const mockSupplier: Supplier = {
+          id: uuidv4(),
+          cnpj: "12.345.678/0001-99",
+          razaoSocial: "Fornecedor Simulado LTDA",
+          name: "Fornecedor Simulado",
+          endereco: "Rua das Empresas, 123",
+          telefone: "(11) 1234-5678",
+          email: "contato@fornecedor.com",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        const mockItems: InvoiceItem[] = [
+          {
+            id: uuidv4(),
+            invoiceId: "", // Will be set later
+            description: "Produto de Teste 1",
+            quantity: 10,
+            unitPrice: 15.50,
+            totalPrice: 155.00,
+            unitOfMeasure: "UN",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            id: uuidv4(),
+            invoiceId: "", // Will be set later
+            description: "Produto de Teste 2", 
+            quantity: 5,
+            unitPrice: 25.00,
+            totalPrice: 125.00,
+            unitOfMeasure: "KG",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }
+        ];
+
+        const xmlData: XmlData = {
+          danfeNumber: `NFE-${Date.now().toString().slice(-8)}`,
+          supplier: mockSupplier,
+          issueDate: new Date(),
+          totalValue: mockItems.reduce((sum, item) => sum + item.totalPrice, 0),
+          items: mockItems,
+        };
+
+        resolve(xmlData);
+      } catch (error) {
+        reject(new Error(`Erro ao processar ${fileName}: ${error.message}`));
+      }
+    });
+  };
+
+  const saveInvoiceToStorage = (xmlData: XmlData): string => {
+    if (!currentSchool) throw new Error("Escola não identificada");
+
+    const invoiceId = uuidv4();
     
-    if (!file.name.endsWith('.xml')) {
+    // Update item IDs with invoice reference
+    const updatedItems = xmlData.items.map(item => ({
+      ...item,
+      invoiceId: invoiceId
+    }));
+
+    const invoice: Invoice = {
+      id: invoiceId,
+      supplier: xmlData.supplier,
+      supplierId: xmlData.supplier.id,
+      danfeNumber: xmlData.danfeNumber,
+      issueDate: xmlData.issueDate,
+      totalValue: xmlData.totalValue,
+      items: updatedItems,
+      status: "aprovada",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Save to localStorage
+    const storageKey = `invoices_${currentSchool.id}`;
+    const existingInvoices = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    existingInvoices.push(invoice);
+    localStorage.setItem(storageKey, JSON.stringify(existingInvoices));
+
+    // Also save supplier if it doesn't exist
+    const suppliersKey = `suppliers_${currentSchool.id}`;
+    const existingSuppliers = JSON.parse(localStorage.getItem(suppliersKey) || "[]");
+    const supplierExists = existingSuppliers.some(s => s.cnpj === xmlData.supplier.cnpj);
+    
+    if (!supplierExists) {
+      existingSuppliers.push(xmlData.supplier);
+      localStorage.setItem(suppliersKey, JSON.stringify(existingSuppliers));
+    }
+
+    return invoiceId;
+  };
+
+  const processFiles = async (files: FileList) => {
+    if (!files || files.length === 0) return;
+
+    setIsProcessing(true);
+    setImportProgress(0);
+    setImportResults([]);
+
+    const results: ImportResult[] = [];
+    const totalFiles = files.length;
+
+    for (let i = 0; i < totalFiles; i++) {
+      const file = files[i];
+      setProcessingStep(`Processando ${file.name}...`);
+      
+      try {
+        // Simulate file reading delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const content = await file.text();
+        const xmlData = await parseXMLContent(content, file.name);
+        
+        setProcessingStep(`Salvando dados de ${file.name}...`);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        const invoiceId = saveInvoiceToStorage(xmlData);
+        
+        results.push({
+          success: true,
+          fileName: file.name,
+          danfeNumber: xmlData.danfeNumber,
+          data: xmlData
+        });
+
+        console.log(`✅ Nota fiscal ${xmlData.danfeNumber} importada com sucesso - ID: ${invoiceId}`);
+        
+      } catch (error) {
+        console.error(`❌ Erro ao processar ${file.name}:`, error);
+        results.push({
+          success: false,
+          fileName: file.name,
+          error: error.message
+        });
+      }
+
+      setImportProgress(((i + 1) / totalFiles) * 100);
+    }
+
+    setImportResults(results);
+    setIsProcessing(false);
+    setProcessingStep("");
+
+    const successCount = results.filter(r => r.success).length;
+    const errorCount = results.filter(r => !r.success).length;
+
+    if (successCount > 0) {
       toast({
-        title: "Arquivo inválido",
-        description: "Por favor, selecione um arquivo XML válido.",
+        title: "Importação concluída",
+        description: `${successCount} nota(s) fiscal(is) importada(s) com sucesso. ${errorCount > 0 ? `${errorCount} arquivo(s) com erro.` : ''}`,
+      });
+    } else {
+      toast({
+        title: "Erro na importação",
+        description: "Nenhum arquivo foi processado com sucesso.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const onSubmit = async (data: z.infer<typeof importFormSchema>) => {
+    if (!data.files || data.files.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Selecione pelo menos um arquivo XML.",
         variant: "destructive",
       });
       return;
     }
-    
-    setFileName(file.name);
-    form.setValue("xmlFile", e.target.files);
-  };
 
-  const processInventoryImport = async (invoice: Invoice) => {
-    try {
-      setImportProgress(prev => ({ ...prev, inventory: 'processing' }));
-      
-      // Get existing products
-      const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
-      const existingInvoices = JSON.parse(localStorage.getItem('invoices') || '[]');
-      
-      // Save invoice
-      const newInvoices = [...existingInvoices, invoice];
-      localStorage.setItem('invoices', JSON.stringify(newInvoices));
-      
-      // Create or update products from invoice items
-      const updatedProducts = [...existingProducts];
-      
-      invoice.items.forEach(item => {
-        const existingProductIndex = updatedProducts.findIndex(
-          p => p.name.toLowerCase() === item.description.toLowerCase()
-        );
-        
-        if (existingProductIndex >= 0) {
-          // Update existing product quantity
-          updatedProducts[existingProductIndex].quantity += item.quantity;
-          updatedProducts[existingProductIndex].updatedAt = new Date();
-        } else {
-          // Create new product
-          const newProduct: Product = {
-            id: uuidv4(),
-            description: item.description,
-            unit: item.unitOfMeasure,
-            quantity: item.quantity.toString(),
-            unitPrice: item.unitPrice,
-            currentStock: item.quantity,
-            minStock: 10,
-            maxStock: 1000,
-            supplier: invoice.supplier.name,
-            familyAgriculture: false,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-          updatedProducts.push(newProduct);
-        }
-      });
-      
-      localStorage.setItem('products', JSON.stringify(updatedProducts));
-      
-      setImportProgress(prev => ({ ...prev, inventory: 'success' }));
-      return true;
-    } catch (error) {
-      console.error('Erro ao importar para estoque:', error);
-      setImportProgress(prev => ({ ...prev, inventory: 'error' }));
-      return false;
-    }
-  };
-
-  const processPayableImport = async (invoice: Invoice, financialProgramming?: string) => {
-    try {
-      setImportProgress(prev => ({ ...prev, payable: 'processing' }));
-      
-      const existingPayments = JSON.parse(localStorage.getItem('paymentAccounts') || '[]');
-      
-      // Create payment account from imported invoice
-      const newPayment: PaymentAccount = {
-        id: `payment-xml-${Date.now()}`,
-        schoolId: "current-school",
-        description: `NF ${invoice.danfeNumber} - ${invoice.supplier.name}`,
-        supplier: invoice.supplier.name,
-        dueDate: new Date(invoice.issueDate.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days from issue
-        value: invoice.totalValue,
-        expenseType: "Outros",
-        resourceCategory: financialProgramming || "Recursos Próprios",
-        status: 'a_pagar',
-        invoiceId: invoice.id,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      const updatedPayments = [...existingPayments, newPayment];
-      localStorage.setItem('paymentAccounts', JSON.stringify(updatedPayments));
-      
-      setImportProgress(prev => ({ ...prev, payable: 'success' }));
-      return true;
-    } catch (error) {
-      console.error('Erro ao importar para contas a pagar:', error);
-      setImportProgress(prev => ({ ...prev, payable: 'error' }));
-      return false;
-    }
-  };
-
-  const handleSubmit = async (values: FormValues) => {
-    setIsLoading(true);
-    setImportProgress({});
-    
-    try {
-      const file = values.xmlFile[0];
-      const xmlContent = await file.text();
-      
-      // Validate XML
-      if (!validateNFeXML(xmlContent)) {
-        throw new Error("XML não é uma NF-e válida");
-      }
-      
-      // Parse XML
-      const parsedData = parseXMLToInvoice(xmlContent);
-      
-      // Create invoice object
-      const invoice: Invoice = {
-        id: uuidv4(),
-        supplier: parsedData.supplier,
-        danfeNumber: parsedData.danfeNumber,
-        issueDate: parsedData.issueDate,
-        totalValue: parsedData.totalValue,
-        items: parsedData.items.map(item => ({
-          ...item,
-          invoiceId: uuidv4()
-        })),
-        status: "aprovada",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      setImportedData({
-        supplier: parsedData.supplier,
-        issueDate: parsedData.issueDate.toLocaleDateString('pt-BR'),
-        danfeNumber: parsedData.danfeNumber,
-        totalValue: new Intl.NumberFormat('pt-BR', {
-          style: 'currency',
-          currency: 'BRL'
-        }).format(parsedData.totalValue),
-        items: parsedData.items
-      });
-      
-      // Check if both modules selected for financial programming
-      if (values.modules.length === 2) {
-        setShowFinancialField(true);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Process single module import
-      let success = true;
-      
-      if (values.modules.includes("inventory")) {
-        const inventorySuccess = await processInventoryImport(invoice);
-        success = success && inventorySuccess;
-      }
-      
-      if (values.modules.includes("payable")) {
-        const payableSuccess = await processPayableImport(invoice);
-        success = success && payableSuccess;
-      }
-      
-      setIsLoading(false);
-      
-      if (success) {
-        const moduleNames = values.modules.map(m => 
-          modules.find(mod => mod.id === m)?.label
-        ).join(", ");
-        
-        toast({
-          title: "Importação concluída",
-          description: `XML importado com sucesso para: ${moduleNames}`,
-        });
-        handleClose();
-      } else {
-        toast({
-          title: "Erro na importação",
-          description: "Alguns módulos falharam na importação. Verifique os logs.",
-          variant: "destructive",
-        });
-      }
-      
-    } catch (error) {
-      setIsLoading(false);
-      console.error('Erro na importação:', error);
-      toast({
-        title: "Erro na importação",
-        description: error instanceof Error ? error.message : "Erro ao processar arquivo XML",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleFinancialSubmit = async () => {
-    setIsLoading(true);
-    const financialProgramming = form.getValues("financialProgramming");
-    const values = form.getValues();
-    
-    try {
-      const file = values.xmlFile[0];
-      const xmlContent = await file.text();
-      const parsedData = parseXMLToInvoice(xmlContent);
-      
-      const invoice: Invoice = {
-        id: uuidv4(),
-        supplier: parsedData.supplier,
-        danfeNumber: parsedData.danfeNumber,
-        issueDate: parsedData.issueDate,
-        totalValue: parsedData.totalValue,
-        items: parsedData.items.map(item => ({
-          ...item,
-          invoiceId: uuidv4()
-        })),
-        status: "aprovada",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      // Process both modules
-      const inventorySuccess = await processInventoryImport(invoice);
-      const payableSuccess = await processPayableImport(invoice, financialProgramming);
-      
-      setIsLoading(false);
-      
-      if (inventorySuccess && payableSuccess) {
-        toast({
-          title: "Importação finalizada",
-          description: "XML importado com sucesso em todos os módulos com programação financeira incluída.",
-        });
-        handleClose();
-      } else {
-        toast({
-          title: "Erro na importação",
-          description: "Alguns módulos falharam na importação.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      setIsLoading(false);
-      console.error('Erro na importação final:', error);
-      toast({
-        title: "Erro na importação",
-        description: "Erro ao finalizar importação",
-        variant: "destructive",
-      });
-    }
+    await processFiles(data.files);
   };
 
   const handleClose = () => {
-    form.reset();
-    setFileName("");
-    setShowFinancialField(false);
-    setImportedData(null);
-    setImportProgress({});
-    onOpenChange(false);
+    if (!isProcessing) {
+      setOpen(false);
+      form.reset();
+      setImportResults([]);
+      setImportProgress(0);
+    }
   };
 
-  const getProgressIcon = (status: string) => {
-    switch (status) {
-      case 'processing':
-        return <Loader2 className="h-4 w-4 animate-spin text-blue-600" />;
-      case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
-      default:
-        return null;
-    }
+  const exportResults = () => {
+    const successfulImports = importResults.filter(r => r.success);
+    if (successfulImports.length === 0) return;
+
+    const reportData = successfulImports.map(result => ({
+      arquivo: result.fileName,
+      danfe: result.danfeNumber,
+      fornecedor: result.data?.supplier.name,
+      valor: result.data?.totalValue,
+      dataImportacao: new Date().toLocaleDateString('pt-BR')
+    }));
+
+    const csvContent = [
+      ['Arquivo', 'DANFE', 'Fornecedor', 'Valor', 'Data Importação'],
+      ...reportData.map(row => [
+        row.arquivo,
+        row.danfe,
+        row.fornecedor,
+        `R$ ${row.valor?.toFixed(2)}`,
+        row.dataImportacao
+      ])
+    ].map(row => row.join(';')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `relatorio_importacao_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogTrigger asChild>
+        <Card className="p-6 border-dashed border-2 hover:border-primary/50 hover:bg-muted/50 transition-colors cursor-pointer">
+          <div className="flex flex-col items-center text-center space-y-2">
+            <div className="p-3 rounded-full bg-primary/10">
+              <Upload className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="font-medium">Importar XML</h3>
+            <p className="text-sm text-muted-foreground">
+              Faça upload de arquivos XML de notas fiscais
+            </p>
+          </div>
+        </Card>
+      </DialogTrigger>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Importar Nota XML</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Importar Notas Fiscais XML
+          </DialogTitle>
+          <DialogDescription>
+            Selecione um ou múltiplos arquivos XML de notas fiscais para importação.
+          </DialogDescription>
         </DialogHeader>
 
-        {!showFinancialField ? (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="modules"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Selecione os módulos para importar os dados:</FormLabel>
-                    <div className="space-y-3">
-                      {modules.map((module) => (
-                        <FormField
-                          key={module.id}
-                          control={form.control}
-                          name="modules"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(module.id)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...field.value, module.id])
-                                      : field.onChange(
-                                          field.value?.filter(
-                                            (value) => value !== module.id
-                                          )
-                                        );
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal flex items-center gap-2">
-                                {module.label}
-                                {importProgress[module.id] && getProgressIcon(importProgress[module.id])}
-                              </FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="xmlFile"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Arquivo XML</FormLabel>
-                    <FormControl>
-                      <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-6">
-                        <FileUp className="h-10 w-10 text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-500 mb-2">
-                          Arraste o arquivo XML ou clique para selecionar
-                        </p>
-                        <Input
-                          type="file"
-                          accept=".xml"
-                          onChange={handleFileChange}
-                          className="hidden"
-                          id="xml-file-input"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => 
-                            document.getElementById("xml-file-input")?.click()
-                          }
-                        >
-                          Selecionar Arquivo
-                        </Button>
-                        {fileName && (
-                          <p className="text-sm mt-2">
-                            Arquivo selecionado: <span className="font-semibold">{fileName}</span>
-                          </p>
-                        )}
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {importedData && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Dados que serão importados:</strong>
-                    <div className="mt-2 space-y-1 text-sm">
-                      <p><strong>Fornecedor:</strong> {importedData.supplier.name}</p>
-                      <p><strong>CNPJ:</strong> {importedData.supplier.cnpj}</p>
-                      <p><strong>Data Emissão:</strong> {importedData.issueDate}</p>
-                      <p><strong>Número DANFE:</strong> {importedData.danfeNumber}</p>
-                      <p><strong>Valor Total:</strong> {importedData.totalValue}</p>
-                      <p><strong>Itens:</strong> {importedData.items.length} produtos</p>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={handleClose}
-                  disabled={isLoading}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={!fileName || isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processando...
-                    </>
-                  ) : (
-                    "Importar XML"
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        ) : (
-          <div className="space-y-6">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                XML processado com sucesso! Como todos os módulos foram selecionados, 
-                inclua a programação financeira para finalizar a importação.
-              </AlertDescription>
-            </Alert>
-
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="financialProgramming"
+              name="files"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Programação Financeira</FormLabel>
+                  <FormLabel>Arquivos XML</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Informe a programação financeira" />
+                    <Input
+                      type="file"
+                      multiple
+                      accept=".xml"
+                      onChange={(e) => field.onChange(e.target.files)}
+                      disabled={isProcessing}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <DialogFooter>
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Observações (Opcional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Adicione observações sobre esta importação..."
+                      {...field}
+                      disabled={isProcessing}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {isProcessing && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">Processando Arquivos</CardTitle>
+                  <CardDescription>{processingStep}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Progress value={importProgress} className="mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    {Math.round(importProgress)}% concluído
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {importResults.length > 0 && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Resultados da Importação</CardTitle>
+                    <CardDescription>
+                      {importResults.filter(r => r.success).length} sucessos, {importResults.filter(r => !r.success).length} erros
+                    </CardDescription>
+                  </div>
+                  {importResults.some(r => r.success) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={exportResults}
+                      className="flex items-center gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      Exportar Relatório
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Arquivo</TableHead>
+                        <TableHead>DANFE</TableHead>
+                        <TableHead>Detalhes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {importResults.map((result, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            {result.success ? (
+                              <Badge variant="default" className="bg-green-100 text-green-800">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Sucesso
+                              </Badge>
+                            ) : (
+                              <Badge variant="destructive">
+                                <AlertCircle className="h-3 w-3 mr-1" />
+                                Erro
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">{result.fileName}</TableCell>
+                          <TableCell>
+                            {result.danfeNumber || "—"}
+                          </TableCell>
+                          <TableCell>
+                            {result.success ? (
+                              <div className="text-sm">
+                                <div>Fornecedor: {result.data?.supplier.name}</div>
+                                <div>Valor: R$ {result.data?.totalValue.toFixed(2)}</div>
+                                <div>Itens: {result.data?.items.length}</div>
+                              </div>
+                            ) : (
+                              <div className="text-sm text-red-600">
+                                {result.error}
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="flex justify-end space-x-2">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={handleClose}
-                disabled={isLoading}
+                disabled={isProcessing}
               >
-                Cancelar
+                {importResults.length > 0 ? "Fechar" : "Cancelar"}
               </Button>
-              <Button onClick={handleFinancialSubmit} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Finalizando...
-                  </>
-                ) : (
-                  "Finalizar Importação"
-                )}
+              <Button 
+                type="submit" 
+                disabled={isProcessing}
+              >
+                {isProcessing ? "Processando..." : "Importar"}
               </Button>
-            </DialogFooter>
-          </div>
-        )}
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

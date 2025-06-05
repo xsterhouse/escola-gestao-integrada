@@ -1,9 +1,12 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { User } from "@/lib/types";
+import { User, School } from "@/lib/types";
 
 interface AuthContextType {
   user: User | null;
+  currentSchool: School | null;
+  availableSchools: School[];
+  isAuthenticated: boolean;
   login: (matricula: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
@@ -47,14 +50,21 @@ interface SystemUser {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [currentSchool, setCurrentSchool] = useState<School | null>(null);
+  const [availableSchools, setAvailableSchools] = useState<School[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Computed property for authentication status
+  const isAuthenticated = !!user;
 
   useEffect(() => {
     // Check if user is already logged in
     const storedUser = localStorage.getItem("currentUser");
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        loadUserSchools(parsedUser);
       } catch (error) {
         console.error("Error parsing stored user:", error);
         localStorage.removeItem("currentUser");
@@ -62,6 +72,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setIsLoading(false);
   }, []);
+
+  const loadUserSchools = (authUser: User) => {
+    const schools: School[] = JSON.parse(localStorage.getItem('schools') || '[]');
+    
+    if (authUser.role === "master") {
+      // Master user can access all schools
+      setAvailableSchools(schools);
+      setCurrentSchool(schools.length > 0 ? schools[0] : null);
+    } else if (authUser.userType === "central_compras" && authUser.purchasingCenterIds) {
+      // Central de compras user - get schools from purchasing centers
+      const purchasingCenters = JSON.parse(localStorage.getItem('purchasingCenters') || '[]');
+      const userCenters = purchasingCenters.filter(pc => 
+        authUser.purchasingCenterIds?.includes(pc.id)
+      );
+      
+      const linkedSchoolIds = new Set<string>();
+      userCenters.forEach(center => {
+        center.schoolIds?.forEach(schoolId => linkedSchoolIds.add(schoolId));
+      });
+      
+      const linkedSchools = schools.filter(school => linkedSchoolIds.has(school.id));
+      setAvailableSchools(linkedSchools);
+      setCurrentSchool(linkedSchools.length > 0 ? linkedSchools[0] : null);
+    } else if (authUser.schoolId) {
+      // School user - only their school
+      const userSchool = schools.find(school => school.id === authUser.schoolId);
+      if (userSchool) {
+        setAvailableSchools([userSchool]);
+        setCurrentSchool(userSchool);
+      }
+    }
+  };
 
   const login = async (matricula: string, password: string): Promise<boolean> => {
     setIsLoading(true);
@@ -103,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           setUser(authUser);
           localStorage.setItem("currentUser", JSON.stringify(authUser));
+          loadUserSchools(authUser);
           console.log(`✅ Login bem-sucedido para usuário do sistema: ${authUser.name}`);
           return true;
         } else {
@@ -130,6 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         setUser(authUser);
         localStorage.setItem("currentUser", JSON.stringify(authUser));
+        loadUserSchools(authUser);
         console.log(`✅ Login bem-sucedido para usuário regular: ${authUser.name}`);
         return true;
       }
@@ -156,6 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         setUser(masterUser);
         localStorage.setItem("currentUser", JSON.stringify(masterUser));
+        loadUserSchools(masterUser);
         console.log(`✅ Login bem-sucedido para usuário master`);
         return true;
       }
@@ -172,12 +217,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null);
+    setCurrentSchool(null);
+    setAvailableSchools([]);
     localStorage.removeItem("currentUser");
     console.log(`👋 Usuário deslogado`);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      currentSchool, 
+      availableSchools, 
+      isAuthenticated, 
+      login, 
+      logout, 
+      isLoading 
+    }}>
       {children}
     </AuthContext.Provider>
   );

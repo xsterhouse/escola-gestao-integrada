@@ -52,12 +52,20 @@ export function LoginForm() {
     setIsSubmitting(true);
     
     try {
-      await login(matricula, password, remember);
-      navigate("/dashboard");
-      toast({
-        title: "Login realizado com sucesso",
-        description: "Bem-vindo ao sistema SIGRE!",
-      });
+      const success = await login(matricula, password);
+      if (success) {
+        navigate("/dashboard");
+        toast({
+          title: "Login realizado com sucesso",
+          description: "Bem-vindo ao sistema SIGRE!",
+        });
+      } else {
+        toast({
+          title: "Falha no login",
+          description: "Matrícula ou senha incorretos.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
         title: "Falha no login",
