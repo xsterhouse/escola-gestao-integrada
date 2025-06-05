@@ -51,9 +51,14 @@ export function UserTab() {
         matricula: userData.matricula || "",
         email: userData.email || "",
         role: userData.role || "user",
+        userType: userData.userType || "funcionario",
+        hierarchyLevel: userData.hierarchyLevel || 4,
         schoolId: userData.schoolId || null,
         permissions: userData.permissions || [],
         status: "active",
+        dataScope: userData.dataScope || "school",
+        canCreateUsers: userData.canCreateUsers || false,
+        canManageSchool: userData.canManageSchool || false,
         createdAt: new Date(),
         updatedAt: new Date()
       };

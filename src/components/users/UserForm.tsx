@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { 
   Dialog, 
@@ -14,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UserPlus, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { User, School } from "@/lib/types";
-import { UserRole } from "@/types/user";
+import { UserRole } from "@/lib/types";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 
 interface UserFormProps {
@@ -104,10 +105,15 @@ export function UserForm({
         matricula: formData.matricula,
         email: formData.email,
         role: formData.role,
+        userType: "funcionario", // Default type, will be updated based on profile
+        hierarchyLevel: 4, // Default level, will be updated based on profile
         profileId: formData.profileId,
         schoolId: formData.schoolId || null,
         permissions: [],
         status: "active",
+        dataScope: "school",
+        canCreateUsers: false,
+        canManageSchool: false,
       };
 
       onSave(userData);
