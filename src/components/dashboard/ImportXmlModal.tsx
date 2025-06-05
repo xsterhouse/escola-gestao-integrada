@@ -21,9 +21,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FileUp, AlertCircle } from "lucide-react";
+import { FileUp, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { parseXMLToInvoice, validateNFeXML } from "@/lib/xmlParser";
+import { Invoice, PaymentAccount, Product } from "@/lib/types";
+import { v4 as uuidv4 } from "uuid";
 
 interface ImportXmlModalProps {
   open: boolean;
@@ -43,12 +46,12 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
   const [fileName, setFileName] = useState("");
   const [showFinancialField, setShowFinancialField] = useState(false);
   const [importedData, setImportedData] = useState<any>(null);
+  const [importProgress, setImportProgress] = useState<{[key: string]: 'pending' | 'processing' | 'success' | 'error'}>({});
   const { toast } = useToast();
 
   const modules = [
-    { id: "contracts", label: "Módulo Contratos" },
     { id: "inventory", label: "Estoque" },
-    { id: "payable", label: "Conta a Pagar" },
+    { id: "payable", label: "Contas a Pagar" },
   ];
 
   const form = useForm<FormValues>({
@@ -76,80 +79,248 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
     form.setValue("xmlFile", e.target.files);
   };
 
-  const handleSubmit = (values: FormValues) => {
+  const processInventoryImport = async (invoice: Invoice) => {
+    try {
+      setImportProgress(prev => ({ ...prev, inventory: 'processing' }));
+      
+      // Get existing products
+      const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
+      const existingInvoices = JSON.parse(localStorage.getItem('invoices') || '[]');
+      
+      // Save invoice
+      const newInvoices = [...existingInvoices, invoice];
+      localStorage.setItem('invoices', JSON.stringify(newInvoices));
+      
+      // Create or update products from invoice items
+      const updatedProducts = [...existingProducts];
+      
+      invoice.items.forEach(item => {
+        const existingProductIndex = updatedProducts.findIndex(
+          p => p.name.toLowerCase() === item.description.toLowerCase()
+        );
+        
+        if (existingProductIndex >= 0) {
+          // Update existing product quantity
+          updatedProducts[existingProductIndex].quantity += item.quantity;
+          updatedProducts[existingProductIndex].updatedAt = new Date();
+        } else {
+          // Create new product
+          const newProduct: Product = {
+            id: uuidv4(),
+            schoolId: "current-school",
+            name: item.description,
+            description: item.description,
+            category: "Importado de XML",
+            quantity: item.quantity,
+            unitOfMeasure: item.unitOfMeasure,
+            unitPrice: item.unitPrice,
+            minimumStock: 10,
+            maximumStock: 1000,
+            location: "Estoque Principal",
+            barcode: "",
+            status: "ativo",
+            supplier: invoice.supplier.name,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          updatedProducts.push(newProduct);
+        }
+      });
+      
+      localStorage.setItem('products', JSON.stringify(updatedProducts));
+      
+      setImportProgress(prev => ({ ...prev, inventory: 'success' }));
+      return true;
+    } catch (error) {
+      console.error('Erro ao importar para estoque:', error);
+      setImportProgress(prev => ({ ...prev, inventory: 'error' }));
+      return false;
+    }
+  };
+
+  const processPayableImport = async (invoice: Invoice, financialProgramming?: string) => {
+    try {
+      setImportProgress(prev => ({ ...prev, payable: 'processing' }));
+      
+      const existingPayments = JSON.parse(localStorage.getItem('paymentAccounts') || '[]');
+      
+      // Create payment account from imported invoice
+      const newPayment: PaymentAccount = {
+        id: `payment-xml-${Date.now()}`,
+        schoolId: "current-school",
+        description: `NF ${invoice.danfeNumber} - ${invoice.supplier.name}`,
+        supplier: invoice.supplier.name,
+        dueDate: new Date(invoice.issueDate.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days from issue
+        value: invoice.totalValue,
+        expenseType: "Outros",
+        resourceCategory: financialProgramming || "Recursos Próprios",
+        status: 'a_pagar',
+        invoiceId: invoice.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      const updatedPayments = [...existingPayments, newPayment];
+      localStorage.setItem('paymentAccounts', JSON.stringify(updatedPayments));
+      
+      setImportProgress(prev => ({ ...prev, payable: 'success' }));
+      return true;
+    } catch (error) {
+      console.error('Erro ao importar para contas a pagar:', error);
+      setImportProgress(prev => ({ ...prev, payable: 'error' }));
+      return false;
+    }
+  };
+
+  const handleSubmit = async (values: FormValues) => {
     setIsLoading(true);
+    setImportProgress({});
     
     try {
-      // Simular processamento do XML - em uma implementação real, 
-      // aqui seria feito o parsing do arquivo XML
-      setTimeout(() => {
-        const mockData = {
-          supplier: {
-            name: "Fornecedor Exemplo Ltda",
-            cnpj: "12.345.678/0001-99",
-            address: "Rua das Empresas, 123 - São Paulo/SP",
-            phone: "(11) 1234-5678",
-            email: "contato@fornecedor.com.br"
-          },
-          issueDate: new Date().toLocaleDateString('pt-BR'),
-          danfeNumber: "123456789",
-          totalValue: "R$ 15.750,00",
-          items: [
-            {
-              description: "Arroz Tipo 1 - 5kg",
-              quantity: 100,
-              unitPrice: "R$ 25,50",
-              totalPrice: "R$ 2.550,00"
-            },
-            {
-              description: "Feijão Carioca - 1kg", 
-              quantity: 200,
-              unitPrice: "R$ 8,90",
-              totalPrice: "R$ 1.780,00"
-            },
-            {
-              description: "Óleo de Soja - 900ml",
-              quantity: 150,
-              unitPrice: "R$ 7,80",
-              totalPrice: "R$ 1.170,00"
-            }
-          ]
-        };
-        
-        setImportedData(mockData);
+      const file = values.xmlFile[0];
+      const xmlContent = await file.text();
+      
+      // Validate XML
+      if (!validateNFeXML(xmlContent)) {
+        throw new Error("XML não é uma NF-e válida");
+      }
+      
+      // Parse XML
+      const parsedData = parseXMLToInvoice(xmlContent);
+      
+      // Create invoice object
+      const invoice: Invoice = {
+        id: uuidv4(),
+        schoolId: "current-school",
+        supplier: parsedData.supplier,
+        danfeNumber: parsedData.danfeNumber,
+        issueDate: parsedData.issueDate,
+        totalValue: parsedData.totalValue,
+        items: parsedData.items.map(item => ({
+          ...item,
+          invoiceId: uuidv4()
+        })),
+        status: "aprovada",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      setImportedData({
+        supplier: parsedData.supplier,
+        issueDate: parsedData.issueDate.toLocaleDateString('pt-BR'),
+        danfeNumber: parsedData.danfeNumber,
+        totalValue: new Intl.NumberFormat('pt-BR', {
+          style: 'currency',
+          currency: 'BRL'
+        }).format(parsedData.totalValue),
+        items: parsedData.items
+      });
+      
+      // Check if both modules selected for financial programming
+      if (values.modules.length === 2) {
+        setShowFinancialField(true);
         setIsLoading(false);
+        return;
+      }
+      
+      // Process single module import
+      let success = true;
+      
+      if (values.modules.includes("inventory")) {
+        const inventorySuccess = await processInventoryImport(invoice);
+        success = success && inventorySuccess;
+      }
+      
+      if (values.modules.includes("payable")) {
+        const payableSuccess = await processPayableImport(invoice);
+        success = success && payableSuccess;
+      }
+      
+      setIsLoading(false);
+      
+      if (success) {
+        const moduleNames = values.modules.map(m => 
+          modules.find(mod => mod.id === m)?.label
+        ).join(", ");
         
-        // Se todos os 3 módulos foram selecionados, mostrar campo de programação financeira
-        if (values.modules.length === 3) {
-          setShowFinancialField(true);
-        } else {
-          // Finalizar importação se não foram todos os módulos
-          toast({
-            title: "Importação concluída",
-            description: `XML importado com sucesso para: ${values.modules.join(", ")}`,
-          });
-          handleClose();
-        }
-      }, 2000);
+        toast({
+          title: "Importação concluída",
+          description: `XML importado com sucesso para: ${moduleNames}`,
+        });
+        handleClose();
+      } else {
+        toast({
+          title: "Erro na importação",
+          description: "Alguns módulos falharam na importação. Verifique os logs.",
+          variant: "destructive",
+        });
+      }
+      
     } catch (error) {
       setIsLoading(false);
+      console.error('Erro na importação:', error);
       toast({
         title: "Erro na importação",
-        description: "Ocorreu um erro ao processar o arquivo XML.",
+        description: error instanceof Error ? error.message : "Erro ao processar arquivo XML",
         variant: "destructive",
       });
     }
   };
 
-  const handleFinancialSubmit = () => {
+  const handleFinancialSubmit = async () => {
+    setIsLoading(true);
     const financialProgramming = form.getValues("financialProgramming");
+    const values = form.getValues();
     
-    toast({
-      title: "Importação finalizada",
-      description: "XML importado com sucesso em todos os módulos com programação financeira incluída.",
-    });
-    
-    handleClose();
+    try {
+      const file = values.xmlFile[0];
+      const xmlContent = await file.text();
+      const parsedData = parseXMLToInvoice(xmlContent);
+      
+      const invoice: Invoice = {
+        id: uuidv4(),
+        schoolId: "current-school",
+        supplier: parsedData.supplier,
+        danfeNumber: parsedData.danfeNumber,
+        issueDate: parsedData.issueDate,
+        totalValue: parsedData.totalValue,
+        items: parsedData.items.map(item => ({
+          ...item,
+          invoiceId: uuidv4()
+        })),
+        status: "aprovada",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      // Process both modules
+      const inventorySuccess = await processInventoryImport(invoice);
+      const payableSuccess = await processPayableImport(invoice, financialProgramming);
+      
+      setIsLoading(false);
+      
+      if (inventorySuccess && payableSuccess) {
+        toast({
+          title: "Importação finalizada",
+          description: "XML importado com sucesso em todos os módulos com programação financeira incluída.",
+        });
+        handleClose();
+      } else {
+        toast({
+          title: "Erro na importação",
+          description: "Alguns módulos falharam na importação.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Erro na importação final:', error);
+      toast({
+        title: "Erro na importação",
+        description: "Erro ao finalizar importação",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleClose = () => {
@@ -157,7 +328,21 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
     setFileName("");
     setShowFinancialField(false);
     setImportedData(null);
+    setImportProgress({});
     onOpenChange(false);
+  };
+
+  const getProgressIcon = (status: string) => {
+    switch (status) {
+      case 'processing':
+        return <Loader2 className="h-4 w-4 animate-spin text-blue-600" />;
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'error':
+        return <AlertCircle className="h-4 w-4 text-red-600" />;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -183,7 +368,7 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
                           control={form.control}
                           name="modules"
                           render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                               <FormControl>
                                 <Checkbox
                                   checked={field.value?.includes(module.id)}
@@ -198,8 +383,9 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
                                   }}
                                 />
                               </FormControl>
-                              <FormLabel className="font-normal">
+                              <FormLabel className="font-normal flex items-center gap-2">
                                 {module.label}
+                                {importProgress[module.id] && getProgressIcon(importProgress[module.id])}
                               </FormLabel>
                             </FormItem>
                           )}
@@ -278,7 +464,14 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={!fileName || isLoading}>
-                  {isLoading ? "Processando..." : "Importar XML"}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    "Importar XML"
+                  )}
                 </Button>
               </DialogFooter>
             </form>
@@ -312,11 +505,19 @@ export function ImportXmlModal({ open, onOpenChange }: ImportXmlModalProps) {
                 type="button" 
                 variant="outline" 
                 onClick={handleClose}
+                disabled={isLoading}
               >
                 Cancelar
               </Button>
-              <Button onClick={handleFinancialSubmit}>
-                Finalizar Importação
+              <Button onClick={handleFinancialSubmit} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Finalizando...
+                  </>
+                ) : (
+                  "Finalizar Importação"
+                )}
               </Button>
             </DialogFooter>
           </div>
