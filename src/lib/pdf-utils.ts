@@ -422,6 +422,208 @@ function formatDate(date: Date, formatStr: string): string {
   return formatStr.replace('dd', day).replace('MM', month).replace('yyyy', year.toString());
 }
 
+// New function for generating modern financial reports
+export const generateModernFinancialReportPDF = (reportData: {
+  title: string;
+  reportType: string;
+  period: string;
+  filters: {
+    resourceType?: string;
+    supplier?: string;
+    status?: string;
+  };
+  schoolName: string;
+  purchasingCenters: string[];
+  userName: string;
+  data: any[];
+  summary: {
+    totalReceitas: number;
+    totalDespesas: number;
+    saldo: number;
+  };
+}) => {
+  const doc = new jsPDF();
+  
+  // Header - Company/System info
+  doc.setFontSize(20);
+  doc.setTextColor(1, 28, 67); // #012340
+  doc.text("SIGRE - Sistema de Gestão de Recursos Educacionais", 14, 20);
+  
+  // School and user information
+  doc.setFontSize(12);
+  doc.setTextColor(0, 0, 0);
+  doc.text(`Escola: ${reportData.schoolName}`, 14, 32);
+  
+  // Purchasing centers
+  if (reportData.purchasingCenters.length > 0) {
+    doc.text(`Centrais de Compras: ${reportData.purchasingCenters.join(', ')}`, 14, 40);
+  }
+  
+  doc.text(`Usuário: ${reportData.userName}`, 14, 48);
+  doc.text(`Data de Exportação: ${new Date().toLocaleString('pt-BR')}`, 14, 56);
+  
+  // Report title and filters
+  doc.setFontSize(16);
+  doc.setTextColor(1, 28, 67);
+  doc.text(reportData.title, 14, 72);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  let filterY = 80;
+  
+  doc.text(`Período: ${reportData.period}`, 14, filterY);
+  
+  if (reportData.filters.resourceType && reportData.filters.resourceType !== "all") {
+    filterY += 6;
+    doc.text(`Tipo de Recurso: ${reportData.filters.resourceType}`, 14, filterY);
+  }
+  
+  if (reportData.filters.supplier) {
+    filterY += 6;
+    doc.text(`Fornecedor/Origem: ${reportData.filters.supplier}`, 14, filterY);
+  }
+  
+  if (reportData.filters.status && reportData.filters.status !== "all") {
+    filterY += 6;
+    doc.text(`Status: ${reportData.filters.status}`, 14, filterY);
+  }
+  
+  // Executive summary
+  let summaryY = filterY + 15;
+  doc.setFontSize(12);
+  doc.setTextColor(1, 28, 67);
+  doc.text("Resumo Executivo", 14, summaryY);
+  
+  summaryY += 8;
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  
+  // Summary boxes
+  const boxWidth = 60;
+  const boxHeight = 20;
+  const spacing = 5;
+  
+  // Total Receitas box
+  doc.setFillColor(34, 197, 94); // green-500
+  doc.rect(14, summaryY, boxWidth, boxHeight, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.text("Total Receitas", 16, summaryY + 6);
+  doc.setFontSize(12);
+  doc.text(new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(reportData.summary.totalReceitas), 16, summaryY + 14);
+  
+  // Total Despesas box
+  doc.setFillColor(239, 68, 68); // red-500
+  doc.rect(14 + boxWidth + spacing, summaryY, boxWidth, boxHeight, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.text("Total Despesas", 16 + boxWidth + spacing, summaryY + 6);
+  doc.setFontSize(12);
+  doc.text(new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(reportData.summary.totalDespesas), 16 + boxWidth + spacing, summaryY + 14);
+  
+  // Saldo box
+  const saldoColor = reportData.summary.saldo >= 0 ? [34, 197, 94] : [239, 68, 68];
+  doc.setFillColor(saldoColor[0], saldoColor[1], saldoColor[2]);
+  doc.rect(14 + (boxWidth + spacing) * 2, summaryY, boxWidth, boxHeight, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.text("Saldo", 16 + (boxWidth + spacing) * 2, summaryY + 6);
+  doc.setFontSize(12);
+  doc.text(new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(reportData.summary.saldo), 16 + (boxWidth + spacing) * 2, summaryY + 14);
+  
+  // Data table
+  const tableStartY = summaryY + boxHeight + 15;
+  
+  doc.setFontSize(12);
+  doc.setTextColor(1, 28, 67);
+  doc.text("Detalhamento", 14, tableStartY - 5);
+  
+  // Define columns based on report type
+  let columns: any[];
+  let tableData: any[];
+  
+  if (reportData.reportType === "resource") {
+    columns = [
+      { header: "Tipo", dataKey: "tipo" },
+      { header: "Descrição", dataKey: "descricao" },
+      { header: "Categoria", dataKey: "categoria" },
+      { header: "Data", dataKey: "data" },
+      { header: "Valor", dataKey: "valor" },
+      { header: "Status", dataKey: "status" }
+    ];
+  } else {
+    columns = [
+      { header: "Tipo", dataKey: "tipo" },
+      { header: "Descrição", dataKey: "descricao" },
+      { header: "Fornecedor/Origem", dataKey: "fornecedor_origem" },
+      { header: "Data", dataKey: "data" },
+      { header: "Valor", dataKey: "valor" },
+      { header: "Situação", dataKey: "situacao" }
+    ];
+  }
+  
+  tableData = reportData.data.map(item => {
+    const row: any = {};
+    columns.forEach(col => {
+      row[col.dataKey] = item[col.dataKey] || "-";
+    });
+    return row;
+  });
+  
+  // Create table
+  autoTable(doc, {
+    startY: tableStartY,
+    head: [columns.map(column => column.header)],
+    body: tableData.length > 0 ? 
+      tableData.map(row => columns.map(column => row[column.dataKey])) :
+      [["Não há dados para exibir no período selecionado.", "", "", "", "", ""]],
+    headStyles: {
+      fillColor: [1, 28, 67], // #012340
+      textColor: 255,
+      fontStyle: "bold",
+      fontSize: 9
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252] // gray-50
+    },
+    styles: {
+      fontSize: 8,
+      cellPadding: 4
+    },
+    columnStyles: {
+      0: { cellWidth: 25 }, // Tipo
+      1: { cellWidth: 50 }, // Descrição
+      2: { cellWidth: 35 }, // Categoria/Fornecedor
+      3: { cellWidth: 25 }, // Data
+      4: { cellWidth: 30 }, // Valor
+      5: { cellWidth: 25 }  // Status/Situação
+    },
+    margin: { top: tableStartY }
+  });
+  
+  // Footer
+  const finalY = (doc as any).lastAutoTable.finalY || tableStartY + 50;
+  
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Relatório gerado em ${new Date().toLocaleString('pt-BR')}`, 14, finalY + 15);
+  doc.text(`Total de registros: ${reportData.data.length}`, 14, finalY + 22);
+  doc.text("SIGRE - Sistema de Gestão de Recursos Educacionais", 14, finalY + 29);
+  
+  // Open in browser instead of downloading
+  const pdfBlob = doc.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  window.open(pdfUrl, '_blank');
+};
+
 // New function for generating financial reports
 export const generateFinancialReportPDF = (reportData: {
   title: string;

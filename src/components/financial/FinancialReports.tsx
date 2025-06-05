@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,7 +48,8 @@ import {
   ReceivableAccount, 
   FinancialReportFilter 
 } from "@/lib/types";
-import { exportToCsv, generatePDF } from "@/lib/pdf-utils";
+import { generateModernFinancialReportPDF } from "@/lib/pdf-utils";
+import { toast } from "sonner";
 
 interface FinancialReportsProps {
   bankAccounts: BankAccount[];
@@ -73,6 +73,20 @@ export function FinancialReports({
   const [isViewReportOpen, setIsViewReportOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [selectedReportId, setSelectedReportId] = useState("");
+  
+  // Dados simulados para usuário e escola (em uma aplicação real viria do contexto de autenticação)
+  const currentUser = {
+    name: "Maria Silva Santos",
+  };
+  
+  const currentSchool = {
+    name: "Escola Municipal João da Silva",
+  };
+  
+  const purchasingCenters = [
+    "Central de Compras Municipal",
+    "Central Regional Norte"
+  ];
   
   // Relatórios salvos carregados do localStorage (dados reais)
   const [reports] = useState(() => {
@@ -105,9 +119,11 @@ export function FinancialReports({
     setPassword("");
   };
   
-  // Função para gerar relatório de recursos (PNAE, PNATE, etc.)
+  // Função para gerar relatório de recursos (PNAE, PNATE, etc.) em PDF
   const generateResourceReport = () => {
-    // Filtrar e formatar dados para o relatório
+    toast.success("Gerando relatório de prestação de contas...");
+    
+    // Filtrar dados
     const filteredPayments = payables.filter(payment => {
       if (resourceTypeFilter !== "all" && payment.resourceCategory !== resourceTypeFilter) {
         return false;
@@ -148,7 +164,7 @@ export function FinancialReports({
       return true;
     });
     
-    // Preparar dados para exportação
+    // Preparar dados para o PDF
     const reportTitle = `Prestação de Contas - ${resourceTypeFilter !== "all" ? resourceTypeFilter : "Todos os recursos"}`;
     const reportPeriod = startDate && endDate 
       ? `${format(startDate, 'dd/MM/yyyy')} - ${format(endDate, 'dd/MM/yyyy')}`
@@ -179,20 +195,35 @@ export function FinancialReports({
     // Combinar dados
     const reportData = [...receiptsData, ...paymentsData];
     
-    // Exportar para CSV
-    exportToCsv(reportData, `prestacao_contas_${resourceTypeFilter}`, [
-      { header: 'Tipo', key: 'tipo' },
-      { header: 'Descrição', key: 'descricao' },
-      { header: 'Fornecedor/Origem', key: 'fornecedor' },
-      { header: 'Categoria', key: 'categoria' },
-      { header: 'Data', key: 'data' },
-      { header: 'Valor', key: 'valor' },
-      { header: 'Status', key: 'status' }
-    ]);
+    // Calcular resumo
+    const totalReceitas = filteredReceipts.reduce((sum, receipt) => sum + receipt.value, 0);
+    const totalDespesas = filteredPayments.reduce((sum, payment) => sum + payment.value, 0);
+    const saldo = totalReceitas - totalDespesas;
+    
+    // Gerar PDF
+    generateModernFinancialReportPDF({
+      title: reportTitle,
+      reportType: "resource",
+      period: reportPeriod,
+      filters: {
+        resourceType: resourceTypeFilter,
+      },
+      schoolName: currentSchool.name,
+      purchasingCenters: purchasingCenters,
+      userName: currentUser.name,
+      data: reportData,
+      summary: {
+        totalReceitas,
+        totalDespesas,
+        saldo
+      }
+    });
   };
   
-  // Função para gerar relatório de pagamentos e recebimentos
+  // Função para gerar relatório de pagamentos e recebimentos em PDF
   const generateTransactionsReport = () => {
+    toast.success("Gerando relatório de pagamentos e recebimentos...");
+    
     // Filtrar dados baseado nos filtros selecionados
     const filteredPayments = payables.filter(payment => {
       let include = true;
@@ -254,7 +285,12 @@ export function FinancialReports({
       return include;
     });
     
-    // Preparar dados para exportação
+    // Preparar dados para o PDF
+    const reportTitle = "Relatório de Pagamentos e Recebimentos";
+    const reportPeriod = startDate && endDate 
+      ? `${format(startDate, 'dd/MM/yyyy')} - ${format(endDate, 'dd/MM/yyyy')}`
+      : "Período completo";
+    
     const paymentsData = filteredPayments.map(payment => ({
       tipo: "Pagamento",
       descricao: payment.description,
@@ -276,15 +312,30 @@ export function FinancialReports({
     // Combinar dados
     const reportData = [...receiptsData, ...paymentsData];
     
-    // Exportar para CSV
-    exportToCsv(reportData, 'pagamentos_recebimentos', [
-      { header: 'Tipo', key: 'tipo' },
-      { header: 'Descrição', key: 'descricao' },
-      { header: 'Fornecedor/Origem', key: 'fornecedor_origem' },
-      { header: 'Data', key: 'data' },
-      { header: 'Valor', key: 'valor' },
-      { header: 'Situação', key: 'situacao' }
-    ]);
+    // Calcular resumo
+    const totalReceitas = filteredReceipts.reduce((sum, receipt) => sum + receipt.value, 0);
+    const totalDespesas = filteredPayments.reduce((sum, payment) => sum + payment.value, 0);
+    const saldo = totalReceitas - totalDespesas;
+    
+    // Gerar PDF
+    generateModernFinancialReportPDF({
+      title: reportTitle,
+      reportType: "transactions",
+      period: reportPeriod,
+      filters: {
+        supplier: supplierFilter,
+        status: statusFilter,
+      },
+      schoolName: currentSchool.name,
+      purchasingCenters: purchasingCenters,
+      userName: currentUser.name,
+      data: reportData,
+      summary: {
+        totalReceitas,
+        totalDespesas,
+        saldo
+      }
+    });
   };
   
   return (
@@ -366,7 +417,7 @@ export function FinancialReports({
                 
                 <div className="flex items-end">
                   <Button onClick={generateResourceReport} className="w-full">
-                    <FileDown className="mr-2 h-4 w-4" />
+                    <FileText className="mr-2 h-4 w-4" />
                     Gerar Relatório
                   </Button>
                 </div>
@@ -525,7 +576,7 @@ export function FinancialReports({
                 
                 <div className="flex items-end">
                   <Button onClick={generateTransactionsReport} className="w-full">
-                    <FileDown className="mr-2 h-4 w-4" />
+                    <FileText className="mr-2 h-4 w-4" />
                     Gerar Relatório
                   </Button>
                 </div>
