@@ -133,10 +133,27 @@ export interface ContractData {
   fornecedor: Supplier;
   dataInicio: Date;
   dataFim: Date;
-  status: 'ativo' | 'encerrado' | 'vencido' | 'liquidado';
+  status: 'ativo' | 'encerrado' | 'vencido' | 'liquidado' | 'divergencia_dados';
   items: ContractItem[];
   createdAt: Date;
   updatedAt: Date;
+  // New fields for divergence tracking
+  divergencias?: ContractDivergence[];
+  ataValidated?: boolean;
+  lastValidationAt?: Date;
+}
+
+export interface ContractDivergence {
+  id: string;
+  contractItemId: string;
+  ataItemId: string;
+  field: 'descricao' | 'unidade' | 'quantidade' | 'valorUnitario';
+  valorContrato: string | number;
+  valorATA: string | number;
+  resolved: boolean;
+  resolvedAt?: Date;
+  resolvedBy?: string;
+  note?: string;
 }
 
 export interface Contract {

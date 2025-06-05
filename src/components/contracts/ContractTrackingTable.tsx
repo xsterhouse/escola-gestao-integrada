@@ -1,13 +1,14 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ContractData, ContractFilter } from "@/lib/types";
-import { Search, Filter, Edit, Eye, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Filter, Edit, Eye, Trash2, AlertTriangle, CheckCircle } from "lucide-react";
 import { EditValidityDialog } from "./EditValidityDialog";
+import { DivergenceEditModal } from "./DivergenceEditModal";
 import { 
   Pagination, 
   PaginationContent, 
@@ -29,6 +30,7 @@ interface GroupedContract {
   fornecedor: string;
   contracts: ContractData[];
   totalItems: number;
+  hasDivergences: boolean;
 }
 
 export function ContractTrackingTable({ 
@@ -38,8 +40,9 @@ export function ContractTrackingTable({
   onUpdateContract 
 }: ContractTrackingTableProps) {
   const [editingContract, setEditingContract] = useState<ContractData | null>(null);
+  const [editingDivergences, setEditingDivergences] = useState<ContractData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 1; // Um contrato/processo por página
+  const itemsPerPage = 1;
 
   // Agrupar contratos por número do contrato e fornecedor
   const groupedContracts = React.useMemo(() => {
@@ -51,12 +54,18 @@ export function ContractTrackingTable({
           numeroContrato: contract.numeroContrato,
           fornecedor: contract.fornecedor.razaoSocial,
           contracts: [],
-          totalItems: 0
+          totalItems: 0,
+          hasDivergences: false
         };
       }
       
       acc[key].contracts.push(contract);
       acc[key].totalItems += contract.items.length;
+      
+      // Check if any contract has divergences
+      if (contract.status === 'divergencia_dados' || (contract.divergencias && contract.divergencias.length > 0)) {
+        acc[key].hasDivergences = true;
+      }
       
       return acc;
     }, {} as Record<string, GroupedContract>);
@@ -82,13 +91,43 @@ export function ContractTrackingTable({
     }).format(value);
   };
 
+  const getStatusBadge = (contract: ContractData) => {
+    switch (contract.status) {
+      case 'divergencia_dados':
+        return (
+          <Badge variant="destructive" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            Com Divergências
+          </Badge>
+        );
+      case 'ativo':
+        return (
+          <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Ativo
+          </Badge>
+        );
+      default:
+        return <Badge variant="outline">{contract.status}</Badge>;
+    }
+  };
+
   const handleEditValidity = (contract: ContractData) => {
     setEditingContract(contract);
+  };
+
+  const handleEditDivergences = (contract: ContractData) => {
+    setEditingDivergences(contract);
   };
 
   const handleUpdateValidity = (updatedContract: ContractData) => {
     onUpdateContract(updatedContract);
     setEditingContract(null);
+  };
+
+  const handleUpdateDivergences = (updatedContract: ContractData) => {
+    onUpdateContract(updatedContract);
+    setEditingDivergences(null);
   };
 
   const handlePageChange = (page: number) => {
@@ -97,7 +136,7 @@ export function ContractTrackingTable({
 
   // Consolidar todos os itens do grupo atual
   const allItems = currentGroup ? currentGroup.contracts.flatMap(contract => 
-    contract.items.map(item => ({ ...item, contractId: contract.id }))
+    contract.items.map(item => ({ ...item, contractId: contract.id, contract }))
   ) : [];
 
   return (
@@ -140,6 +179,7 @@ export function ContractTrackingTable({
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="ativo">Ativos</SelectItem>
+                  <SelectItem value="divergencia_dados">Com Divergências</SelectItem>
                   <SelectItem value="encerrado">Encerrados</SelectItem>
                   <SelectItem value="vencido">Vencidos</SelectItem>
                   <SelectItem value="liquidado">Liquidados</SelectItem>
@@ -161,12 +201,37 @@ export function ContractTrackingTable({
               {/* Cabeçalho do Contrato/Processo */}
               <div className="border rounded-lg p-4 bg-gray-50">
                 <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-lg">Processo: {currentGroup.numeroContrato}</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-semibold text-lg">Processo: {currentGroup.numeroContrato}</h3>
+                      {currentGroup.contracts.map(contract => getStatusBadge(contract))}
+                    </div>
                     <p className="text-gray-600">Fornecedor: {currentGroup.fornecedor}</p>
                     <p className="text-sm text-gray-500">Total de itens: {currentGroup.totalItems}</p>
+                    
+                    {currentGroup.hasDivergences && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-2">
+                        <div className="flex items-center gap-2 text-yellow-800">
+                          <AlertTriangle className="h-4 w-4" />
+                          <span className="text-sm font-medium">
+                            Este contrato possui divergências que precisam ser resolvidas
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2">
+                    {currentGroup.hasDivergences && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditDivergences(currentGroup.contracts[0])}
+                        className="text-yellow-600 border-yellow-300 hover:bg-yellow-50"
+                      >
+                        <AlertTriangle className="h-4 w-4 mr-2" />
+                        Resolver Divergências
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -289,6 +354,14 @@ export function ContractTrackingTable({
           contract={editingContract}
           onUpdate={handleUpdateValidity}
           onClose={() => setEditingContract(null)}
+        />
+      )}
+
+      {editingDivergences && (
+        <DivergenceEditModal
+          contract={editingDivergences}
+          onUpdate={handleUpdateDivergences}
+          onClose={() => setEditingDivergences(null)}
         />
       )}
     </>

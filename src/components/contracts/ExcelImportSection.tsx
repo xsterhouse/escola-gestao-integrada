@@ -2,8 +2,8 @@ import React, { useCallback, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, FileSpreadsheet } from "lucide-react";
-import { ContractData, ContractImportData } from "@/lib/types";
+import { Upload, FileSpreadsheet, AlertTriangle } from "lucide-react";
+import { ContractData, ContractImportData, ContractDivergence, PlanningItem } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { getATAByNumber, ATAForContracts } from "@/utils/ataUtils";
 import {
@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DivergenceResolutionModal } from "./DivergenceResolutionModal";
 
 interface ExcelImportSectionProps {
   onImport: (contractData: ContractData) => void;
@@ -24,12 +25,21 @@ interface ImportedContract {
   importedAt: string;
 }
 
+interface ValidationResult {
+  isValid: boolean;
+  hasDivergences: boolean;
+  divergences: ContractDivergence[];
+  contractData: ContractData;
+}
+
 export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [ataId, setAtaId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [showDivergenceModal, setShowDivergenceModal] = useState(false);
 
   const getImportedContracts = (): ImportedContract[] => {
     try {
@@ -56,33 +66,99 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
     }
   };
 
-  const validateATAItems = (ata: ATAForContracts, contractItems: any[]): boolean => {
-    // Check if all contract items exist in ATA and quantities don't exceed planning
-    for (const contractItem of contractItems) {
-      const ataItem = ata.items.find(item => 
-        item.descricaoProduto.toLowerCase().includes(contractItem.produto.toLowerCase()) ||
-        contractItem.produto.toLowerCase().includes(item.descricaoProduto.toLowerCase())
-      );
+  const compareItems = (contractItems: any[], ataItems: PlanningItem[]): ContractDivergence[] => {
+    const divergences: ContractDivergence[] = [];
+
+    contractItems.forEach((contractItem, contractIndex) => {
+      // Find corresponding ATA item by description similarity
+      const ataItem = ataItems.find(item => {
+        const contractDesc = contractItem.produto.toLowerCase().trim();
+        const ataDesc = item.description.toLowerCase().trim();
+        
+        // Check for partial match (at least 70% similarity in words)
+        const contractWords = contractDesc.split(' ');
+        const ataWords = ataDesc.split(' ');
+        const commonWords = contractWords.filter(word => 
+          ataWords.some(ataWord => ataWord.includes(word) || word.includes(ataWord))
+        );
+        
+        return commonWords.length >= Math.min(contractWords.length, ataWords.length) * 0.7;
+      });
 
       if (!ataItem) {
-        toast({
-          title: "Erro na Validação",
-          description: `Produto "${contractItem.produto}" não encontrado no planejamento da ATA ${ata.numeroATA}`,
-          variant: "destructive",
+        // Item not found in ATA - major divergence
+        divergences.push({
+          id: `div-${contractIndex}-notfound`,
+          contractItemId: `contract-item-${contractIndex}`,
+          ataItemId: '',
+          field: 'descricao',
+          valorContrato: contractItem.produto,
+          valorATA: 'Não encontrado na ATA',
+          resolved: false
         });
-        return false;
+        return;
       }
 
-      if (contractItem.quantidadeContratada > ataItem.quantidade) {
-        toast({
-          title: "Erro na Validação", 
-          description: `Quantidade contratada para "${contractItem.produto}" (${contractItem.quantidadeContratada}) excede o planejado na ATA (${ataItem.quantidade})`,
-          variant: "destructive",
+      // Compare description
+      if (contractItem.produto.toLowerCase() !== ataItem.description.toLowerCase()) {
+        divergences.push({
+          id: `div-${contractIndex}-desc`,
+          contractItemId: `contract-item-${contractIndex}`,
+          ataItemId: ataItem.id,
+          field: 'descricao',
+          valorContrato: contractItem.produto,
+          valorATA: ataItem.description,
+          resolved: false
         });
-        return false;
       }
-    }
-    return true;
+
+      // Compare unit
+      if (contractItem.unidade && ataItem.unit && 
+          contractItem.unidade.toLowerCase() !== ataItem.unit.toLowerCase()) {
+        divergences.push({
+          id: `div-${contractIndex}-unit`,
+          contractItemId: `contract-item-${contractIndex}`,
+          ataItemId: ataItem.id,
+          field: 'unidade',
+          valorContrato: contractItem.unidade,
+          valorATA: ataItem.unit,
+          resolved: false
+        });
+      }
+
+      // Compare quantity (contract can't exceed ATA)
+      if (contractItem.quantidadeContratada > ataItem.quantity) {
+        divergences.push({
+          id: `div-${contractIndex}-qty`,
+          contractItemId: `contract-item-${contractIndex}`,
+          ataItemId: ataItem.id,
+          field: 'quantidade',
+          valorContrato: contractItem.quantidadeContratada,
+          valorATA: ataItem.quantity,
+          resolved: false
+        });
+      }
+
+      // Compare unit price (tolerance of 5%)
+      if (ataItem.unitPrice && contractItem.precoUnitario) {
+        const tolerance = ataItem.unitPrice * 0.05;
+        const priceDiff = Math.abs(contractItem.precoUnitario - ataItem.unitPrice);
+        
+        if (priceDiff > tolerance) {
+          divergences.push({
+            id: `div-${contractIndex}-price`,
+            contractItemId: `contract-item-${contractIndex}`,
+            ataItemId: ataItem.id,
+            field: 'valorUnitario',
+            valorContrato: contractItem.precoUnitario,
+            valorATA: ataItem.unitPrice,
+            resolved: false
+          });
+        }
+      }
+    });
+
+    return divergences;
   };
 
   const validateAndImport = async () => {
@@ -107,7 +183,7 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
     setIsValidating(true);
 
     try {
-      // Check if ATA exists and is approved
+      // Get ATA data including planning items
       const ata = getATAByNumber(ataId);
       if (!ata) {
         toast({
@@ -127,7 +203,7 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
         return;
       }
 
-      // Check if ATA was already imported
+      // Check if already imported
       const importedContracts = getImportedContracts();
       const alreadyImported = importedContracts.find(contract => contract.ataId === ataId);
       if (alreadyImported) {
@@ -139,24 +215,37 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
         return;
       }
 
-      // Mock contract data for validation
+      // Get ATA planning items
+      const ataPlanning = JSON.parse(localStorage.getItem(`plans_${ata.schoolId}`) || "[]");
+      const planningItems = ataPlanning.find(p => p.ataNumber === ataId)?.items || [];
+
+      if (planningItems.length === 0) {
+        toast({
+          title: "Erro na Validação",
+          description: `Não foram encontrados itens no planejamento da ATA ${ataId}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Mock contract data (in real implementation, parse Excel file)
       const mockContractItems = [
         {
           produto: "Arroz Tipo 1 - 5kg",
-          quantidadeContratada: 800, // Less than ATA planning
+          quantidadeContratada: 800,
           precoUnitario: 25.50,
+          unidade: "Un"
         },
         {
           produto: "Feijão Carioca - 1kg", 
-          quantidadeContratada: 400, // Less than ATA planning
+          quantidadeContratada: 400,
           precoUnitario: 8.90,
+          unidade: "Un"
         }
       ];
 
-      // Validate contract items against ATA
-      if (!validateATAItems(ata, mockContractItems)) {
-        return;
-      }
+      // Compare items and find divergences
+      const divergences = compareItems(mockContractItems, planningItems);
 
       // Create contract data
       const contractData: ContractData = {
@@ -177,7 +266,7 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
         },
         dataInicio: new Date(ata.dataInicioVigencia),
         dataFim: new Date(ata.dataFimVigencia),
-        status: 'ativo',
+        status: divergences.length > 0 ? 'divergencia_dados' : 'ativo',
         items: mockContractItems.map((item, index) => ({
           id: `item-${index + 1}`,
           contractId: `contract-${Date.now()}`,
@@ -193,24 +282,38 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
           createdAt: new Date(),
           updatedAt: new Date(),
         })),
+        divergencias: divergences,
+        ataValidated: divergences.length === 0,
+        lastValidationAt: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      // Save the imported contract reference
-      saveImportedContract(ataId, contractData.id);
+      const validationResult: ValidationResult = {
+        isValid: divergences.length === 0,
+        hasDivergences: divergences.length > 0,
+        divergences,
+        contractData
+      };
 
-      onImport(contractData);
-      
-      toast({
-        title: "Sucesso",
-        description: `Contrato importado com sucesso para ATA ${ataId}!`,
-      });
+      setValidationResult(validationResult);
 
-      // Reset form
-      setIsModalOpen(false);
-      setAtaId("");
-      setSelectedFile(null);
+      if (divergences.length > 0) {
+        setShowDivergenceModal(true);
+      } else {
+        // No divergences, import directly
+        saveImportedContract(ataId, contractData.id);
+        onImport(contractData);
+        
+        toast({
+          title: "Sucesso",
+          description: `Contrato importado com sucesso para ATA ${ataId}!`,
+        });
+
+        setIsModalOpen(false);
+        setAtaId("");
+        setSelectedFile(null);
+      }
 
     } catch (error) {
       console.error("Error during validation:", error);
@@ -222,6 +325,25 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
     } finally {
       setIsValidating(false);
     }
+  };
+
+  const handleImportWithDivergences = () => {
+    if (!validationResult) return;
+
+    saveImportedContract(ataId, validationResult.contractData.id);
+    onImport(validationResult.contractData);
+    
+    toast({
+      title: "Contrato Importado com Divergências",
+      description: `Contrato importado com ${validationResult.divergences.length} divergência(s). Resolva as divergências na aba de acompanhamento.`,
+      variant: "destructive",
+    });
+
+    setIsModalOpen(false);
+    setShowDivergenceModal(false);
+    setAtaId("");
+    setSelectedFile(null);
+    setValidationResult(null);
   };
 
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -356,6 +478,19 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {showDivergenceModal && validationResult && (
+        <DivergenceResolutionModal
+          divergences={validationResult.divergences}
+          contractData={validationResult.contractData}
+          ataId={ataId}
+          onImportWithDivergences={handleImportWithDivergences}
+          onCancel={() => {
+            setShowDivergenceModal(false);
+            setValidationResult(null);
+          }}
+        />
+      )}
     </>
   );
 }
