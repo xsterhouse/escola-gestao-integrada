@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -43,7 +42,7 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
     status: "active" as "active" | "blocked"
   });
 
-  const { data: purchasingCentersRaw } = useLocalStorageSync<PurchasingCenter>('purchasing-centers', []);
+  const { data: purchasingCentersRaw, loadData: reloadPurchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasing-centers', []);
 
   // Normalize purchasing centers data structure
   const purchasingCenters = purchasingCentersRaw.map((centerItem: any) => {
@@ -63,34 +62,51 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
     };
   });
 
-  console.log("🏢 SystemUserForm - Dados carregados:", {
+  // Reload data when modal opens to ensure fresh data
+  useEffect(() => {
+    if (isOpen) {
+      console.log("🔄 Modal aberto - recarregando dados das centrais de compras");
+      reloadPurchasingCenters();
+    }
+  }, [isOpen, reloadPurchasingCenters]);
+
+  console.log("🏢 SystemUserForm - Dados detalhados:", {
     schools: schools.length,
-    purchasingCenters: purchasingCenters.length,
     purchasingCentersRaw: purchasingCentersRaw.length,
-    selectedSchool: formData.schoolId
+    purchasingCenters: purchasingCenters.length,
+    selectedSchoolId: formData.schoolId,
+    allCenters: purchasingCenters.map(c => ({
+      id: c.id,
+      name: c.name,
+      schoolIds: c.schoolIds,
+      hasSelectedSchool: c.schoolIds?.includes(formData.schoolId)
+    }))
   });
 
   // Filter purchasing centers based on selected school and user type
   const availablePurchasingCenters = userType === "purchasing_center" 
     ? purchasingCenters 
-    : purchasingCenters.filter(center => {
-        const isLinked = formData.schoolId && formData.schoolId !== "none" 
-          ? center.schoolIds?.includes(formData.schoolId) 
-          : true;
-        
-        console.log(`🔍 Verificando central ${center.name}:`, {
-          centerId: center.id,
-          centerSchoolIds: center.schoolIds,
-          selectedSchoolId: formData.schoolId,
-          isLinked
-        });
-        
-        return isLinked;
-      });
+    : formData.schoolId && formData.schoolId !== "none" && formData.schoolId !== ""
+      ? purchasingCenters.filter(center => {
+          const hasSchoolInList = center.schoolIds?.includes(formData.schoolId);
+          console.log(`🔍 Verificando central "${center.name}":`, {
+            centerId: center.id,
+            centerSchoolIds: center.schoolIds,
+            selectedSchoolId: formData.schoolId,
+            hasSchoolInList,
+            schoolIdsType: typeof center.schoolIds,
+            schoolIdsLength: center.schoolIds?.length
+          });
+          return hasSchoolInList;
+        })
+      : [];
 
-  console.log("🎯 Centrais disponíveis para a escola:", {
+  console.log("🎯 Resultado final das centrais disponíveis:", {
+    userType,
     selectedSchoolId: formData.schoolId,
-    availableCenters: availablePurchasingCenters.map(c => ({ id: c.id, name: c.name, schoolIds: c.schoolIds }))
+    totalCenters: purchasingCenters.length,
+    availableCenters: availablePurchasingCenters.length,
+    centers: availablePurchasingCenters.map(c => ({ id: c.id, name: c.name }))
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,13 +127,21 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
 
   const handleSchoolChange = (schoolId: string) => {
     console.log("🏫 Escola selecionada:", schoolId);
+    console.log("🏫 Dados da escola selecionada:", schools.find(s => s.id === schoolId));
+    
+    // Force reload purchasing centers data when school changes
+    reloadPurchasingCenters();
     
     // Find linked purchasing centers for this school
     const linkedCenters = purchasingCenters.filter(center => 
       center.schoolIds?.includes(schoolId)
     );
     
-    console.log("🔗 Centrais vinculadas encontradas:", linkedCenters.map(c => ({ id: c.id, name: c.name })));
+    console.log("🔗 Centrais vinculadas encontradas para escola:", {
+      schoolId,
+      linkedCenters: linkedCenters.map(c => ({ id: c.id, name: c.name, schoolIds: c.schoolIds })),
+      allCenters: purchasingCenters.map(c => ({ id: c.id, name: c.name, schoolIds: c.schoolIds }))
+    });
     
     setFormData(prev => ({ 
       ...prev, 
@@ -318,7 +342,7 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
             </div>
           )}
 
-          {userType === "school" && formData.schoolId && formData.schoolId !== "none" && (
+          {userType === "school" && formData.schoolId && formData.schoolId !== "none" && formData.schoolId !== "" && (
             <div className="space-y-2">
               <Label>Centrais de Compras (Opcional)</Label>
               {availablePurchasingCenters.length > 0 ? (
@@ -348,7 +372,11 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
                 <div className="text-sm text-gray-500 p-3 border rounded-md bg-gray-50">
                   Esta escola não está vinculada a nenhuma central de compras.
                   <br />
-                  <span className="text-xs">Configure a vinculação na aba "Central de Compras" primeiro.</span>
+                  <span className="text-xs">
+                    Vincule a escola a uma central na aba "Central de Compras" primeiro.
+                    <br />
+                    Dados atuais: {purchasingCenters.length} centrais encontradas
+                  </span>
                 </div>
               )}
             </div>
