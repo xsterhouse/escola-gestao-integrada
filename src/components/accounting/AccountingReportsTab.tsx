@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Filter, Download, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from "recharts";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
+import { School } from "@/lib/types";
 
 export function AccountingReportsTab() {
   const [filters, setFilters] = useState({
@@ -19,16 +20,19 @@ export function AccountingReportsTab() {
     resourceType: "all"
   });
 
-  const [sigreFilters, setSigreFilters] = useState({
+  const [quarterFilters, setQuarterFilters] = useState({
     year: new Date().getFullYear().toString(),
     quarter: "1",
     schoolId: "all"
   });
   
   const [reportData, setReportData] = useState<any[]>([]);
-  const [sigreData, setSigreData] = useState<any>(null);
+  const [quarterData, setQuarterData] = useState<any>(null);
   const [reportType, setReportType] = useState("balancete");
   const { toast } = useToast();
+
+  // Load schools from localStorage
+  const { data: schools } = useLocalStorageSync<School>('schools', []);
 
   const accountTypes = [
     { value: "all", label: "Todos os tipos" },
@@ -120,11 +124,11 @@ export function AccountingReportsTab() {
     });
   };
 
-  const generateSigreReport = () => {
-    // Gerar dados do relatório SIGRE baseado nos filtros
+  const generateQuarterReport = () => {
+    // Gerar dados do relatório quadrimestral baseado nos filtros
     const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
-    const year = parseInt(sigreFilters.year);
-    const quarter = parseInt(sigreFilters.quarter);
+    const year = parseInt(quarterFilters.year);
+    const quarter = parseInt(quarterFilters.quarter);
     
     // Definir período do quadrimestre
     const quarterPeriods = {
@@ -173,7 +177,7 @@ export function AccountingReportsTab() {
       remaining: 52000
     };
 
-    setSigreData({
+    setQuarterData({
       period: `${quarter}º Quadrimestre de ${year}`,
       categoryExpenses,
       foodProducts,
@@ -183,7 +187,7 @@ export function AccountingReportsTab() {
     });
 
     toast({
-      title: "Relatório SIGRE gerado",
+      title: "Relatório Quadrimestre gerado",
       description: `Relatório quadrimestral gerado para ${quarter}º quadrimestre de ${year}.`,
     });
   };
@@ -206,18 +210,18 @@ export function AccountingReportsTab() {
     document.body.removeChild(link);
   };
 
-  const exportSigrePDF = () => {
+  const exportQuarterPDF = () => {
     toast({
       title: "Exportando PDF",
-      description: "Relatório SIGRE será exportado em PDF...",
+      description: "Relatório Quadrimestre será exportado em PDF...",
     });
     // Implementação da exportação PDF seria feita aqui
   };
 
-  const exportSigreXLSX = () => {
+  const exportQuarterXLSX = () => {
     toast({
       title: "Exportando XLSX",
-      description: "Relatório SIGRE será exportado em Excel...",
+      description: "Relatório Quadrimestre será exportado em Excel...",
     });
     // Implementação da exportação XLSX seria feita aqui
   };
@@ -227,7 +231,7 @@ export function AccountingReportsTab() {
       <Tabs defaultValue="traditional" className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="traditional">Relatórios Tradicionais</TabsTrigger>
-          <TabsTrigger value="sigre">Relatório SIGRE</TabsTrigger>
+          <TabsTrigger value="quarter">Relatório Quadrimestre</TabsTrigger>
         </TabsList>
 
         <TabsContent value="traditional" className="space-y-6">
@@ -396,20 +400,20 @@ export function AccountingReportsTab() {
           )}
         </TabsContent>
 
-        <TabsContent value="sigre" className="space-y-6">
-          {/* Filtros SIGRE */}
+        <TabsContent value="quarter" className="space-y-6">
+          {/* Quarter Filters */}
           <Card className="shadow-lg border-0">
             <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
               <CardTitle className="text-xl text-gray-800 flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Relatório Quadrimestral SIGRE
+                Relatório Quadrimestral
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-gray-700">Ano Letivo</Label>
-                  <Select value={sigreFilters.year} onValueChange={(value) => setSigreFilters(prev => ({ ...prev, year: value }))}>
+                  <Select value={quarterFilters.year} onValueChange={(value) => setQuarterFilters(prev => ({ ...prev, year: value }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -425,7 +429,7 @@ export function AccountingReportsTab() {
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-gray-700">Quadrimestre</Label>
-                  <Select value={sigreFilters.quarter} onValueChange={(value) => setSigreFilters(prev => ({ ...prev, quarter: value }))}>
+                  <Select value={quarterFilters.quarter} onValueChange={(value) => setQuarterFilters(prev => ({ ...prev, quarter: value }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -441,34 +445,37 @@ export function AccountingReportsTab() {
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-gray-700">Escola</Label>
-                  <Select value={sigreFilters.schoolId} onValueChange={(value) => setSigreFilters(prev => ({ ...prev, schoolId: value }))}>
+                  <Select value={quarterFilters.schoolId} onValueChange={(value) => setQuarterFilters(prev => ({ ...prev, schoolId: value }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as Escolas</SelectItem>
-                      <SelectItem value="school1">Escola Municipal A</SelectItem>
-                      <SelectItem value="school2">Escola Municipal B</SelectItem>
+                      {schools.map(school => (
+                        <SelectItem key={school.id} value={school.id}>
+                          {school.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="flex items-end">
                   <Button
-                    onClick={generateSigreReport}
+                    onClick={generateQuarterReport}
                     className="w-full h-10 px-6 text-white font-semibold"
                     style={{ backgroundColor: '#16a34a' }}
                   >
                     <BarChart3 className="mr-2 h-4 w-4" />
-                    Gerar SIGRE
+                    Gerar Relatório Quadrimestre
                   </Button>
                 </div>
               </div>
 
-              {sigreData && (
+              {quarterData && (
                 <div className="flex gap-3 mt-4">
                   <Button
-                    onClick={exportSigrePDF}
+                    onClick={exportQuarterPDF}
                     variant="outline"
                     className="h-10 px-6"
                   >
@@ -476,7 +483,7 @@ export function AccountingReportsTab() {
                     Exportar PDF
                   </Button>
                   <Button
-                    onClick={exportSigreXLSX}
+                    onClick={exportQuarterXLSX}
                     variant="outline"
                     className="h-10 px-6"
                   >
@@ -488,8 +495,8 @@ export function AccountingReportsTab() {
             </CardContent>
           </Card>
 
-          {/* Resultados SIGRE */}
-          {sigreData && (
+          {/* Resultados Quadrimestre */}
+          {quarterData && (
             <div className="space-y-6">
               {/* Cards de Resumo */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -497,7 +504,7 @@ export function AccountingReportsTab() {
                   <CardContent className="p-4">
                     <div className="text-sm font-medium text-gray-600">Total Gasto</div>
                     <div className="text-2xl font-bold text-blue-600">
-                      {sigreData.budgetExecution.totalSpent.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      {quarterData.budgetExecution.totalSpent.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </div>
                   </CardContent>
                 </Card>
@@ -505,7 +512,7 @@ export function AccountingReportsTab() {
                   <CardContent className="p-4">
                     <div className="text-sm font-medium text-gray-600">% Execução</div>
                     <div className="text-2xl font-bold text-green-600">
-                      {sigreData.budgetExecution.percentage}%
+                      {quarterData.budgetExecution.percentage}%
                     </div>
                   </CardContent>
                 </Card>
@@ -513,7 +520,7 @@ export function AccountingReportsTab() {
                   <CardContent className="p-4">
                     <div className="text-sm font-medium text-gray-600">Orçamento Total</div>
                     <div className="text-2xl font-bold text-purple-600">
-                      {sigreData.budgetExecution.totalBudget.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      {quarterData.budgetExecution.totalBudget.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </div>
                   </CardContent>
                 </Card>
@@ -521,7 +528,7 @@ export function AccountingReportsTab() {
                   <CardContent className="p-4">
                     <div className="text-sm font-medium text-gray-600">Saldo Disponível</div>
                     <div className="text-2xl font-bold text-orange-600">
-                      {sigreData.budgetExecution.remaining.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      {quarterData.budgetExecution.remaining.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </div>
                   </CardContent>
                 </Card>
@@ -538,7 +545,7 @@ export function AccountingReportsTab() {
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>
                         <Pie
-                          data={sigreData.categoryExpenses}
+                          data={quarterData.categoryExpenses}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
@@ -547,7 +554,7 @@ export function AccountingReportsTab() {
                           fill="#8884d8"
                           dataKey="value"
                         >
-                          {sigreData.categoryExpenses.map((entry: any, index: number) => (
+                          {quarterData.categoryExpenses.map((entry: any, index: number) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
@@ -564,7 +571,7 @@ export function AccountingReportsTab() {
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={sigreData.quarterComparison}>
+                      <BarChart data={quarterData.quarterComparison}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="quarter" />
                         <YAxis />
@@ -596,7 +603,7 @@ export function AccountingReportsTab() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sigreData.foodProducts.map((product: any, index: number) => (
+                        {quarterData.foodProducts.map((product: any, index: number) => (
                           <TableRow key={index}>
                             <TableCell className="font-medium">{product.product}</TableCell>
                             <TableCell>{product.quantity} {product.unit}</TableCell>
@@ -624,7 +631,7 @@ export function AccountingReportsTab() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sigreData.categoryExpenses.map((category: any, index: number) => (
+                        {quarterData.categoryExpenses.map((category: any, index: number) => (
                           <TableRow key={index}>
                             <TableCell className="font-medium">{category.category}</TableCell>
                             <TableCell>{category.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
