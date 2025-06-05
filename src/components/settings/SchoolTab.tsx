@@ -46,9 +46,12 @@ export function SchoolTab() {
     setIsEditMode(false);
   };
 
-  const handleSaveSchool = (schoolData: Omit<School, "id" | "createdAt" | "updatedAt" | "status">) => {
+  const handleSaveSchool = async (schoolData: Omit<School, "id" | "createdAt" | "updatedAt" | "status">): Promise<string> => {
+    let schoolId: string;
+    
     if (isEditMode && currentSchool) {
       // Update existing school
+      schoolId = currentSchool.id;
       const updatedSchools = schools.map(s => 
         s.id === currentSchool.id 
           ? { 
@@ -59,10 +62,13 @@ export function SchoolTab() {
           : s
       );
       setSchools(updatedSchools);
+      
+      console.log("✅ Escola atualizada:", { schoolId, name: schoolData.name });
     } else {
       // Create new school
+      schoolId = Date.now().toString();
       const newSchool: School = {
-        id: Date.now().toString(),
+        id: schoolId,
         ...schoolData,
         status: "active",
         createdAt: new Date(),
@@ -72,7 +78,7 @@ export function SchoolTab() {
       const updatedSchools = [...schools, newSchool];
       setSchools(updatedSchools);
       
-      console.log(`✅ Nova escola criada: ${schoolData.name} - Total: ${updatedSchools.length}`);
+      console.log(`✅ Nova escola criada: ${schoolData.name} - ID: ${schoolId} - Total: ${updatedSchools.length}`);
     }
     
     handleCloseModal();
@@ -83,6 +89,8 @@ export function SchoolTab() {
         ? "A escola foi atualizada com sucesso." 
         : "A escola foi cadastrada com sucesso.",
     });
+
+    return schoolId;
   };
 
   const getPurchasingCenterNames = (centerIds: string[] = []) => {

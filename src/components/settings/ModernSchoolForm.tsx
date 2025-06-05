@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Dialog, 
@@ -20,7 +21,7 @@ import { syncSchoolPurchasingRelationship } from "@/utils/schoolPurchasingSync";
 type ModernSchoolFormProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (school: Omit<School, "id" | "createdAt" | "updatedAt" | "status">) => void;
+  onSave: (school: Omit<School, "id" | "createdAt" | "updatedAt" | "status">) => Promise<string>; // Return school ID
   initialData?: School;
 };
 
@@ -125,25 +126,37 @@ export function ModernSchoolForm({
       // Generate code from CNPJ (first 8 digits)
       const code = formData.cnpj.replace(/\D/g, '').substring(0, 8);
       
-      // Salvar a escola
-      onSave({
-        ...formData,
-        code, // Add the missing code property
+      console.log("💾 Salvando escola:", {
+        isEdit: !!initialData,
+        schoolId: initialData?.id,
+        oldPurchasingCenterIds: originalPurchasingCenterIds,
+        newPurchasingCenterIds: formData.purchasingCenterIds
       });
 
-      // Sincronizar relacionamento bidirecional apenas se for uma edição
-      if (initialData?.id) {
-        console.log("🔄 Sincronizando relacionamento para escola editada:", {
-          schoolId: initialData.id,
+      // Salvar a escola e obter o ID
+      const schoolId = await onSave({
+        ...formData,
+        code,
+      });
+
+      console.log("✅ Escola salva com ID:", schoolId);
+
+      // Sincronizar relacionamento bidirecional sempre (criação ou edição)
+      if (formData.purchasingCenterIds.length > 0) {
+        console.log("🔄 Executando sincronização escola-centrais:", {
+          schoolId,
           oldIds: originalPurchasingCenterIds,
-          newIds: formData.purchasingCenterIds
+          newIds: formData.purchasingCenterIds,
+          isEdit: !!initialData
         });
         
         syncSchoolPurchasingRelationship(
-          initialData.id,
+          schoolId,
           formData.purchasingCenterIds,
           originalPurchasingCenterIds
         );
+        
+        console.log("✅ Sincronização concluída");
       }
       
       toast({
@@ -155,6 +168,7 @@ export function ModernSchoolForm({
       
       onClose();
     } catch (error) {
+      console.error("❌ Erro ao salvar escola:", error);
       toast({
         title: "Erro ao salvar",
         description: "Ocorreu um erro ao salvar a escola.",

@@ -28,6 +28,64 @@ interface PurchasingCenter {
   };
 }
 
+// Função para sincronizar todas as vinculações escola-central
+const syncAllSchoolPurchasingRelationships = () => {
+  try {
+    console.log("🔄 Executando sincronização automática de todas as vinculações...");
+    
+    const storedSchools = localStorage.getItem("schools");
+    const storedCenters = localStorage.getItem("purchasing-centers");
+    
+    if (!storedSchools || !storedCenters) {
+      console.log("⚠️ Dados não encontrados para sincronização");
+      return;
+    }
+    
+    const schools = JSON.parse(storedSchools);
+    let centers = JSON.parse(storedCenters);
+    
+    const isWrappedFormat = Array.isArray(centers) && centers.length > 0 && centers[0].data;
+    let hasChanges = false;
+    
+    // Para cada escola que tem centrais vinculadas
+    schools.forEach((school: any) => {
+      if (school.purchasingCenterIds && school.purchasingCenterIds.length > 0) {
+        school.purchasingCenterIds.forEach((centerId: string) => {
+          const centerIndex = centers.findIndex((c: any) => {
+            const centerData = isWrappedFormat ? c.data : c;
+            return centerData.id === centerId;
+          });
+          
+          if (centerIndex !== -1) {
+            const centerData = isWrappedFormat ? centers[centerIndex].data : centers[centerIndex];
+            
+            if (!centerData.schoolIds) {
+              centerData.schoolIds = [];
+            }
+            
+            if (!centerData.schoolIds.includes(school.id)) {
+              centerData.schoolIds.push(school.id);
+              centerData.updatedAt = new Date().toISOString();
+              hasChanges = true;
+              console.log(`➕ Adicionada escola ${school.name} à central ${centerData.name}`);
+            }
+          }
+        });
+      }
+    });
+    
+    if (hasChanges) {
+      localStorage.setItem("purchasing-centers", JSON.stringify(centers));
+      console.log("✅ Sincronização automática concluída");
+    } else {
+      console.log("ℹ️ Nenhuma sincronização necessária");
+    }
+    
+  } catch (error) {
+    console.error("❌ Erro na sincronização automática:", error);
+  }
+};
+
 export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [userType, setUserType] = useState<"school" | "purchasing_center">("school");
@@ -46,7 +104,6 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
 
   // Normalize purchasing centers data structure
   const purchasingCenters = purchasingCentersRaw.map((centerItem: any) => {
-    // Check if it's wrapped format with data property
     if (centerItem.data) {
       return {
         id: centerItem.data.id,
@@ -54,7 +111,6 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
         schoolIds: centerItem.data.schoolIds || []
       };
     }
-    // Direct format
     return {
       id: centerItem.id,
       name: centerItem.name,
@@ -62,11 +118,15 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
     };
   });
 
-  // Reload data when modal opens to ensure fresh data
+  // Execute auto-sync when modal opens
   useEffect(() => {
     if (isOpen) {
-      console.log("🔄 Modal aberto - recarregando dados das centrais de compras");
-      reloadPurchasingCenters();
+      console.log("🔄 Modal aberto - executando sincronização automática");
+      syncAllSchoolPurchasingRelationships();
+      // Recarregar dados após sincronização
+      setTimeout(() => {
+        reloadPurchasingCenters();
+      }, 100);
     }
   }, [isOpen, reloadPurchasingCenters]);
 
@@ -83,21 +143,27 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
     }))
   });
 
-  // Filter purchasing centers based on selected school and user type
+  // Filter purchasing centers with improved validation
   const availablePurchasingCenters = userType === "purchasing_center" 
     ? purchasingCenters 
     : formData.schoolId && formData.schoolId !== "none" && formData.schoolId !== ""
       ? purchasingCenters.filter(center => {
           const hasSchoolInList = center.schoolIds?.includes(formData.schoolId);
+          
+          // Verificação adicional: buscar também do lado da escola
+          const selectedSchool = schools.find(s => s.id === formData.schoolId);
+          const schoolHasCenter = selectedSchool?.purchasingCenterIds?.includes(center.id);
+          
           console.log(`🔍 Verificando central "${center.name}":`, {
             centerId: center.id,
             centerSchoolIds: center.schoolIds,
             selectedSchoolId: formData.schoolId,
             hasSchoolInList,
-            schoolIdsType: typeof center.schoolIds,
-            schoolIdsLength: center.schoolIds?.length
+            schoolHasCenter,
+            finalResult: hasSchoolInList || schoolHasCenter
           });
-          return hasSchoolInList;
+          
+          return hasSchoolInList || schoolHasCenter;
         })
       : [];
 
@@ -129,24 +195,18 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
     console.log("🏫 Escola selecionada:", schoolId);
     console.log("🏫 Dados da escola selecionada:", schools.find(s => s.id === schoolId));
     
+    // Execute sync before processing
+    syncAllSchoolPurchasingRelationships();
+    
     // Force reload purchasing centers data when school changes
-    reloadPurchasingCenters();
-    
-    // Find linked purchasing centers for this school
-    const linkedCenters = purchasingCenters.filter(center => 
-      center.schoolIds?.includes(schoolId)
-    );
-    
-    console.log("🔗 Centrais vinculadas encontradas para escola:", {
-      schoolId,
-      linkedCenters: linkedCenters.map(c => ({ id: c.id, name: c.name, schoolIds: c.schoolIds })),
-      allCenters: purchasingCenters.map(c => ({ id: c.id, name: c.name, schoolIds: c.schoolIds }))
-    });
+    setTimeout(() => {
+      reloadPurchasingCenters();
+    }, 100);
     
     setFormData(prev => ({ 
       ...prev, 
       schoolId,
-      purchasingCenterIds: [], // Reset purchasing centers when school changes
+      purchasingCenterIds: [],
       isLinkedToPurchasing: userType === "purchasing_center"
     }));
   };
@@ -369,14 +429,29 @@ export function SystemUserForm({ isOpen, onClose, onSave, schools }: SystemUserF
                   ))}
                 </div>
               ) : (
-                <div className="text-sm text-gray-500 p-3 border rounded-md bg-gray-50">
-                  Esta escola não está vinculada a nenhuma central de compras.
-                  <br />
-                  <span className="text-xs">
-                    Vincule a escola a uma central na aba "Central de Compras" primeiro.
+                <div className="space-y-2">
+                  <div className="text-sm text-amber-600 p-3 border border-amber-200 rounded-md bg-amber-50">
+                    ⚠️ Esta escola não está vinculada a nenhuma central de compras ou os dados estão inconsistentes.
                     <br />
-                    Dados atuais: {purchasingCenters.length} centrais encontradas
-                  </span>
+                    <span className="text-xs">
+                      Para vincular, vá na aba "Central de Compras" → editar a central → marcar esta escola.
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      console.log("🔄 Forçando sincronização manual...");
+                      syncAllSchoolPurchasingRelationships();
+                      setTimeout(() => {
+                        reloadPurchasingCenters();
+                      }, 200);
+                    }}
+                    className="w-full"
+                  >
+                    🔄 Tentar Sincronizar Dados
+                  </Button>
                 </div>
               )}
             </div>
