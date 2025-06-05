@@ -1,3 +1,4 @@
+
 export interface BankAccount {
   id: string;
   schoolId: string;
