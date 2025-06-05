@@ -575,10 +575,12 @@ export interface AccountingEntry {
   debitAccount: string;
   debitValue: number;
   debitDescription: string;
+  debitHistory: string; // Novo campo para histórico específico do débito
   creditAccount: string;
   creditValue: number;
   creditDescription: string;
-  history: string;
+  creditHistory: string; // Novo campo para histórico específico do crédito
+  history: string; // Mantido para compatibilidade com dados existentes
   totalValue: number;
   entryType: 'manual' | 'automatic' | 'closing';
   sourceModule?: 'financial' | 'inventory' | 'contracts' | 'invoices';

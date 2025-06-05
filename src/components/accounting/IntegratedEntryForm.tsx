@@ -13,6 +13,7 @@ import { Save, Zap, FileText, DollarSign, Building } from "lucide-react";
 import { AccountingEntry, Invoice, PaymentAccount, ReceivableAccount, BankTransaction } from "@/lib/types";
 import { accountingAutomationService } from "@/services/accountingAutomationService";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatAccountMask, validateAccountCode, isValidAccountFormat } from "@/utils/accountMask";
 
 export function IntegratedEntryForm() {
   const [activeTab, setActiveTab] = useState("manual");
@@ -21,10 +22,12 @@ export function IntegratedEntryForm() {
     debitAccount: "",
     debitValue: "",
     debitDescription: "",
+    debitHistory: "", // Novo campo para histórico do débito
     creditAccount: "",
     creditValue: "",
     creditDescription: "",
-    history: "",
+    creditHistory: "", // Novo campo para histórico do crédito
+    history: "", // Mantido para compatibilidade
     totalValue: "",
     entryType: "manual" as const
   });
@@ -79,10 +82,29 @@ export function IntegratedEntryForm() {
   };
 
   const handleSaveManualEntry = () => {
-    if (!formData.date || !formData.totalValue || !formData.history || !formData.debitAccount || !formData.creditAccount) {
+    if (!formData.date || !formData.totalValue || (!formData.debitHistory || !formData.creditHistory) || !formData.debitAccount || !formData.creditAccount) {
       toast({
         title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios.",
+        description: "Preencha todos os campos obrigatórios incluindo os históricos de débito e crédito.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validar formato das contas
+    if (!isValidAccountFormat(formData.debitAccount) || !validateAccountCode(formData.debitAccount)) {
+      toast({
+        title: "Conta de débito inválida",
+        description: "O código da conta de débito deve seguir o formato 0.0.00.00.0000 com valores válidos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isValidAccountFormat(formData.creditAccount) || !validateAccountCode(formData.creditAccount)) {
+      toast({
+        title: "Conta de crédito inválida", 
+        description: "O código da conta de crédito deve seguir o formato 0.0.00.00.0000 com valores válidos.",
         variant: "destructive",
       });
       return;
@@ -96,10 +118,12 @@ export function IntegratedEntryForm() {
       debitAccount: formData.debitAccount,
       debitValue: parseFloat(formData.debitValue.replace(/\D/g, '')) / 100 || 0,
       debitDescription: formData.debitDescription,
+      debitHistory: formData.debitHistory, // Novo campo
       creditAccount: formData.creditAccount,
       creditValue: parseFloat(formData.creditValue.replace(/\D/g, '')) / 100 || 0,
       creditDescription: formData.creditDescription,
-      history: formData.history,
+      creditHistory: formData.creditHistory, // Novo campo
+      history: `D: ${formData.debitHistory} | C: ${formData.creditHistory}`, // Combinação para compatibilidade
       totalValue: parseFloat(formData.totalValue.replace(/\D/g, '')) / 100,
       entryType: 'manual',
       auditTrail: [{
@@ -131,9 +155,11 @@ export function IntegratedEntryForm() {
       debitAccount: "",
       debitValue: "",
       debitDescription: "",
+      debitHistory: "",
       creditAccount: "",
       creditValue: "",
       creditDescription: "",
+      creditHistory: "",
       history: "",
       totalValue: "",
       entryType: "manual"
@@ -200,18 +226,6 @@ export function IntegratedEntryForm() {
   const handleCurrencyChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value.replace(/\D/g, "");
     setFormData(prev => ({ ...prev, [field]: inputValue }));
-  };
-
-  const formatAccountMask = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    let formatted = '';
-    for (let i = 0; i < numbers.length && i < 8; i++) {
-      if (i === 1 || i === 2 || i === 4 || i === 6) {
-        formatted += '.';
-      }
-      formatted += numbers[i];
-    }
-    return formatted;
   };
 
   const handleAccountChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -371,12 +385,15 @@ export function IntegratedEntryForm() {
                     <div>
                       <Label className="text-sm font-medium text-gray-700">Conta Contábil *</Label>
                       <Input
-                        placeholder="X.X.X.XX.XX"
+                        placeholder="0.0.00.00.0000"
                         value={formData.debitAccount}
                         onChange={handleAccountChange('debitAccount')}
                         className="h-10 mt-1 rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
-                        maxLength={11}
+                        maxLength={12}
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Formato: 0.0.00.00.0000 (1-9.1-9.01-99.01-99.0001-9999)
+                      </p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-gray-700">Valor Débito</Label>
@@ -396,6 +413,15 @@ export function IntegratedEntryForm() {
                         className="h-10 mt-1 rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
                       />
                     </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Histórico do Débito *</Label>
+                      <Textarea
+                        placeholder="Descreva o histórico específico para o lançamento a débito..."
+                        value={formData.debitHistory}
+                        onChange={(e) => setFormData(prev => ({ ...prev, debitHistory: e.target.value }))}
+                        className="min-h-[80px] resize-none rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -405,12 +431,15 @@ export function IntegratedEntryForm() {
                     <div>
                       <Label className="text-sm font-medium text-gray-700">Conta Contábil *</Label>
                       <Input
-                        placeholder="X.X.X.XX.XX"
+                        placeholder="0.0.00.00.0000"
                         value={formData.creditAccount}
                         onChange={handleAccountChange('creditAccount')}
                         className="h-10 mt-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
-                        maxLength={11}
+                        maxLength={12}
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Formato: 0.0.00.00.0000 (1-9.1-9.01-99.01-99.0001-9999)
+                      </p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-gray-700">Valor Crédito</Label>
@@ -428,6 +457,15 @@ export function IntegratedEntryForm() {
                         value={formData.creditDescription}
                         onChange={(e) => setFormData(prev => ({ ...prev, creditDescription: e.target.value }))}
                         className="h-10 mt-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Histórico do Crédito *</Label>
+                      <Textarea
+                        placeholder="Descreva o histórico específico para o lançamento a crédito..."
+                        value={formData.creditHistory}
+                        onChange={(e) => setFormData(prev => ({ ...prev, creditHistory: e.target.value }))}
+                        className="min-h-[80px] resize-none rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
                       />
                     </div>
                   </div>

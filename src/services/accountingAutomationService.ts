@@ -11,7 +11,8 @@ class AccountingAutomationService {
     debitAccount: string,
     creditAccount: string,
     value: number,
-    history: string,
+    debitHistory: string,
+    creditHistory: string,
     sourceModule: 'financial' | 'inventory' | 'contracts' | 'invoices',
     sourceDocumentId: string,
     schoolId: string,
@@ -27,10 +28,12 @@ class AccountingAutomationService {
       debitAccount,
       debitValue: value,
       debitDescription: debitAcc?.description || 'Conta não encontrada',
+      debitHistory, // Histórico específico do débito
       creditAccount,
       creditValue: value,
       creditDescription: creditAcc?.description || 'Conta não encontrada',
-      history,
+      creditHistory, // Histórico específico do crédito
+      history: `D: ${debitHistory} | C: ${creditHistory}`, // Combinação para compatibilidade
       totalValue: value,
       entryType: 'automatic',
       sourceModule,
@@ -56,15 +59,18 @@ class AccountingAutomationService {
 
   // Lançamento automático para pagamento
   generatePaymentEntry(payment: PaymentAccount, userId: string): AccountingEntry {
-    // Exemplo: Débito em Despesa, Crédito em Bancos
     const debitAccount = this.getExpenseAccountByType(payment.expenseType);
     const creditAccount = '1.1.1.01.01'; // Bancos - Conta Movimento
+
+    const debitHistory = `Pagamento realizado: ${payment.description}`;
+    const creditHistory = `Saída para pagamento: ${payment.description}`;
 
     return this.createAutomaticEntry(
       debitAccount,
       creditAccount,
       payment.value,
-      `Pagamento: ${payment.description}`,
+      debitHistory,
+      creditHistory,
       'financial',
       payment.id,
       payment.schoolId,
@@ -74,15 +80,18 @@ class AccountingAutomationService {
 
   // Lançamento automático para recebimento
   generateReceivableEntry(receivable: ReceivableAccount, userId: string): AccountingEntry {
-    // Exemplo: Débito em Bancos, Crédito em Receita
     const debitAccount = '1.1.1.01.01'; // Bancos - Conta Movimento
     const creditAccount = this.getRevenueAccountByType(receivable.resourceType);
+
+    const debitHistory = `Recebimento de recurso: ${receivable.description}`;
+    const creditHistory = `Entrada de recurso: ${receivable.description}`;
 
     return this.createAutomaticEntry(
       debitAccount,
       creditAccount,
       receivable.value,
-      `Recebimento: ${receivable.description}`,
+      debitHistory,
+      creditHistory,
       'financial',
       receivable.id,
       receivable.schoolId,
@@ -92,18 +101,21 @@ class AccountingAutomationService {
 
   // Lançamento automático para nota fiscal
   generateInvoiceEntry(invoice: Invoice, userId: string): AccountingEntry {
-    // Exemplo: Débito em Estoque/Despesa, Crédito em Fornecedores
     const debitAccount = '1.1.4.01.01'; // Estoque de Materiais
     const creditAccount = '2.1.1.01.01'; // Fornecedores
+
+    const debitHistory = `Entrada de mercadoria conforme NF: ${invoice.danfeNumber}`;
+    const creditHistory = `Obrigação com fornecedor ${invoice.supplier.razaoSocial} - NF: ${invoice.danfeNumber}`;
 
     return this.createAutomaticEntry(
       debitAccount,
       creditAccount,
       invoice.totalValue,
-      `Entrada de mercadoria - NF: ${invoice.danfeNumber}`,
+      debitHistory,
+      creditHistory,
       'invoices',
       invoice.id,
-      invoice.supplierId, // Usando supplierId como schoolId temporariamente
+      invoice.supplierId,
       userId
     );
   }
@@ -113,11 +125,20 @@ class AccountingAutomationService {
     const debitAccount = transaction.transactionType === 'credito' ? '1.1.1.01.01' : this.getExpenseAccountByCategory(transaction.category);
     const creditAccount = transaction.transactionType === 'debito' ? '1.1.1.01.01' : this.getRevenueAccountByCategory(transaction.category);
 
+    const debitHistory = transaction.transactionType === 'credito' 
+      ? `Entrada bancária: ${transaction.description}`
+      : `Saída bancária: ${transaction.description}`;
+    
+    const creditHistory = transaction.transactionType === 'credito'
+      ? `Receita reconhecida: ${transaction.description}`
+      : `Movimentação bancária: ${transaction.description}`;
+
     return this.createAutomaticEntry(
       debitAccount,
       creditAccount,
       transaction.value,
-      `Transação bancária: ${transaction.description}`,
+      debitHistory,
+      creditHistory,
       'financial',
       transaction.id,
       transaction.schoolId,
