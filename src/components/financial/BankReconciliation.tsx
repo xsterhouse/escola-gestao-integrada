@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -418,7 +419,7 @@ export function BankReconciliation({
         </div>
       </div>
       
-      {/* Transactions Table */}
+      {/* Transactions Table with ScrollArea */}
       <Card>
         <CardHeader>
           <CardTitle>Conciliação Bancária</CardTitle>
@@ -432,126 +433,128 @@ export function BankReconciliation({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Tipo de Conta</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Saldo</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Gestão</TableHead>
-                <TableHead>Situação</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactionsWithBalance.length === 0 ? (
+          <ScrollArea className="h-[600px] w-full rounded-md border">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center">
-                    {selectedAccount ? 
-                      "Nenhuma transação encontrada para esta conta." : 
-                      "Selecione uma conta bancária para visualizar as transações."
-                    }
-                  </TableCell>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Tipo de Conta</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Saldo</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Gestão</TableHead>
+                  <TableHead>Situação</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
-              ) : (
-                transactionsWithBalance.map(transaction => {
-                  const account = bankAccounts.find(a => a.id === transaction.bankAccountId);
-                  const displayValue = transaction.isPartialPayment && transaction.partialAmount 
-                    ? transaction.partialAmount 
-                    : transaction.value;
-                  
-                  return (
-                    <TableRow key={transaction.id}>
-                      <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>{account?.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {transaction.description}
-                          {transaction.isDuplicate && (
-                            <span className="px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded-full">
-                              Duplicado
-                            </span>
-                          )}
-                          {transaction.isPartialPayment && (
-                            <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">
-                              Parcial
-                            </span>
-                          )}
-                        </div>
-                        {transaction.remainingAmount && transaction.remainingAmount > 0 && (
-                          <div className="text-xs text-orange-600 mt-1">
-                            Restante: {formatCurrency(transaction.remainingAmount)}
+              </TableHeader>
+              <TableBody>
+                {transactionsWithBalance.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center">
+                      {selectedAccount ? 
+                        "Nenhuma transação encontrada para esta conta." : 
+                        "Selecione uma conta bancária para visualizar as transações."
+                      }
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  transactionsWithBalance.map(transaction => {
+                    const account = bankAccounts.find(a => a.id === transaction.bankAccountId);
+                    const displayValue = transaction.isPartialPayment && transaction.partialAmount 
+                      ? transaction.partialAmount 
+                      : transaction.value;
+                    
+                    return (
+                      <TableRow key={transaction.id}>
+                        <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>{account?.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {transaction.description}
+                            {transaction.isDuplicate && (
+                              <span className="px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded-full">
+                                Duplicado
+                              </span>
+                            )}
+                            {transaction.isPartialPayment && (
+                              <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">
+                                Parcial
+                              </span>
+                            )}
                           </div>
-                        )}
-                      </TableCell>
-                      <TableCell className={transaction.transactionType === 'credito' ? 'text-green-600' : 'text-red-600'}>
-                        {formatCurrency(displayValue)}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {formatCurrency(transaction.balance)}
-                      </TableCell>
-                      <TableCell>{transaction.transactionType === 'credito' ? 'Crédito' : 'Débito'}</TableCell>
-                      <TableCell>
-                        {account?.managementType && (
-                          <Badge 
-                            variant="outline" 
-                            className={`${getManagementTypeBadgeColor(account.managementType)} text-xs`}
-                          >
-                            {account.managementType}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <div className={`mr-2 h-2 w-2 rounded-full ${
-                            transaction.reconciliationStatus === 'conciliado' ? 'bg-green-500' : 
-                            transaction.reconciliationStatus === 'pgt_parcial' ? 'bg-orange-500' :
-                            'bg-orange-500'
-                          }`} />
-                          {transaction.reconciliationStatus === 'conciliado' ? 'Conciliado' : 
-                           transaction.reconciliationStatus === 'pgt_parcial' ? 'Pgt Parcial' :
-                           'Não Conciliado'}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleViewTransaction(transaction)}
-                            title="Visualizar"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {transaction.reconciliationStatus === 'pendente' && (
+                          {transaction.remainingAmount && transaction.remainingAmount > 0 && (
+                            <div className="text-xs text-orange-600 mt-1">
+                              Restante: {formatCurrency(transaction.remainingAmount)}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className={transaction.transactionType === 'credito' ? 'text-green-600' : 'text-red-600'}>
+                          {formatCurrency(displayValue)}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {formatCurrency(transaction.balance)}
+                        </TableCell>
+                        <TableCell>{transaction.transactionType === 'credito' ? 'Crédito' : 'Débito'}</TableCell>
+                        <TableCell>
+                          {account?.managementType && (
+                            <Badge 
+                              variant="outline" 
+                              className={`${getManagementTypeBadgeColor(account.managementType)} text-xs`}
+                            >
+                              {account.managementType}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <div className={`mr-2 h-2 w-2 rounded-full ${
+                              transaction.reconciliationStatus === 'conciliado' ? 'bg-green-500' : 
+                              transaction.reconciliationStatus === 'pgt_parcial' ? 'bg-orange-500' :
+                              'bg-orange-500'
+                            }`} />
+                            {transaction.reconciliationStatus === 'conciliado' ? 'Conciliado' : 
+                             transaction.reconciliationStatus === 'pgt_parcial' ? 'Pgt Parcial' :
+                             'Não Conciliado'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              onClick={() => handleReconcileTransaction(transaction)}
-                              title="Conciliar"
+                              onClick={() => handleViewTransaction(transaction)}
+                              title="Visualizar"
                             >
-                              <Check className="h-4 w-4" />
+                              <Eye className="h-4 w-4" />
                             </Button>
-                          )}
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleDeleteTransaction(transaction)}
-                            title="Excluir"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                            {transaction.reconciliationStatus === 'pendente' && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleReconcileTransaction(transaction)}
+                                title="Conciliar"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleDeleteTransaction(transaction)}
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
         </CardContent>
       </Card>
       
