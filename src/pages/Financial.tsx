@@ -130,8 +130,10 @@ export default function Financial() {
     }
   };
 
-  // Handle receivable update with automatic transaction creation
+  // Enhanced handle receivable update with better partial payment support
   const handleReceivableUpdate = (updatedReceivable: ReceivableAccount, bankAccountId?: string, isPartial?: boolean, partialAmount?: number) => {
+    console.log('💰 Atualizando recebimento:', { updatedReceivable, bankAccountId, isPartial, partialAmount });
+
     // Update receivable accounts
     const updatedReceivables = receivableAccounts.map(receivable =>
       receivable.id === updatedReceivable.id ? updatedReceivable : receivable
@@ -146,7 +148,9 @@ export default function Financial() {
         isPartial || false, 
         partialAmount
       );
-      setTransactions([...transactions, bankTransaction]);
+      
+      console.log('💰 Criando transação bancária:', bankTransaction);
+      setTransactions(prevTransactions => [...prevTransactions, bankTransaction]);
       
       // Update bank account balance
       const amount = isPartial && partialAmount ? partialAmount : updatedReceivable.value;
@@ -162,7 +166,8 @@ export default function Financial() {
       });
       setBankAccounts(updatedBankAccounts);
 
-      toast.success("Recebimento registrado e transação criada na conciliação!");
+      const paymentType = isPartial ? "Recebimento parcial" : "Recebimento";
+      toast.success(`${paymentType} registrado e transação criada na conciliação!`);
       console.log('💰 Transação bancária criada para recebimento:', bankTransaction);
     }
   };

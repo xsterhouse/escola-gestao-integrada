@@ -7,6 +7,7 @@ import { ReceivableAccount, BankAccount } from "@/lib/types";
 import { ReceivableAccountsTable } from "./ReceivableAccountsTable";
 import { EditReceivableDialog } from "./EditReceivableDialog";
 import { ReceiptRegistrationDialog } from "./ReceiptRegistrationDialog";
+import { CompletePartialPaymentDialog } from "./CompletePartialPaymentDialog";
 
 interface ReceivableAccountsProps {
   receivableAccounts: ReceivableAccount[];
@@ -25,6 +26,7 @@ export function ReceivableAccounts({
 }: ReceivableAccountsProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
+  const [isCompletePartialDialogOpen, setIsCompletePartialDialogOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<ReceivableAccount | null>(null);
 
   const formatCurrency = (value: number) => {
@@ -64,6 +66,11 @@ export function ReceivableAccounts({
   const handleRegisterReceipt = (account: ReceivableAccount) => {
     setSelectedAccount(account);
     setIsReceiptDialogOpen(true);
+  };
+
+  const handleCompletePartialPayment = (account: ReceivableAccount) => {
+    setSelectedAccount(account);
+    setIsCompletePartialDialogOpen(true);
   };
 
   const handleConfirmReceipt = (receiptData: { 
@@ -137,6 +144,37 @@ export function ReceivableAccounts({
     }
   };
 
+  const handleConfirmCompletePartial = (data: { bankAccountId: string; remainingAmount: number; receivable: ReceivableAccount }) => {
+    if (selectedAccount) {
+      const { bankAccountId, remainingAmount, receivable: updatedReceivable } = data;
+
+      // Update the account to show it's fully paid
+      const finalizedAccount: ReceivableAccount = {
+        ...updatedReceivable,
+        status: 'recebido',
+        receivedDate: new Date(),
+        bankAccountId: bankAccountId,
+        isPartialPayment: false, // No longer partial
+        updatedAt: new Date(),
+      };
+
+      // Use callback to create transaction for remaining amount
+      if (onUpdateReceivable) {
+        // Create transaction for the remaining amount
+        onUpdateReceivable(finalizedAccount, bankAccountId, false, remainingAmount);
+      } else {
+        // Fallback to direct update
+        const updatedAccounts = receivableAccounts.map(receivable =>
+          receivable.id === selectedAccount.id ? finalizedAccount : receivable
+        );
+        setReceivableAccounts(updatedAccounts);
+      }
+
+      setIsCompletePartialDialogOpen(false);
+      calculateFinancialSummary();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -155,6 +193,7 @@ export function ReceivableAccounts({
             onEditReceivable={handleEdit}
             onDeleteReceivable={handleDelete}
             onOpenReceiptConfirm={handleRegisterReceipt}
+            onCompletePartialPayment={handleCompletePartialPayment}
           />
         </CardContent>
       </Card>
@@ -178,6 +217,17 @@ export function ReceivableAccounts({
         account={selectedAccount}
         bankAccounts={bankAccounts}
         onConfirm={handleConfirmReceipt}
+      />
+
+      <CompletePartialPaymentDialog
+        isOpen={isCompletePartialDialogOpen}
+        onClose={() => {
+          setIsCompletePartialDialogOpen(false);
+          setSelectedAccount(null);
+        }}
+        receivable={selectedAccount}
+        bankAccounts={bankAccounts}
+        onConfirm={handleConfirmCompletePartial}
       />
     </div>
   );
