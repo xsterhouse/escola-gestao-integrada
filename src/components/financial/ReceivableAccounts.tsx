@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,9 +39,9 @@ export function ReceivableAccounts({
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (account: ReceivableAccount) => {
     if (window.confirm("Tem certeza que deseja excluir esta conta a receber?")) {
-      const updatedAccounts = receivableAccounts.filter(account => account.id !== id);
+      const updatedAccounts = receivableAccounts.filter(receivable => receivable.id !== account.id);
       setReceivableAccounts(updatedAccounts);
       calculateFinancialSummary();
     }
@@ -151,9 +152,9 @@ export function ReceivableAccounts({
         <CardContent>
           <ReceivableAccountsTable
             accounts={receivableAccounts}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onRegisterReceipt={handleRegisterReceipt}
+            onEditReceivable={handleEdit}
+            onDeleteReceivable={handleDelete}
+            onOpenReceiptConfirm={handleRegisterReceipt}
           />
         </CardContent>
       </Card>
@@ -164,7 +165,7 @@ export function ReceivableAccounts({
           setIsEditDialogOpen(false);
           setSelectedAccount(null);
         }}
-        account={selectedAccount}
+        receivable={selectedAccount}
         onSave={handleSave}
       />
 

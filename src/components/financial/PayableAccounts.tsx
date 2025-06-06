@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,9 +43,9 @@ export function PayableAccounts({
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (account: PaymentAccount) => {
     if (window.confirm("Tem certeza que deseja excluir esta conta?")) {
-      const updatedAccounts = paymentAccounts.filter(account => account.id !== id);
+      const updatedAccounts = paymentAccounts.filter(payment => payment.id !== account.id);
       setPaymentAccounts(updatedAccounts);
       calculateFinancialSummary();
     }
@@ -110,9 +111,11 @@ export function PayableAccounts({
         <CardContent>
           <PayableAccountsTable
             accounts={paymentAccounts}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onRegisterPayment={handleRegisterPayment}
+            invoices={[]}
+            onPaymentConfirm={handleRegisterPayment}
+            onEditPayment={handleEdit}
+            onDeletePayment={handleDelete}
+            formatCurrency={formatCurrency}
           />
         </CardContent>
       </Card>
@@ -123,7 +126,7 @@ export function PayableAccounts({
           setIsEditDialogOpen(false);
           setSelectedAccount(null);
         }}
-        account={selectedAccount}
+        payment={selectedAccount}
         onSave={handleSave}
         resourceCategories={resourceCategories}
         expenseTypes={expenseTypes}
