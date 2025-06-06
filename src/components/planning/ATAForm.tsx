@@ -7,6 +7,7 @@ import { Form } from "@/components/ui/form";
 import { ATAContract } from "@/lib/types";
 import { ATAFormFields } from "./ATAFormFields";
 import { ATAItemsList } from "./ATAItemsList";
+import { ATAFormData } from "./types";
 
 const ataFormSchema = z.object({
   numeroProcesso: z.string().min(1, "Número do processo é obrigatório"),
@@ -22,8 +23,6 @@ const ataFormSchema = z.object({
     descricao: z.string().optional(),
   })).min(1, "Pelo menos um item deve ser adicionado"),
 });
-
-type ATAFormData = z.infer<typeof ataFormSchema>;
 
 interface ATAFormProps {
   onSubmit: (data: Omit<ATAContract, "id" | "schoolId" | "createdBy" | "createdAt" | "updatedAt">) => void;

@@ -3,21 +3,7 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/comp
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Control } from "react-hook-form";
-
-interface ATAFormData {
-  numeroProcesso: string;
-  fornecedor: string;
-  dataATA: string;
-  dataInicioVigencia: string;
-  dataFimVigencia: string;
-  observacoes: string;
-  items: Array<{
-    nome: string;
-    unidade: string;
-    quantidade: number;
-    descricao: string;
-  }>;
-}
+import { ATAFormData } from "./types";
 
 interface ATAFormFieldsProps {
   control: Control<ATAFormData>;
