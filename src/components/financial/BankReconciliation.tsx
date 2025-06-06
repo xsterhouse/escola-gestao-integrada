@@ -1,4 +1,5 @@
 
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -92,12 +93,12 @@ export function BankReconciliation({
 
     const searchCondition = !searchQuery ||
                             transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            transaction.category.toLowerCase().includes(searchQuery.toLowerCase());
+                            transaction.category?.toLowerCase().includes(searchQuery.toLowerCase());
 
     return accountFilter && statusCondition && dateCondition && searchCondition;
   });
 
-  const handleTransactionReconciliationStatusChange = (transactionId: string, newStatus: string) => {
+  const handleTransactionReconciliationStatusChange = (transactionId: string, newStatus: "pendente" | "conciliado" | "pgt_parcial") => {
     const updatedTransactions = transactions.map(transaction =>
       transaction.id === transactionId ? { ...transaction, reconciliationStatus: newStatus } : transaction
     );
@@ -114,7 +115,7 @@ export function BankReconciliation({
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDeleteTransaction = () => {
+  const confirmDeleteTransaction = (password: string, reason: string) => {
     if (!selectedTransaction) return;
 
     const updatedTransactions = transactions.filter(transaction => transaction.id !== selectedTransaction.id);
@@ -129,6 +130,10 @@ export function BankReconciliation({
     const reconciled = accountTransactions.filter(t => t.reconciliationStatus === 'conciliado').length;
     const pending = accountTransactions.filter(t => t.reconciliationStatus === 'pendente').length;
     return { reconciled, pending };
+  };
+
+  const handleNewTransaction = (newTransaction: BankTransaction) => {
+    setTransactions([...transactions, newTransaction]);
   };
 
   return (
@@ -146,7 +151,7 @@ export function BankReconciliation({
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Agência:</span>
-                  <span>{account.agency}</span>
+                  <span>{account.agencyNumber}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Conta:</span>
@@ -340,7 +345,7 @@ export function BankReconciliation({
                       <Badge
                         variant={
                           transaction.reconciliationStatus === "conciliado"
-                            ? "success"
+                            ? "default"
                             : transaction.reconciliationStatus === "pendente"
                             ? "secondary"
                             : "destructive"
@@ -414,41 +419,40 @@ export function BankReconciliation({
       {/* Modals */}
       <ViewTransactionDialog
         isOpen={isViewTransactionOpen}
-        setIsOpen={setIsViewTransactionOpen}
+        onClose={() => setIsViewTransactionOpen(false)}
         transaction={selectedTransaction}
       />
 
       <DeleteTransactionDialog
         isOpen={isDeleteDialogOpen}
-        setIsOpen={setIsDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
         transaction={selectedTransaction}
-        confirmDelete={confirmDeleteTransaction}
+        onConfirm={confirmDeleteTransaction}
       />
 
       <NewTransactionModal
         isOpen={isNewTransactionOpen}
-        setIsOpen={setIsNewTransactionOpen}
+        onClose={() => setIsNewTransactionOpen(false)}
         bankAccounts={bankAccounts}
-        setTransactions={setTransactions}
-        transactions={transactions}
+        onSave={handleNewTransaction}
       />
 
       <ImportStatementModal
         isOpen={isImportModalOpen}
-        setIsOpen={setIsImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
         bankAccounts={bankAccounts}
         setTransactions={setTransactions}
         transactions={transactions}
         setBankAccounts={setBankAccounts}
-        bankAccounts={bankAccounts}
         calculateFinancialSummary={calculateFinancialSummary}
       />
 
       <GenerateReportModal
         isOpen={isReportModalOpen}
-        setIsOpen={setIsReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
         transactions={transactions}
       />
     </div>
   );
 }
+
