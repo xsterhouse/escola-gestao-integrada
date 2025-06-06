@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -150,7 +149,7 @@ export default function Financial() {
       );
       
       console.log('💰 Criando transação bancária:', bankTransaction);
-      setTransactions(prevTransactions => [...prevTransactions, bankTransaction]);
+      setTransactions([...transactions, bankTransaction]);
       
       // Update bank account balance
       const amount = isPartial && partialAmount ? partialAmount : updatedReceivable.value;
