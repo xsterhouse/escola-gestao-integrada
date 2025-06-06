@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -369,11 +370,23 @@ export function FinancialReports({
   
   // Function to handle report download
   const handleDownloadReport = (reportId: string) => {
+    console.log("🔽 Tentando fazer download do relatório:", reportId);
+    console.log("📊 Relatórios disponíveis:", reports);
+    
     const report = reports.find((r: any) => r.id === reportId);
+    console.log("📋 Relatório encontrado:", report);
+    
     if (report) {
-      generateModernFinancialReportPDF(report);
-      toast.success("Download do relatório iniciado!");
+      try {
+        console.log("📄 Gerando PDF com dados:", report);
+        generateModernFinancialReportPDF(report);
+        toast.success("Download do relatório iniciado!");
+      } catch (error) {
+        console.error("❌ Erro ao gerar PDF:", error);
+        toast.error("Erro ao gerar o PDF do relatório!");
+      }
     } else {
+      console.error("❌ Relatório não encontrado para ID:", reportId);
       toast.error("Relatório não encontrado!");
     }
   };
