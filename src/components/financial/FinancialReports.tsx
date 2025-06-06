@@ -379,7 +379,26 @@ export function FinancialReports({
     if (report) {
       try {
         console.log("📄 Gerando PDF com dados:", report);
-        generateModernFinancialReportPDF(report);
+        
+        // Formatar dados para a função de PDF
+        const formattedReport = {
+          title: report.title,
+          reportType: report.reportType,
+          period: report.period,
+          schoolName: report.schoolName || currentSchool?.name || "Escola",
+          purchasingCenters: report.purchasingCenters || purchasingCenters,
+          userName: report.createdBy || user?.name || "Usuário",
+          data: report.data || [],
+          summary: report.summary || {
+            totalReceitas: 0,
+            totalDespesas: 0,
+            saldo: 0
+          },
+          filters: report.filters || {}
+        };
+        
+        console.log("📄 Dados formatados para PDF:", formattedReport);
+        generateModernFinancialReportPDF(formattedReport);
         toast.success("Download do relatório iniciado!");
       } catch (error) {
         console.error("❌ Erro ao gerar PDF:", error);
