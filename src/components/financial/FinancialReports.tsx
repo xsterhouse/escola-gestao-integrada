@@ -367,6 +367,17 @@ export function FinancialReports({
     generateModernFinancialReportPDF(reportToSave);
   };
   
+  // Function to handle report download
+  const handleDownloadReport = (reportId: string) => {
+    const report = reports.find((r: any) => r.id === reportId);
+    if (report) {
+      generateModernFinancialReportPDF(report);
+      toast.success("Download do relatório iniciado!");
+    } else {
+      toast.error("Relatório não encontrado!");
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <Tabs defaultValue="resource" className="w-full">
@@ -502,6 +513,7 @@ export function FinancialReports({
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => handleDownloadReport(report.id)}
                               title="Download"
                             >
                               <Download className="h-4 w-4" />
@@ -659,6 +671,7 @@ export function FinancialReports({
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => handleDownloadReport(report.id)}
                               title="Download"
                             >
                               <Download className="h-4 w-4" />
