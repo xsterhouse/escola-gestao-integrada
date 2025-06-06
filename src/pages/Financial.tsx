@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -175,6 +176,7 @@ export default function Financial() {
             <PayableAccounts 
               paymentAccounts={payableAccounts}
               setPaymentAccounts={setPayableAccounts}
+              bankAccounts={bankAccounts}
               calculateFinancialSummary={calculateFinancialSummary}
               resourceCategories={resourceCategories}
               expenseTypes={expenseTypes}
