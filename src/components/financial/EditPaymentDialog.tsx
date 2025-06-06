@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface EditPaymentDialogProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export function EditPaymentDialog({
   resourceCategories,
   expenseTypes
 }: EditPaymentDialogProps) {
+  const { currentSchool } = useAuth();
   const [formData, setFormData] = useState({
     description: "",
     supplier: "",
@@ -80,6 +82,7 @@ export function EditPaymentDialog({
     
     const paymentData: PaymentAccount = {
       id: payment?.id || `payment_${Date.now()}`,
+      schoolId: currentSchool?.id || '',
       description: formData.description,
       supplier: formData.supplier,
       dueDate: formData.dueDate,
