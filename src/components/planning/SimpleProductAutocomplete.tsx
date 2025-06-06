@@ -3,13 +3,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Product } from "@/lib/types";
-
-interface ProductSuggestion {
-  id: string;
-  description: string;
-  unit: string;
-  item?: number;
-}
+import { ProductSuggestion } from "./types";
 
 interface SimpleProductAutocompleteProps {
   value: string;
@@ -23,11 +17,9 @@ export function SimpleProductAutocomplete({
   value,
   onChange,
   onProductSelect,
-  placeholder = "Digite o nome do produto...",
+  placeholder = "Digite para buscar produtos...",
   disabled = false,
 }: SimpleProductAutocompleteProps) {
-  console.log("🔄 SimpleProductAutocomplete montado - valor:", value);
-  
   const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -36,16 +28,10 @@ export function SimpleProductAutocomplete({
 
   // Carregar produtos do localStorage
   useEffect(() => {
-    console.log("📦 Carregando produtos do localStorage...");
-    
     try {
       const storedProducts = localStorage.getItem("products");
-      console.log("📋 Dados brutos do localStorage:", storedProducts);
-      
       if (storedProducts) {
         const parsedData = JSON.parse(storedProducts);
-        console.log("🔍 Dados parseados:", parsedData);
-        
         let productArray: Product[] = [];
         
         if (Array.isArray(parsedData)) {
@@ -54,22 +40,16 @@ export function SimpleProductAutocomplete({
           productArray = parsedData.data;
         }
         
-        console.log("✅ Produtos carregados:", productArray.length);
         setProducts(productArray);
-      } else {
-        console.log("❌ Nenhum produto encontrado no localStorage");
       }
     } catch (error) {
-      console.error("❌ Erro ao carregar produtos:", error);
+      console.error("Erro ao carregar produtos:", error);
     }
-    
     setIsLoading(false);
   }, []);
 
-  // Filtrar produtos com debounce
+  // Filtrar produtos com base no texto digitado
   useEffect(() => {
-    console.log("🔍 Executando busca - valor:", value, "produtos:", products.length);
-    
     if (isLoading || value.length < 2) {
       setSuggestions([]);
       setShowSuggestions(false);
@@ -78,7 +58,6 @@ export function SimpleProductAutocomplete({
 
     const timeoutId = setTimeout(() => {
       const searchTerm = value.toLowerCase().trim();
-      console.log("🔎 Buscando por:", searchTerm);
       
       const filtered = products
         .filter(product => 
@@ -92,7 +71,6 @@ export function SimpleProductAutocomplete({
           item: product.item
         }));
       
-      console.log("📋 Resultados encontrados:", filtered.length);
       setSuggestions(filtered);
       setShowSuggestions(filtered.length > 0);
       setSelectedIndex(-1);
@@ -103,12 +81,10 @@ export function SimpleProductAutocomplete({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    console.log("📝 Input alterado:", newValue);
     onChange(newValue);
   };
 
   const handleProductSelect = (product: ProductSuggestion) => {
-    console.log("🎯 Produto selecionado:", product);
     onChange(product.description);
     onProductSelect(product);
     setShowSuggestions(false);
