@@ -44,7 +44,7 @@ export function DeleteProductDialog({
               ? "Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita."
               : hasSelectedItems
               ? `Tem certeza que deseja excluir ${count} produtos selecionados? Esta ação não pode ser desfeita.`
-              : "Nenhum produto foi selecionado para exclusão."}
+              : "Nenhum produto foi selecionado para exclusão. Selecione pelo menos um produto para continuar."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

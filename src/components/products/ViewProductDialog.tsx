@@ -17,7 +17,7 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
         <DialogHeader>
           <DialogTitle>Detalhes do Produto</DialogTitle>
           <DialogDescription>
-            Informações detalhadas do produto.
+            Visualize todas as informações detalhadas do produto selecionado.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
