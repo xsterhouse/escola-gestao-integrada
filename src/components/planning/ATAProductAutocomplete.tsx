@@ -21,98 +21,128 @@ interface ATAProductAutocompleteProps {
 
 export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAutocompleteProps>(
   ({ value, onChange, onProductSelect, placeholder = "Digite o nome do produto...", disabled = false }, ref) => {
-    console.log("🚀 ATAProductAutocomplete renderizado com valor:", value);
+    console.log("🚀 ATAProductAutocomplete RENDERIZADO - valor atual:", value);
     
     const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const [products, setProducts] = useState<Product[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     
     // Carregar produtos uma única vez no mount
     useEffect(() => {
-      console.log("📥 Carregando produtos do localStorage...");
+      console.log("🔄 INICIANDO carregamento de produtos...");
+      setIsLoading(true);
+      
       const loadProducts = (): Product[] => {
         try {
+          console.log("📦 Verificando localStorage...");
           const storedProducts = localStorage.getItem("products");
-          console.log("🔍 Dados brutos do localStorage 'products':", storedProducts);
+          console.log("📋 Dados RAW do localStorage 'products':", storedProducts);
           
-          if (storedProducts) {
-            const parsedData = JSON.parse(storedProducts);
-            console.log("📋 Dados parseados:", parsedData);
-            
-            // Se for um array direto de produtos
-            if (Array.isArray(parsedData)) {
-              console.log("✅ Array de produtos encontrado:", parsedData.length, "produtos");
-              return parsedData;
-            }
-            
-            // Se for um objeto com propriedade 'data'
-            if (parsedData && parsedData.data && Array.isArray(parsedData.data)) {
-              console.log("✅ Dados em parsedData.data encontrados:", parsedData.data.length, "produtos");
-              return parsedData.data;
-            }
+          if (!storedProducts) {
+            console.log("❌ NENHUM dado encontrado no localStorage 'products'");
+            return [];
           }
           
-          console.log("❌ Nenhum produto encontrado no localStorage");
-          return [];
+          const parsedData = JSON.parse(storedProducts);
+          console.log("🔍 Dados PARSEADOS:", parsedData);
+          console.log("🔍 Tipo dos dados:", typeof parsedData, "É array?", Array.isArray(parsedData));
+          
+          let productArray: Product[] = [];
+          
+          if (Array.isArray(parsedData)) {
+            console.log("✅ Dados são um array direto com", parsedData.length, "itens");
+            productArray = parsedData;
+          } else if (parsedData && parsedData.data && Array.isArray(parsedData.data)) {
+            console.log("✅ Dados estão em .data com", parsedData.data.length, "itens");
+            productArray = parsedData.data;
+          } else {
+            console.log("❌ Estrutura de dados não reconhecida:", parsedData);
+            return [];
+          }
+          
+          console.log("📊 PRODUTOS CARREGADOS:", productArray.length);
+          console.log("📊 EXEMPLO do primeiro produto:", productArray[0]);
+          
+          return productArray;
         } catch (error) {
-          console.error("❌ Erro ao carregar produtos:", error);
+          console.error("❌ ERRO ao carregar produtos:", error);
           return [];
         }
       };
 
       const loadedProducts = loadProducts();
       setProducts(loadedProducts);
-      console.log("💾 Produtos carregados no estado:", loadedProducts.length);
+      setIsLoading(false);
+      console.log("✅ PRODUTOS definidos no estado:", loadedProducts.length, "produtos");
     }, []);
 
     // Filtrar produtos com base no texto digitado
     useEffect(() => {
-      console.log("🔤 Texto digitado mudou:", value, "| Tamanho:", value.length, "| Produtos disponíveis:", products.length);
+      console.log("🔤 EFEITO DE BUSCA EXECUTADO:");
+      console.log("   - Valor digitado:", `"${value}"`);
+      console.log("   - Tamanho do valor:", value.length);
+      console.log("   - Produtos disponíveis:", products.length);
+      console.log("   - Está carregando:", isLoading);
       
-      if (value.length >= 3 && products.length > 0) {
-        console.log("🔍 Iniciando filtro de produtos...");
-        
-        const filtered = products
-          .filter(product => {
-            const hasDescription = product.description && 
-              product.description.toLowerCase().includes(value.toLowerCase());
-            console.log(`🔍 Produto "${product.description}" - Match:`, hasDescription);
-            return hasDescription;
-          })
-          .slice(0, 10)
-          .map(product => ({
-            id: product.id,
-            description: product.description,
-            unit: product.unit,
-            item: product.item
-          }));
-        
-        console.log("✨ Produtos filtrados:", filtered);
-        setSuggestions(filtered);
-        setShowSuggestions(filtered.length > 0);
-        setSelectedIndex(-1);
-      } else {
-        if (value.length < 3) {
-          console.log("⏳ Aguardando pelo menos 3 caracteres...");
-        }
-        if (products.length === 0) {
-          console.log("📭 Nenhum produto disponível para filtrar");
-        }
+      if (isLoading) {
+        console.log("⏳ Ainda carregando produtos, aguardando...");
+        return;
+      }
+      
+      if (value.length < 3) {
+        console.log("📏 Valor muito curto (< 3 caracteres), limpando sugestões");
         setSuggestions([]);
         setShowSuggestions(false);
         setSelectedIndex(-1);
+        return;
       }
-    }, [value, products]);
+      
+      if (products.length === 0) {
+        console.log("📭 NENHUM produto disponível para buscar");
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+      
+      console.log("🔍 INICIANDO busca com valor:", `"${value}"`);
+      
+      const searchTerm = value.toLowerCase().trim();
+      console.log("🔍 Termo de busca processado:", `"${searchTerm}"`);
+      
+      const filtered = products
+        .filter(product => {
+          const hasDescription = product.description && 
+            product.description.toLowerCase().includes(searchTerm);
+          
+          console.log(`   🔍 Produto "${product.description}" -> Match: ${hasDescription}`);
+          return hasDescription;
+        })
+        .slice(0, 10)
+        .map(product => ({
+          id: product.id,
+          description: product.description,
+          unit: product.unit,
+          item: product.item
+        }));
+      
+      console.log("✨ RESULTADOS da busca:", filtered.length, "produtos encontrados");
+      console.log("✨ PRODUTOS filtrados:", filtered);
+      
+      setSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+      setSelectedIndex(-1);
+    }, [value, products, isLoading]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
-      console.log("📝 Input mudou de:", value, "para:", newValue);
+      console.log("📝 INPUT CHANGE:", `"${value}" -> "${newValue}"`);
       onChange(newValue);
     };
 
     const handleProductClick = (product: ProductSuggestion) => {
-      console.log("🎯 Produto selecionado:", product);
+      console.log("🎯 PRODUTO SELECIONADO:", product);
       onChange(product.description);
       onProductSelect(product);
       setShowSuggestions(false);
@@ -120,7 +150,7 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      console.log("⌨️ Tecla pressionada:", e.key, "| Sugestões visíveis:", showSuggestions);
+      console.log("⌨️ TECLA:", e.key, "| Sugestões visíveis:", showSuggestions, "| Quantidade:", suggestions.length);
       
       if (!showSuggestions || suggestions.length === 0) return;
 
@@ -149,8 +179,7 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
     };
 
     const handleBlur = () => {
-      console.log("👋 Input perdeu o foco");
-      // Delay para permitir clique nas sugestões
+      console.log("👋 INPUT perdeu foco");
       setTimeout(() => {
         setShowSuggestions(false);
         setSelectedIndex(-1);
@@ -158,12 +187,17 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
     };
 
     const handleFocus = () => {
-      console.log("🎯 Input ganhou foco com valor:", value);
+      console.log("🎯 INPUT ganhou foco, valor atual:", `"${value}"`);
       if (value.length >= 3 && suggestions.length > 0) {
-        console.log("🔄 Reexibindo sugestões...");
+        console.log("🔄 Reexibindo sugestões existentes");
         setShowSuggestions(true);
       }
     };
+
+    console.log("🖼️ RENDERIZANDO componente:");
+    console.log("   - Exibir sugestões:", showSuggestions);
+    console.log("   - Quantidade de sugestões:", suggestions.length);
+    console.log("   - Carregando:", isLoading);
 
     return (
       <div className="relative">
@@ -179,7 +213,13 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
           className="w-full"
         />
         
-        {showSuggestions && suggestions.length > 0 && (
+        {isLoading && (
+          <div className="absolute z-50 w-full mt-1 p-2 bg-gray-100 rounded border">
+            <div className="text-sm text-gray-600">Carregando produtos...</div>
+          </div>
+        )}
+        
+        {showSuggestions && suggestions.length > 0 && !isLoading && (
           <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto">
             <CardContent className="p-0">
               {suggestions.map((product, index) => (
@@ -201,7 +241,7 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
           </Card>
         )}
         
-        {showSuggestions && suggestions.length === 0 && value.length >= 3 && (
+        {showSuggestions && suggestions.length === 0 && value.length >= 3 && !isLoading && (
           <Card className="absolute z-50 w-full mt-1">
             <CardContent className="p-3">
               <div className="text-sm text-gray-500">
