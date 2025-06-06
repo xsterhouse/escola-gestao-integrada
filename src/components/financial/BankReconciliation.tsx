@@ -1,5 +1,3 @@
-
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -134,6 +132,10 @@ export function BankReconciliation({
 
   const handleNewTransaction = (newTransaction: BankTransaction) => {
     setTransactions([...transactions, newTransaction]);
+  };
+
+  const handleImportTransactions = (importedTransactions: BankTransaction[]) => {
+    setTransactions([...transactions, ...importedTransactions]);
   };
 
   return (
@@ -441,18 +443,14 @@ export function BankReconciliation({
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         bankAccounts={bankAccounts}
-        setTransactions={setTransactions}
-        transactions={transactions}
-        setBankAccounts={setBankAccounts}
-        calculateFinancialSummary={calculateFinancialSummary}
+        onImport={handleImportTransactions}
       />
 
       <GenerateReportModal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
-        transactions={transactions}
+        bankAccounts={bankAccounts}
       />
     </div>
   );
 }
-
