@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,16 +49,31 @@ export function ReceivableAccounts({
   };
 
   const handleSave = (accountData: ReceivableAccount) => {
-    const updatedAccount: ReceivableAccount = {
-      ...accountData,
-      updatedAt: new Date(),
-    };
+    if (selectedAccount) {
+      // Editing existing account
+      const updatedAccount: ReceivableAccount = {
+        ...accountData,
+        updatedAt: new Date(),
+      };
 
-    const updatedAccounts = receivableAccounts.map(account =>
-      account.id === updatedAccount.id ? updatedAccount : account
-    );
-    setReceivableAccounts(updatedAccounts);
+      const updatedAccounts = receivableAccounts.map(account =>
+        account.id === updatedAccount.id ? updatedAccount : account
+      );
+      setReceivableAccounts(updatedAccounts);
+    } else {
+      // Creating new account
+      const newAccount: ReceivableAccount = {
+        ...accountData,
+        id: `receivable_${Date.now()}`,
+        status: 'pendente',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setReceivableAccounts([...receivableAccounts, newAccount]);
+    }
+    
     setIsEditDialogOpen(false);
+    setSelectedAccount(null);
     calculateFinancialSummary();
   };
 
@@ -71,6 +85,11 @@ export function ReceivableAccounts({
   const handleCompletePartialPayment = (account: ReceivableAccount) => {
     setSelectedAccount(account);
     setIsCompletePartialDialogOpen(true);
+  };
+
+  const handleNewAccount = () => {
+    setSelectedAccount(null);
+    setIsEditDialogOpen(true);
   };
 
   const handleConfirmReceipt = (receiptData: { 
@@ -181,7 +200,7 @@ export function ReceivableAccounts({
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Contas a Receber</span>
-            <Button onClick={() => setIsEditDialogOpen(true)}>
+            <Button onClick={handleNewAccount}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Conta
             </Button>

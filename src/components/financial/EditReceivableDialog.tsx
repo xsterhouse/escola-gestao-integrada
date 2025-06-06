@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface EditReceivableDialogProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export function EditReceivableDialog({
   receivable,
   onSave
 }: EditReceivableDialogProps) {
+  const { currentSchool } = useAuth();
   const [formData, setFormData] = useState({
     description: "",
     origin: "",
@@ -45,12 +47,20 @@ export function EditReceivableDialog({
         resourceType: receivable.resourceType,
         notes: receivable.notes || "",
       });
+    } else {
+      // Reset form for new receivable
+      setFormData({
+        description: "",
+        origin: "",
+        expectedDate: new Date(),
+        value: "",
+        resourceType: "",
+        notes: "",
+      });
     }
-  }, [receivable]);
+  }, [receivable, isOpen]);
   
   const handleSave = () => {
-    if (!receivable) return;
-    
     if (!formData.description) {
       toast.error("Informe uma descrição");
       return;
@@ -66,21 +76,25 @@ export function EditReceivableDialog({
       return;
     }
     
-    const updatedReceivable: ReceivableAccount = {
-      ...receivable,
+    const receivableData: ReceivableAccount = {
+      id: receivable?.id || `receivable_${Date.now()}`,
+      schoolId: currentSchool?.id || '',
       description: formData.description,
       origin: formData.origin,
       expectedDate: formData.expectedDate,
       value: parseFloat(formData.value),
       resourceType: formData.resourceType,
       notes: formData.notes,
+      status: receivable?.status || 'pendente',
+      createdAt: receivable?.createdAt || new Date(),
       updatedAt: new Date()
     };
     
-    onSave(updatedReceivable);
+    onSave(receivableData);
     onClose();
-    toast.success("Conta a receber atualizada com sucesso!");
   };
+  
+  const isNewReceivable = !receivable;
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -88,7 +102,9 @@ export function EditReceivableDialog({
     }}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-xl">Editar Conta a Receber</DialogTitle>
+          <DialogTitle className="text-xl">
+            {isNewReceivable ? "Nova Conta a Receber" : "Editar Conta a Receber"}
+          </DialogTitle>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
@@ -190,7 +206,7 @@ export function EditReceivableDialog({
           </Button>
           <Button onClick={handleSave}>
             <Check className="mr-2 h-4 w-4" />
-            Salvar
+            {isNewReceivable ? "Criar" : "Salvar"}
           </Button>
         </DialogFooter>
       </DialogContent>
