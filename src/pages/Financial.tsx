@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +14,7 @@ import { ExpenseTypesConfig } from "@/components/financial/ExpenseTypesConfig";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { useAuth } from "@/contexts/AuthContext";
 import { PaymentAccount, ReceivableAccount, BankAccount, BankTransaction, FinancialSummary } from "@/lib/types";
+import { toast } from "sonner";
 
 export default function Financial() {
   const { currentSchool } = useAuth();
@@ -47,6 +49,123 @@ export default function Financial() {
   });
   
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  // Function to create bank transaction from payment
+  const createBankTransactionFromPayment = (payment: PaymentAccount, bankAccountId: string): BankTransaction => {
+    const transactionId = `payment_${payment.id}_${Date.now()}`;
+    
+    return {
+      id: transactionId,
+      schoolId: currentSchool?.id || '',
+      bankAccountId,
+      date: payment.paymentDate || new Date(),
+      description: `Pagamento: ${payment.description} - ${payment.supplier}`,
+      value: payment.value,
+      transactionType: 'debito',
+      reconciliationStatus: 'pendente',
+      category: payment.expenseType,
+      resourceType: payment.resourceCategory,
+      source: 'payment',
+      documentId: payment.id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  };
+
+  // Function to create bank transaction from receivable
+  const createBankTransactionFromReceivable = (receivable: ReceivableAccount, bankAccountId: string, isPartial: boolean = false, partialAmount?: number): BankTransaction => {
+    const transactionId = `receivable_${receivable.id}_${Date.now()}`;
+    const amount = isPartial && partialAmount ? partialAmount : receivable.value;
+    
+    return {
+      id: transactionId,
+      schoolId: currentSchool?.id || '',
+      bankAccountId,
+      date: receivable.receivedDate || new Date(),
+      description: `Recebimento: ${receivable.description} - ${receivable.origin}${isPartial ? ' (Parcial)' : ''}`,
+      value: amount,
+      transactionType: 'credito',
+      reconciliationStatus: 'pendente',
+      category: 'Recebimento',
+      resourceType: receivable.resourceType,
+      source: 'receivable',
+      documentId: receivable.id,
+      isPartialPayment: isPartial,
+      partialAmount: isPartial ? partialAmount : undefined,
+      remainingAmount: isPartial && partialAmount ? receivable.value - partialAmount : undefined,
+      originalReceivableId: receivable.id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  };
+
+  // Handle payment update with automatic transaction creation
+  const handlePaymentUpdate = (updatedPayment: PaymentAccount, bankAccountId?: string) => {
+    // Update payment accounts
+    const updatedPayments = payableAccounts.map(payment =>
+      payment.id === updatedPayment.id ? updatedPayment : payment
+    );
+    setPayableAccounts(updatedPayments);
+
+    // Create bank transaction if payment was completed and bankAccountId is provided
+    if (updatedPayment.status === 'pago' && bankAccountId) {
+      const bankTransaction = createBankTransactionFromPayment(updatedPayment, bankAccountId);
+      setTransactions([...transactions, bankTransaction]);
+      
+      // Update bank account balance
+      const updatedBankAccounts = bankAccounts.map(account => {
+        if (account.id === bankAccountId) {
+          return {
+            ...account,
+            currentBalance: account.currentBalance - updatedPayment.value,
+            updatedAt: new Date()
+          };
+        }
+        return account;
+      });
+      setBankAccounts(updatedBankAccounts);
+
+      toast.success("Pagamento registrado e transação criada na conciliação!");
+      console.log('💰 Transação bancária criada para pagamento:', bankTransaction);
+    }
+  };
+
+  // Handle receivable update with automatic transaction creation
+  const handleReceivableUpdate = (updatedReceivable: ReceivableAccount, bankAccountId?: string, isPartial?: boolean, partialAmount?: number) => {
+    // Update receivable accounts
+    const updatedReceivables = receivableAccounts.map(receivable =>
+      receivable.id === updatedReceivable.id ? updatedReceivable : receivable
+    );
+    setReceivableAccounts(updatedReceivables);
+
+    // Create bank transaction if receivable was received and bankAccountId is provided
+    if (updatedReceivable.status === 'recebido' && bankAccountId) {
+      const bankTransaction = createBankTransactionFromReceivable(
+        updatedReceivable, 
+        bankAccountId, 
+        isPartial || false, 
+        partialAmount
+      );
+      setTransactions([...transactions, bankTransaction]);
+      
+      // Update bank account balance
+      const amount = isPartial && partialAmount ? partialAmount : updatedReceivable.value;
+      const updatedBankAccounts = bankAccounts.map(account => {
+        if (account.id === bankAccountId) {
+          return {
+            ...account,
+            currentBalance: account.currentBalance + amount,
+            updatedAt: new Date()
+          };
+        }
+        return account;
+      });
+      setBankAccounts(updatedBankAccounts);
+
+      toast.success("Recebimento registrado e transação criada na conciliação!");
+      console.log('💰 Transação bancária criada para recebimento:', bankTransaction);
+    }
+  };
 
   // Calculate financial summary
   const calculateFinancialSummary = (): FinancialSummary => {
@@ -179,6 +298,7 @@ export default function Financial() {
               calculateFinancialSummary={calculateFinancialSummary}
               resourceCategories={resourceCategories}
               expenseTypes={expenseTypes}
+              onUpdatePayment={handlePaymentUpdate}
             />
           </TabsContent>
 
@@ -188,6 +308,7 @@ export default function Financial() {
               setReceivableAccounts={setReceivableAccounts}
               calculateFinancialSummary={calculateFinancialSummary}
               bankAccounts={bankAccounts}
+              onUpdateReceivable={handleReceivableUpdate}
             />
           </TabsContent>
 
