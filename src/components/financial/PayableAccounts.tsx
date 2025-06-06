@@ -52,16 +52,31 @@ export function PayableAccounts({
   };
 
   const handleSave = (accountData: PaymentAccount) => {
-    const updatedAccount: PaymentAccount = {
-      ...accountData,
-      updatedAt: new Date(),
-    };
+    if (selectedAccount) {
+      // Editing existing account
+      const updatedAccount: PaymentAccount = {
+        ...accountData,
+        updatedAt: new Date(),
+      };
 
-    const updatedAccounts = paymentAccounts.map(payment =>
-      payment.id === updatedAccount.id ? updatedAccount : payment
-    );
-    setPaymentAccounts(updatedAccounts);
+      const updatedAccounts = paymentAccounts.map(payment =>
+        payment.id === updatedAccount.id ? updatedAccount : payment
+      );
+      setPaymentAccounts(updatedAccounts);
+    } else {
+      // Creating new account
+      const newAccount: PaymentAccount = {
+        ...accountData,
+        id: `payment_${Date.now()}`,
+        status: 'a_pagar',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setPaymentAccounts([...paymentAccounts, newAccount]);
+    }
+    
     setIsEditDialogOpen(false);
+    setSelectedAccount(null);
     calculateFinancialSummary();
   };
 
@@ -92,8 +107,14 @@ export function PayableAccounts({
       }
 
       setIsPaymentDialogOpen(false);
+      setSelectedAccount(null);
       calculateFinancialSummary();
     }
+  };
+
+  const handleNewAccount = () => {
+    setSelectedAccount(null);
+    setIsEditDialogOpen(true);
   };
 
   return (
@@ -102,7 +123,7 @@ export function PayableAccounts({
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Contas a Pagar</span>
-            <Button onClick={() => setIsEditDialogOpen(true)}>
+            <Button onClick={handleNewAccount}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Conta
             </Button>

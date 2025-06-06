@@ -49,12 +49,20 @@ export function EditPaymentDialog({
         expenseType: payment.expenseType,
         resourceCategory: payment.resourceCategory,
       });
+    } else {
+      // Reset form for new payment
+      setFormData({
+        description: "",
+        supplier: "",
+        dueDate: new Date(),
+        value: "",
+        expenseType: "",
+        resourceCategory: "",
+      });
     }
-  }, [payment]);
+  }, [payment, isOpen]);
   
   const handleSave = () => {
-    if (!payment) return;
-    
     if (!formData.description) {
       toast.error("Informe uma descrição");
       return;
@@ -70,20 +78,24 @@ export function EditPaymentDialog({
       return;
     }
     
-    const updatedPayment: PaymentAccount = {
-      ...payment,
+    const paymentData: PaymentAccount = {
+      id: payment?.id || `payment_${Date.now()}`,
       description: formData.description,
       supplier: formData.supplier,
       dueDate: formData.dueDate,
       value: parseFloat(formData.value),
       expenseType: formData.expenseType,
       resourceCategory: formData.resourceCategory,
+      status: payment?.status || 'a_pagar',
+      createdAt: payment?.createdAt || new Date(),
       updatedAt: new Date()
     };
     
-    onSave(updatedPayment);
+    onSave(paymentData);
     onClose();
   };
+  
+  const isNewPayment = !payment;
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -91,7 +103,9 @@ export function EditPaymentDialog({
     }}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-xl">Editar Conta a Pagar</DialogTitle>
+          <DialogTitle className="text-xl">
+            {isNewPayment ? "Nova Conta a Pagar" : "Editar Conta a Pagar"}
+          </DialogTitle>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
@@ -205,7 +219,7 @@ export function EditPaymentDialog({
           </Button>
           <Button onClick={handleSave}>
             <Check className="mr-2 h-4 w-4" />
-            Salvar
+            {isNewPayment ? "Criar" : "Salvar"}
           </Button>
         </DialogFooter>
       </DialogContent>
