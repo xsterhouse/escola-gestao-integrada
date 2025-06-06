@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,6 +8,8 @@ import { ReceivableAccounts } from "@/components/financial/ReceivableAccounts";
 import { BankAccounts } from "@/components/financial/BankAccounts";
 import { BankReconciliation } from "@/components/financial/BankReconciliation";
 import { FinancialReports } from "@/components/financial/FinancialReports";
+import { ResourceCategoriesConfig } from "@/components/financial/ResourceCategoriesConfig";
+import { ExpenseTypesConfig } from "@/components/financial/ExpenseTypesConfig";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { useAuth } from "@/contexts/AuthContext";
 import { PaymentAccount, ReceivableAccount, BankAccount, BankTransaction, FinancialSummary } from "@/lib/types";
@@ -21,17 +22,28 @@ export default function Financial() {
   const receivableAccountsKey = currentSchool ? `receivableAccounts_${currentSchool.id}` : 'receivableAccounts';
   const bankAccountsKey = currentSchool ? `bankAccounts_${currentSchool.id}` : 'bankAccounts';
   const transactionsKey = currentSchool ? `transactions_${currentSchool.id}` : 'transactions';
+  const resourceCategoriesKey = currentSchool ? `resourceCategories_${currentSchool.id}` : 'resourceCategories';
+  const expenseTypesKey = currentSchool ? `expenseTypes_${currentSchool.id}` : 'expenseTypes';
   
   const { data: payableAccounts, saveData: setPayableAccounts } = useLocalStorageSync<PaymentAccount>(payableAccountsKey, []);
   const { data: receivableAccounts, saveData: setReceivableAccounts } = useLocalStorageSync<ReceivableAccount>(receivableAccountsKey, []);
   const { data: bankAccounts, saveData: setBankAccounts } = useLocalStorageSync<BankAccount>(bankAccountsKey, []);
   const { data: transactions, saveData: setTransactions } = useLocalStorageSync<BankTransaction>(transactionsKey, []);
   
+  // Default values for resource categories and expense types
+  const defaultResourceCategories = ["PNAE", "PDDE", "PNATE", "Recursos Próprios", "Outros"];
+  const defaultExpenseTypes = ["Material de Consumo", "Serviços", "Equipamentos", "Manutenção", "Outros"];
+  
+  const { data: resourceCategories, saveData: setResourceCategories } = useLocalStorageSync<string>(resourceCategoriesKey, defaultResourceCategories);
+  const { data: expenseTypes, saveData: setExpenseTypes } = useLocalStorageSync<string>(expenseTypesKey, defaultExpenseTypes);
+  
   console.log(`💰 Carregando financeiro com chaves:`, {
     payable: `${payableAccountsKey} (${payableAccounts.length})`,
     receivable: `${receivableAccountsKey} (${receivableAccounts.length})`,
     bank: `${bankAccountsKey} (${bankAccounts.length})`,
-    transactions: `${transactionsKey} (${transactions.length})`
+    transactions: `${transactionsKey} (${transactions.length})`,
+    resourceCategories: `${resourceCategoriesKey} (${resourceCategories.length})`,
+    expenseTypes: `${expenseTypesKey} (${expenseTypes.length})`
   });
   
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -101,17 +113,16 @@ export default function Financial() {
 
   const summary = calculateFinancialSummary();
 
-  // Mock data for missing props
-  const resourceCategories = [
-    "PNAE", "PDDE", "PNATE", "Recursos Próprios", "Outros"
-  ];
-
-  const expenseTypes = [
-    "Material de Consumo", "Serviços", "Equipamentos", "Manutenção", "Outros"
-  ];
-
   const handleAddTransaction = (transaction: BankTransaction) => {
     setTransactions([...transactions, transaction]);
+  };
+
+  const handleResourceCategoriesChange = (categories: string[]) => {
+    setResourceCategories(categories);
+  };
+
+  const handleExpenseTypesChange = (types: string[]) => {
+    setExpenseTypes(types);
   };
 
   return (
@@ -124,12 +135,14 @@ export default function Financial() {
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-3xl grid-cols-6">
+          <TabsList className="grid w-full max-w-4xl grid-cols-8">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="payable">Contas a Pagar</TabsTrigger>
-            <TabsTrigger value="receivable">Contas a Receber</TabsTrigger>
             <TabsTrigger value="bank">Contas Bancárias</TabsTrigger>
             <TabsTrigger value="reconciliation">Conciliação</TabsTrigger>
+            <TabsTrigger value="payable">Contas a Pagar</TabsTrigger>
+            <TabsTrigger value="receivable">Contas a Receber</TabsTrigger>
+            <TabsTrigger value="resource-categories">Categoria de Recursos</TabsTrigger>
+            <TabsTrigger value="expense-types">Tipo de Despesas</TabsTrigger>
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
           </TabsList>
 
@@ -138,6 +151,23 @@ export default function Financial() {
               summary={summary}
               payables={payableAccounts}
               receivables={receivableAccounts}
+            />
+          </TabsContent>
+
+          <TabsContent value="bank" className="mt-4">
+            <BankAccounts 
+              bankAccounts={bankAccounts}
+              setBankAccounts={setBankAccounts}
+            />
+          </TabsContent>
+
+          <TabsContent value="reconciliation" className="mt-4">
+            <BankReconciliation 
+              bankAccounts={bankAccounts}
+              setBankAccounts={setBankAccounts}
+              transactions={transactions}
+              setTransactions={setTransactions}
+              calculateFinancialSummary={calculateFinancialSummary}
             />
           </TabsContent>
 
@@ -159,20 +189,17 @@ export default function Financial() {
             />
           </TabsContent>
 
-          <TabsContent value="bank" className="mt-4">
-            <BankAccounts 
-              bankAccounts={bankAccounts}
-              setBankAccounts={setBankAccounts}
+          <TabsContent value="resource-categories" className="mt-4">
+            <ResourceCategoriesConfig
+              categories={resourceCategories}
+              onCategoriesChange={handleResourceCategoriesChange}
             />
           </TabsContent>
 
-          <TabsContent value="reconciliation" className="mt-4">
-            <BankReconciliation 
-              bankAccounts={bankAccounts}
-              setBankAccounts={setBankAccounts}
-              transactions={transactions}
-              setTransactions={setTransactions}
-              calculateFinancialSummary={calculateFinancialSummary}
+          <TabsContent value="expense-types" className="mt-4">
+            <ExpenseTypesConfig
+              expenseTypes={expenseTypes}
+              onExpenseTypesChange={handleExpenseTypesChange}
             />
           </TabsContent>
 
