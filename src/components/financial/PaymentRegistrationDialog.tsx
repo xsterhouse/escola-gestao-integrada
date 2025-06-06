@@ -51,6 +51,10 @@ export function PaymentRegistrationDialog({
     resourceCategory: account?.resourceCategory || "",
   });
 
+  // Debug: Log das contas bancárias
+  console.log('🏦 PaymentRegistrationDialog - bankAccounts recebidas:', bankAccounts);
+  console.log('🏦 Número de contas bancárias:', bankAccounts?.length || 0);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -99,6 +103,10 @@ export function PaymentRegistrationDialog({
   };
 
   if (!account) return null;
+
+  // Debug: Filtro das contas bancárias
+  const validBankAccounts = bankAccounts?.filter(account => account.id && account.bankName) || [];
+  console.log('🏦 Contas bancárias válidas após filtro:', validBankAccounts);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -208,11 +216,20 @@ export function PaymentRegistrationDialog({
                       <SelectValue placeholder="Selecione a conta bancária" />
                     </SelectTrigger>
                     <SelectContent>
-                      {bankAccounts.filter(account => account.id && account.bankName).map(bankAccount => (
-                        <SelectItem key={bankAccount.id} value={bankAccount.id}>
-                          {bankAccount.bankName} - {bankAccount.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}
+                      {validBankAccounts.length === 0 ? (
+                        <SelectItem value="no-accounts" disabled>
+                          Nenhuma conta bancária encontrada
                         </SelectItem>
-                      ))}
+                      ) : (
+                        validBankAccounts.map(bankAccount => {
+                          console.log('🏦 Renderizando conta:', bankAccount);
+                          return (
+                            <SelectItem key={bankAccount.id} value={bankAccount.id}>
+                              {bankAccount.bankName} - {bankAccount.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}
+                            </SelectItem>
+                          );
+                        })
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
