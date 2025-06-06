@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,7 +97,7 @@ export function BankReconciliation({
     return accountFilter && statusCondition && dateCondition && searchCondition;
   });
 
-  const handleTransaction reconciliationStatusChange = (transactionId: string, newStatus: string) => {
+  const handleTransactionReconciliationStatusChange = (transactionId: string, newStatus: string) => {
     const updatedTransactions = transactions.map(transaction =>
       transaction.id === transactionId ? { ...transaction, reconciliationStatus: newStatus } : transaction
     );
@@ -361,7 +362,7 @@ export function BankReconciliation({
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleTransactionreconciliationStatusChange(transaction.id, transaction.reconciliationStatus === 'pendente' ? 'conciliado' : 'pendente')}
+                          onClick={() => handleTransactionReconciliationStatusChange(transaction.id, transaction.reconciliationStatus === 'pendente' ? 'conciliado' : 'pendente')}
                           title={transaction.reconciliationStatus === 'pendente' ? 'Conciliar' : 'Desconciliar'}
                         >
                           {transaction.reconciliationStatus === 'pendente' ? (
