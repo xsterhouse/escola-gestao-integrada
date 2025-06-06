@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ import {
 } from "@/lib/types";
 import { generateModernFinancialReportPDF } from "@/lib/pdf-utils";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface FinancialReportsProps {
   bankAccounts: BankAccount[];
@@ -64,6 +66,7 @@ export function FinancialReports({
   payables,
   receivables,
 }: FinancialReportsProps) {
+  const { currentUser, currentSchool } = useAuth();
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [resourceTypeFilter, setResourceTypeFilter] = useState("all");
@@ -74,25 +77,38 @@ export function FinancialReports({
   const [password, setPassword] = useState("");
   const [selectedReportId, setSelectedReportId] = useState("");
   
-  // Dados simulados para usuário e escola (em uma aplicação real viria do contexto de autenticação)
-  const currentUser = {
-    name: "Maria Silva Santos",
-  };
-  
-  const currentSchool = {
-    name: "Escola Municipal João da Silva",
-  };
-  
   const purchasingCenters = [
     "Central de Compras Municipal",
     "Central Regional Norte"
   ];
   
   // Relatórios salvos carregados do localStorage (dados reais)
-  const [reports] = useState(() => {
+  const [reports, setReports] = useState(() => {
     const savedReports = localStorage.getItem('financialReports');
     return savedReports ? JSON.parse(savedReports) : [];
   });
+
+  // Função para salvar relatório
+  const saveReportToStorage = (reportData: any) => {
+    const newReport = {
+      id: `report_${Date.now()}`,
+      title: reportData.title,
+      reportType: reportData.reportType,
+      resourceType: reportData.filters?.resourceType || reportData.filters?.status || "Todos",
+      period: reportData.period,
+      createdAt: new Date().toISOString(),
+      createdBy: currentUser?.name || "Usuário",
+      schoolName: currentSchool?.name || "Escola",
+      data: reportData.data,
+      summary: reportData.summary
+    };
+
+    const updatedReports = [...reports, newReport];
+    setReports(updatedReports);
+    localStorage.setItem('financialReports', JSON.stringify(updatedReports));
+    
+    toast.success("Relatório salvo com sucesso!");
+  };
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -114,9 +130,11 @@ export function FinancialReports({
   const confirmDeleteReport = () => {
     // Em uma aplicação real, verificaria a senha e deletaria o relatório
     const updatedReports = reports.filter((r: any) => r.id !== selectedReportId);
+    setReports(updatedReports);
     localStorage.setItem('financialReports', JSON.stringify(updatedReports));
     setIsDeleteDialogOpen(false);
     setPassword("");
+    toast.success("Relatório excluído com sucesso!");
   };
   
   // Função para gerar relatório de recursos (PNAE, PNATE, etc.) em PDF
@@ -199,25 +217,31 @@ export function FinancialReports({
     const totalReceitas = filteredReceipts.reduce((sum, receipt) => sum + receipt.value, 0);
     const totalDespesas = filteredPayments.reduce((sum, payment) => sum + payment.value, 0);
     const saldo = totalReceitas - totalDespesas;
-    
-    // Gerar PDF
-    generateModernFinancialReportPDF({
+
+    // Preparar dados para salvar
+    const reportToSave = {
       title: reportTitle,
       reportType: "resource",
       period: reportPeriod,
       filters: {
         resourceType: resourceTypeFilter,
       },
-      schoolName: currentSchool.name,
+      schoolName: currentSchool?.name || "Escola",
       purchasingCenters: purchasingCenters,
-      userName: currentUser.name,
+      userName: currentUser?.name || "Usuário",
       data: reportData,
       summary: {
         totalReceitas,
         totalDespesas,
         saldo
       }
-    });
+    };
+
+    // Salvar o relatório
+    saveReportToStorage(reportToSave);
+    
+    // Gerar PDF
+    generateModernFinancialReportPDF(reportToSave);
   };
   
   // Função para gerar relatório de pagamentos e recebimentos em PDF
@@ -316,9 +340,9 @@ export function FinancialReports({
     const totalReceitas = filteredReceipts.reduce((sum, receipt) => sum + receipt.value, 0);
     const totalDespesas = filteredPayments.reduce((sum, payment) => sum + payment.value, 0);
     const saldo = totalReceitas - totalDespesas;
-    
-    // Gerar PDF
-    generateModernFinancialReportPDF({
+
+    // Preparar dados para salvar
+    const reportToSave = {
       title: reportTitle,
       reportType: "transactions",
       period: reportPeriod,
@@ -326,16 +350,22 @@ export function FinancialReports({
         supplier: supplierFilter,
         status: statusFilter,
       },
-      schoolName: currentSchool.name,
+      schoolName: currentSchool?.name || "Escola",
       purchasingCenters: purchasingCenters,
-      userName: currentUser.name,
+      userName: currentUser?.name || "Usuário",
       data: reportData,
       summary: {
         totalReceitas,
         totalDespesas,
         saldo
       }
-    });
+    };
+
+    // Salvar o relatório
+    saveReportToStorage(reportToSave);
+    
+    // Gerar PDF
+    generateModernFinancialReportPDF(reportToSave);
   };
   
   return (
@@ -446,14 +476,14 @@ export function FinancialReports({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.filter((r: any) => r.resourceType !== "Todos").length === 0 ? (
+                  {reports.filter((r: any) => r.reportType === "resource").length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                         Nenhum relatório de prestação de contas encontrado. Gere novos relatórios usando os filtros acima.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    reports.filter((r: any) => r.resourceType !== "Todos").map((report: any) => (
+                    reports.filter((r: any) => r.reportType === "resource").map((report: any) => (
                       <TableRow key={report.id}>
                         <TableCell className="font-medium">{report.title}</TableCell>
                         <TableCell>{report.resourceType}</TableCell>
@@ -604,14 +634,14 @@ export function FinancialReports({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.filter((r: any) => r.resourceType === "Todos").length === 0 ? (
+                  {reports.filter((r: any) => r.reportType === "transactions").length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-gray-500">
                         Nenhum relatório de pagamentos e recebimentos encontrado. Gere novos relatórios usando os filtros acima.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    reports.filter((r: any) => r.resourceType === "Todos").map((report: any) => (
+                    reports.filter((r: any) => r.reportType === "transactions").map((report: any) => (
                       <TableRow key={report.id}>
                         <TableCell className="font-medium">{report.title}</TableCell>
                         <TableCell>{report.period}</TableCell>
@@ -733,7 +763,9 @@ export function FinancialReports({
                     <CardTitle className="text-sm">Total Receitas</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl font-bold text-green-600">{formatCurrency(0)}</p>
+                    <p className="text-xl font-bold text-green-600">
+                      {formatCurrency(reports.find((r: any) => r.id === selectedReportId)?.summary?.totalReceitas || 0)}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -741,7 +773,9 @@ export function FinancialReports({
                     <CardTitle className="text-sm">Total Despesas</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl font-bold text-red-600">{formatCurrency(0)}</p>
+                    <p className="text-xl font-bold text-red-600">
+                      {formatCurrency(reports.find((r: any) => r.id === selectedReportId)?.summary?.totalDespesas || 0)}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -749,7 +783,9 @@ export function FinancialReports({
                     <CardTitle className="text-sm">Saldo</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl font-bold">{formatCurrency(0)}</p>
+                    <p className="text-xl font-bold">
+                      {formatCurrency(reports.find((r: any) => r.id === selectedReportId)?.summary?.saldo || 0)}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -757,7 +793,9 @@ export function FinancialReports({
                     <CardTitle className="text-sm">Itens</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl font-bold">0</p>
+                    <p className="text-xl font-bold">
+                      {reports.find((r: any) => r.id === selectedReportId)?.data?.length || 0}
+                    </p>
                   </CardContent>
                 </Card>
               </div>
@@ -775,11 +813,23 @@ export function FinancialReports({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                        Nenhum dado disponível no relatório selecionado.
-                      </TableCell>
-                    </TableRow>
+                    {reports.find((r: any) => r.id === selectedReportId)?.data?.length > 0 ? (
+                      reports.find((r: any) => r.id === selectedReportId)?.data?.map((item: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell>{item.descricao}</TableCell>
+                          <TableCell>{item.categoria}</TableCell>
+                          <TableCell>{item.data}</TableCell>
+                          <TableCell>{item.valor}</TableCell>
+                          <TableCell>{item.tipo}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                          Nenhum dado disponível no relatório selecionado.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
