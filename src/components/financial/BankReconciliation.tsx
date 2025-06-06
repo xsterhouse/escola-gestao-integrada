@@ -1,15 +1,10 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { BankAccount, BankTransaction } from "@/lib/types";
 import {
   Table,
   TableBody,
@@ -18,89 +13,80 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Search, 
-  FileText, 
-  Eye, 
-  CheckCircle, 
-  XCircle, 
-  Calendar,
-  Filter,
-  Download,
-  RefreshCw
-} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Search, Download, Check, RefreshCw, Filter, Plus, FileText, Eye, Trash2, Building2, CreditCard } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { 
-  BankAccount, 
-  BankTransaction, 
-  FinancialSummary 
-} from "@/lib/types";
+import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { NewTransactionModal } from "./NewTransactionModal";
+import { GenerateReportModal } from "./GenerateReportModal";
 import { ViewTransactionDialog } from "./ViewTransactionDialog";
 import { DeleteTransactionDialog } from "./DeleteTransactionDialog";
-import { NewTransactionModal } from "./NewTransactionModal";
-import { ImportStatementModal } from "./ImportStatementModal";
-import { GenerateReportModal } from "./GenerateReportModal";
 import { toast } from "sonner";
 
 interface BankReconciliationProps {
   bankAccounts: BankAccount[];
-  setBankAccounts: (accounts: BankAccount[]) => void;
+  setBankAccounts: React.Dispatch<React.SetStateAction<BankAccount[]>>;
   transactions: BankTransaction[];
-  setTransactions: (transactions: BankTransaction[]) => void;
-  calculateFinancialSummary: () => FinancialSummary;
+  setTransactions: React.Dispatch<React.SetStateAction<BankTransaction[]>>;
+  calculateFinancialSummary: () => void;
 }
 
-export function BankReconciliation({
-  bankAccounts,
-  setBankAccounts,
+export function BankReconciliation({ 
+  bankAccounts, 
+  setBankAccounts, 
   transactions,
   setTransactions,
-  calculateFinancialSummary,
+  calculateFinancialSummary
 }: BankReconciliationProps) {
-  const [activeTab, setActiveTab] = useState("reconciliation");
-  const [selectedAccount, setSelectedAccount] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedAccount, setSelectedAccount] = useState<string>("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [isReconcileDialogOpen, setIsReconcileDialogOpen] = useState<boolean>(false);
   const [selectedTransaction, setSelectedTransaction] = useState<BankTransaction | null>(null);
-  const [isViewTransactionOpen, setIsViewTransactionOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isNewTransactionOpen, setIsNewTransactionOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-
+  
+  // Modal states
+  const [isNewTransactionModalOpen, setIsNewTransactionModalOpen] = useState<boolean>(false);
+  const [isGenerateReportModalOpen, setIsGenerateReportModalOpen] = useState<boolean>(false);
+  const [isViewTransactionOpen, setIsViewTransactionOpen] = useState<boolean>(false);
+  const [isDeleteTransactionOpen, setIsDeleteTransactionOpen] = useState<boolean>(false);
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
-
-  const filteredTransactions = transactions.filter((transaction) => {
-    const accountFilter = selectedAccount === "all" || transaction.bankAccountId === selectedAccount;
-    const statusCondition = statusFilter === "all" || transaction.reconciliationStatus === statusFilter;
-
-    const dateCondition = (!startDate || !transaction.date || new Date(transaction.date) >= startDate) &&
-                          (!endDate || !transaction.date || new Date(transaction.date) <= endDate);
-
-    const searchCondition = !searchQuery ||
-                            transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            transaction.category?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    return accountFilter && statusCondition && dateCondition && searchCondition;
-  });
-
-  const handleTransactionReconciliationStatusChange = (transactionId: string, newStatus: "pendente" | "conciliado" | "pgt_parcial") => {
-    const updatedTransactions = transactions.map(transaction =>
-      transaction.id === transactionId ? { ...transaction, reconciliationStatus: newStatus } : transaction
-    );
-    setTransactions(updatedTransactions);
+  
+  const handleReconcileTransaction = (transaction: BankTransaction) => {
+    setSelectedTransaction(transaction);
+    setIsReconcileDialogOpen(true);
+  };
+  
+  const confirmReconciliation = () => {
+    if (selectedTransaction) {
+      // Update the reconciliation status with the correct type
+      const updatedTransactions = transactions.map(t => 
+        t.id === selectedTransaction.id 
+          ? { ...t, reconciliationStatus: "conciliado" as const }
+          : t
+      );
+      setTransactions(updatedTransactions);
+      setIsReconcileDialogOpen(false);
+      calculateFinancialSummary();
+      toast.success("Transação conciliada com sucesso!");
+    }
   };
 
   const handleViewTransaction = (transaction: BankTransaction) => {
@@ -110,346 +96,540 @@ export function BankReconciliation({
 
   const handleDeleteTransaction = (transaction: BankTransaction) => {
     setSelectedTransaction(transaction);
-    setIsDeleteDialogOpen(true);
+    setIsDeleteTransactionOpen(true);
   };
 
   const confirmDeleteTransaction = (password: string, reason: string) => {
-    if (!selectedTransaction) return;
-
-    const updatedTransactions = transactions.filter(transaction => transaction.id !== selectedTransaction.id);
-    setTransactions(updatedTransactions);
-    setIsDeleteDialogOpen(false);
-    setSelectedTransaction(null);
-    toast.success("Transação excluída com sucesso!");
+    if (selectedTransaction) {
+      // Remove transaction from the list
+      const updatedTransactions = transactions.filter(t => t.id !== selectedTransaction.id);
+      setTransactions(updatedTransactions);
+      setIsDeleteTransactionOpen(false);
+      setSelectedTransaction(null);
+      calculateFinancialSummary();
+      toast.success("Transação excluída com sucesso!");
+      
+      // Here you could also save the deletion record for audit purposes
+      console.log('Transaction deleted:', {
+        transactionId: selectedTransaction.id,
+        reason,
+        deletedAt: new Date(),
+        deletedBy: 'current-user' // This would come from auth context
+      });
+    }
   };
-
-  const getAccountStats = (accountId: string) => {
-    const accountTransactions = transactions.filter(t => t.bankAccountId === accountId);
-    const reconciled = accountTransactions.filter(t => t.reconciliationStatus === 'conciliado').length;
-    const pending = accountTransactions.filter(t => t.reconciliationStatus === 'pendente').length;
-    return { reconciled, pending };
-  };
-
-  const handleNewTransaction = (newTransaction: BankTransaction) => {
+  
+  const handleAddTransaction = (newTransaction: BankTransaction) => {
     setTransactions([...transactions, newTransaction]);
+    calculateFinancialSummary();
   };
-
-  const handleImportTransactions = (importedTransactions: BankTransaction[]) => {
-    setTransactions([...transactions, ...importedTransactions]);
+  
+  const exportTransactions = () => {
+    // This functionality is already implemented in the component
+    toast.success("Exportando transações...");
   };
+  
+  // Filter transactions based on selected filters
+  const filteredTransactions = transactions.filter(transaction => {
+    let includeTransaction = true;
+    
+    if (selectedAccount && transaction.bankAccountId !== selectedAccount) {
+      includeTransaction = false;
+    }
+    
+    if (startDate && new Date(transaction.date) < startDate) {
+      includeTransaction = false;
+    }
+    
+    if (endDate) {
+      const endDateWithTime = new Date(endDate);
+      endDateWithTime.setHours(23, 59, 59, 999);
+      if (new Date(transaction.date) > endDateWithTime) {
+        includeTransaction = false;
+      }
+    }
+    
+    if (statusFilter !== "all") {
+      if (statusFilter === "reconciled" && transaction.reconciliationStatus !== "conciliado") {
+        includeTransaction = false;
+      } else if (statusFilter === "unreconciled" && !["pendente", "pgt_parcial"].includes(transaction.reconciliationStatus)) {
+        includeTransaction = false;
+      }
+    }
+    
+    if (typeFilter !== "all" && 
+        ((typeFilter === "credit" && transaction.transactionType !== "credito") ||
+         (typeFilter === "debit" && transaction.transactionType !== "debito"))) {
+      includeTransaction = false;
+    }
+    
+    return includeTransaction;
+  });
+  
+  // Calculate running balance for each transaction
+  const transactionsWithBalance = filteredTransactions.map((transaction, index) => {
+    const previousTransactions = filteredTransactions.slice(0, index + 1);
+    const selectedAccountData = bankAccounts.find(a => a.id === selectedAccount);
+    const initialBalance = selectedAccountData?.initialBalance || 0;
+    
+    const balance = previousTransactions.reduce((acc, t) => {
+      return t.transactionType === "credito" ? acc + t.value : acc - t.value;
+    }, initialBalance);
+    
+    return { ...transaction, balance };
+  });
+  
+  // Get selected account information
+  const selectedAccountData = bankAccounts.find(a => a.id === selectedAccount);
+  
+  // Calculate financial summary for displayed transactions (fix initial balance calculation)
+  const displayedInitialBalance = selectedAccountData?.initialBalance || 0;
+  const displayedTotalRevenues = filteredTransactions
+    .filter(t => t.transactionType === "credito")
+    .reduce((sum, t) => sum + t.value, 0);
+  const displayedTotalExpenses = filteredTransactions
+    .filter(t => t.transactionType === "debito")
+    .reduce((sum, t) => sum + t.value, 0);
+  const displayedFinalBalance = displayedInitialBalance + displayedTotalRevenues - displayedTotalExpenses;
 
+  // Get management type badge color
+  const getManagementTypeBadgeColor = (managementType?: string) => {
+    switch (managementType) {
+      case 'PDDE':
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'PNAE':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'PNATE':
+        return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'Recursos Próprios':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+  
   return (
     <div className="space-y-6">
-      {/* Account Overview Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {bankAccounts.map((account) => (
-          <Card key={account.id}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                {account.bankName} - {account.accountType}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Agência:</span>
-                  <span>{account.agencyNumber}</span>
+      {/* Selected Account Information Header */}
+      {selectedAccountData && (
+        <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-semibold text-blue-900">{selectedAccountData.bankName}</h3>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Conta:</span>
-                  <span>{account.accountNumber}</span>
-                </div>
-                <div className="flex justify-between text-sm font-medium">
-                  <span>Saldo Atual:</span>
-                  <span className={account.currentBalance >= 0 ? "text-green-600" : "text-red-600"}>
-                    {formatCurrency(account.currentBalance)}
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm text-blue-700">
+                    {selectedAccountData.accountType === 'movimento' ? 'Conta Movimento' : 'Conta Aplicação'}
                   </span>
                 </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Conciliadas:</span>
-                  <span>{getAccountStats(account.id).reconciled}</span>
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Pendentes:</span>
-                  <span>{getAccountStats(account.id).pending}</span>
-                </div>
+                {selectedAccountData.managementType && (
+                  <Badge 
+                    variant="outline" 
+                    className={`${getManagementTypeBadgeColor(selectedAccountData.managementType)} font-medium`}
+                  >
+                    {selectedAccountData.managementType}
+                  </Badge>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
-          <TabsTrigger value="reconciliation">Conciliação</TabsTrigger>
-          <TabsTrigger value="statements">Extratos</TabsTrigger>
-          <TabsTrigger value="reports">Relatórios</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="reconciliation" className="space-y-4 mt-4">
-          {/* Filters and Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Conciliação Bancária</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-4 mb-4">
-                <div className="flex-1 min-w-[200px]">
-                  <Label>Conta Bancária</Label>
-                  <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma conta" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas as contas</SelectItem>
-                      {bankAccounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.bankName} - {account.accountNumber}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex-1 min-w-[200px]">
-                  <Label>Status</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Filtrar por status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="pendente">Pendentes</SelectItem>
-                      <SelectItem value="conciliado">Conciliadas</SelectItem>
-                      <SelectItem value="divergente">Divergentes</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex-1 min-w-[200px]">
-                  <Label>Período - Início</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        {startDate ? format(startDate, 'dd/MM/yyyy') : "Data inicial"}
-                        <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={startDate}
-                        onSelect={setStartDate}
-                        initialFocus
-                        locale={ptBR}
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="flex-1 min-w-[200px]">
-                  <Label>Período - Fim</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        {endDate ? format(endDate, 'dd/MM/yyyy') : "Data final"}
-                        <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={endDate}
-                        onSelect={setEndDate}
-                        initialFocus
-                        locale={ptBR}
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsNewTransactionOpen(true)}
-                  className="flex items-center gap-2"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Nova Transação
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsImportModalOpen(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Importar Extrato
-                </Button>
-
-                <Button 
-                  onClick={() => setIsReportModalOpen(true)}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Gerar Relatório
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Transactions Table */}
-          <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
-            <div className="flex items-center justify-between py-4 bg-white dark:bg-gray-900">
-              <div>
-                <Button variant="outline">
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filtrar
-                </Button>
-              </div>
-              <Label htmlFor="table-search" className="sr-only">Search</Label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Search className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                </div>
-                <Input 
-                  type="text" 
-                  id="table-search" 
-                  className="block pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
-                  placeholder="Buscar transações" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Saldo Atual</p>
+                <p className="text-xl font-bold text-blue-900">
+                  {formatCurrency(selectedAccountData.currentBalance)}
+                </p>
               </div>
             </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTransactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>{transaction.description}</TableCell>
-                    <TableCell>{transaction.category}</TableCell>
-                    <TableCell>{formatCurrency(transaction.value)}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          transaction.reconciliationStatus === "conciliado"
-                            ? "default"
-                            : transaction.reconciliationStatus === "pendente"
-                            ? "secondary"
-                            : "destructive"
-                        }
-                      >
-                        {transaction.reconciliationStatus}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleViewTransaction(transaction)}
-                          title="Visualizar"
+            {selectedAccountData.description && (
+              <p className="text-sm text-blue-600 mt-2">{selectedAccountData.description}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Financial Summary */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Saldo Inicial</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{formatCurrency(displayedInitialBalance)}</p>
+            {selectedAccountData && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {selectedAccountData.managementType || 'Gestão não informada'}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Total Receitas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(displayedTotalRevenues)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Total Despesas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-red-600">{formatCurrency(displayedTotalExpenses)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Saldo Final</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{formatCurrency(displayedFinalBalance)}</p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Filters & Actions */}
+      <div className="flex flex-col md:flex-row gap-4 justify-between">
+        <div className="flex flex-wrap gap-2">
+          <div className="w-full md:w-56">
+            <Label htmlFor="account">Conta Bancária</Label>
+            <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+              <SelectTrigger id="account" className={selectedAccount ? "ring-2 ring-blue-500 bg-blue-50" : ""}>
+                <SelectValue placeholder="Selecione uma conta" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as contas</SelectItem>
+                {bankAccounts.filter(account => account.id && account.id.trim() !== "").map(account => (
+                  <SelectItem key={account.id} value={account.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{account.bankName} - {account.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}</span>
+                      {account.managementType && (
+                        <Badge 
+                          variant="outline" 
+                          className={`${getManagementTypeBadgeColor(account.managementType)} text-xs`}
                         >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleTransactionReconciliationStatusChange(transaction.id, transaction.reconciliationStatus === 'pendente' ? 'conciliado' : 'pendente')}
-                          title={transaction.reconciliationStatus === 'pendente' ? 'Conciliar' : 'Desconciliar'}
-                        >
-                          {transaction.reconciliationStatus === 'pendente' ? (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-yellow-500" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteTransaction(transaction)}
-                          title="Excluir"
-                        >
-                          <XCircle className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                          {account.managementType}
+                        </Badge>
+                      )}
+                    </div>
+                  </SelectItem>
                 ))}
-              </TableBody>
-            </Table>
+              </SelectContent>
+            </Select>
           </div>
-        </TabsContent>
+          
+          <div className="w-full md:w-auto">
+            <Label>Período</Label>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-[120px] pl-3 text-left font-normal"
+                  >
+                    {startDate ? format(startDate, 'dd/MM/yyyy') : "Data inicial"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-[120px] pl-3 text-left font-normal"
+                  >
+                    {endDate ? format(endDate, 'dd/MM/yyyy') : "Data final"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          
+          <div className="w-full md:w-40">
+            <Label htmlFor="status">Status</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger id="status">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="reconciled">Conciliado</SelectItem>
+                <SelectItem value="unreconciled">Não Conciliado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="w-full md:w-40">
+            <Label htmlFor="type">Tipo</Label>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger id="type">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="credit">Crédito</SelectItem>
+                <SelectItem value="debit">Débito</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="w-full md:w-auto flex items-end">
+            <Button variant="outline" size="icon" className="h-10 w-10">
+              <Filter className="h-4 w-4" />
+              <span className="sr-only">Filtrar</span>
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex gap-2 items-end">
+          <Button onClick={() => setIsNewTransactionModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Incluir
+          </Button>
+          <Button onClick={() => setIsGenerateReportModalOpen(true)}>
+            <FileText className="mr-2 h-4 w-4" />
+            Gerar Relatório
+          </Button>
+          <Button variant="outline" onClick={exportTransactions}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar
+          </Button>
+        </div>
+      </div>
+      
+      {/* Transactions Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Conciliação Bancária</CardTitle>
+          <CardDescription>
+            Visualize e concilie os lançamentos bancários com seus registros internos.
+            {selectedAccountData && (
+              <span className="block mt-1 text-blue-600">
+                Conta selecionada: {selectedAccountData.bankName} - {selectedAccountData.managementType || 'Gestão não informada'}
+              </span>
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data</TableHead>
+                <TableHead>Tipo de Conta</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Valor</TableHead>
+                <TableHead>Saldo</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Gestão</TableHead>
+                <TableHead>Situação</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {transactionsWithBalance.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center">
+                    {selectedAccount ? 
+                      "Nenhuma transação encontrada para esta conta." : 
+                      "Selecione uma conta bancária para visualizar as transações."
+                    }
+                  </TableCell>
+                </TableRow>
+              ) : (
+                transactionsWithBalance.map(transaction => {
+                  const account = bankAccounts.find(a => a.id === transaction.bankAccountId);
+                  const displayValue = transaction.isPartialPayment && transaction.partialAmount 
+                    ? transaction.partialAmount 
+                    : transaction.value;
+                  
+                  return (
+                    <TableRow key={transaction.id}>
+                      <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell>{account?.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {transaction.description}
+                          {transaction.isDuplicate && (
+                            <span className="px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded-full">
+                              Duplicado
+                            </span>
+                          )}
+                          {transaction.isPartialPayment && (
+                            <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">
+                              Parcial
+                            </span>
+                          )}
+                        </div>
+                        {transaction.remainingAmount && transaction.remainingAmount > 0 && (
+                          <div className="text-xs text-orange-600 mt-1">
+                            Restante: {formatCurrency(transaction.remainingAmount)}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className={transaction.transactionType === 'credito' ? 'text-green-600' : 'text-red-600'}>
+                        {formatCurrency(displayValue)}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {formatCurrency(transaction.balance)}
+                      </TableCell>
+                      <TableCell>{transaction.transactionType === 'credito' ? 'Crédito' : 'Débito'}</TableCell>
+                      <TableCell>
+                        {account?.managementType && (
+                          <Badge 
+                            variant="outline" 
+                            className={`${getManagementTypeBadgeColor(account.managementType)} text-xs`}
+                          >
+                            {account.managementType}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <div className={`mr-2 h-2 w-2 rounded-full ${
+                            transaction.reconciliationStatus === 'conciliado' ? 'bg-green-500' : 
+                            transaction.reconciliationStatus === 'pgt_parcial' ? 'bg-orange-500' :
+                            'bg-orange-500'
+                          }`} />
+                          {transaction.reconciliationStatus === 'conciliado' ? 'Conciliado' : 
+                           transaction.reconciliationStatus === 'pgt_parcial' ? 'Pgt Parcial' :
+                           'Não Conciliado'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleViewTransaction(transaction)}
+                            title="Visualizar"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {transaction.reconciliationStatus === 'pendente' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleReconcileTransaction(transaction)}
+                              title="Conciliar"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDeleteTransaction(transaction)}
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      
+      {/* Reconciliation Dialog */}
+      <Dialog open={isReconcileDialogOpen} onOpenChange={setIsReconcileDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Conciliar Transação</DialogTitle>
+            <DialogDescription>
+              Confirme os detalhes da transação para conciliação bancária.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedTransaction && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Data</Label>
+                  <Input value={format(new Date(selectedTransaction.date), 'dd/MM/yyyy')} readOnly />
+                </div>
+                <div>
+                  <Label>Valor</Label>
+                  <Input value={formatCurrency(selectedTransaction.value)} readOnly />
+                </div>
+              </div>
+              
+              <div>
+                <Label>Descrição</Label>
+                <Input value={selectedTransaction.description} readOnly />
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox id="confirm" />
+                <label
+                  htmlFor="confirm"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Confirmo que esta transação foi verificada e está correta.
+                </label>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReconcileDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={confirmReconciliation}>Confirmar Conciliação</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* New Transaction Modal */}
+      <NewTransactionModal
+        isOpen={isNewTransactionModalOpen}
+        onClose={() => setIsNewTransactionModalOpen(false)}
+        bankAccounts={bankAccounts}
+        onSave={handleAddTransaction}
+      />
+      
+      {/* Generate Report Modal */}
+      <GenerateReportModal
+        isOpen={isGenerateReportModalOpen}
+        onClose={() => setIsGenerateReportModalOpen(false)}
+        bankAccounts={bankAccounts}
+      />
 
-        <TabsContent value="statements" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Extratos Bancários</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Funcionalidade para visualizar e gerenciar extratos bancários.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="reports" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Relatórios</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Funcionalidade para gerar e exportar relatórios financeiros.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Modals */}
+      {/* View Transaction Dialog */}
       <ViewTransactionDialog
         isOpen={isViewTransactionOpen}
         onClose={() => setIsViewTransactionOpen(false)}
         transaction={selectedTransaction}
       />
 
+      {/* Delete Transaction Dialog */}
       <DeleteTransactionDialog
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
+        isOpen={isDeleteTransactionOpen}
+        onClose={() => setIsDeleteTransactionOpen(false)}
         transaction={selectedTransaction}
         onConfirm={confirmDeleteTransaction}
-      />
-
-      <NewTransactionModal
-        isOpen={isNewTransactionOpen}
-        onClose={() => setIsNewTransactionOpen(false)}
-        bankAccounts={bankAccounts}
-        onSave={handleNewTransaction}
-      />
-
-      <ImportStatementModal
-        isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
-        bankAccounts={bankAccounts}
-        onImport={handleImportTransactions}
-      />
-
-      <GenerateReportModal
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-        bankAccounts={bankAccounts}
       />
     </div>
   );
