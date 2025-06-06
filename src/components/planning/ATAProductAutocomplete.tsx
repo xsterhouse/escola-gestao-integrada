@@ -35,34 +35,47 @@ export function ATAProductAutocomplete({
   const loadProducts = (): Product[] => {
     try {
       const storedProducts = localStorage.getItem("products");
+      console.log("🔍 Dados brutos do localStorage 'products':", storedProducts);
+      
       if (storedProducts) {
         const parsedData = JSON.parse(storedProducts);
+        console.log("📋 Dados parseados:", parsedData);
         
-        // Se for um array de objetos com propriedade 'data', extrair os dados
-        if (Array.isArray(parsedData) && parsedData.length > 0 && parsedData[0].data) {
-          return parsedData.map(item => item.data);
-        }
-        
-        // Se for um array direto, retornar como está
+        // Se for um array direto de produtos
         if (Array.isArray(parsedData)) {
+          console.log("✅ Array de produtos encontrado:", parsedData.length, "produtos");
           return parsedData;
         }
+        
+        // Se for um objeto com propriedade 'data'
+        if (parsedData && parsedData.data && Array.isArray(parsedData.data)) {
+          console.log("✅ Dados em parsedData.data encontrados:", parsedData.data.length, "produtos");
+          return parsedData.data;
+        }
       }
+      
+      console.log("❌ Nenhum produto encontrado no localStorage");
       return [];
     } catch (error) {
-      console.error("Erro ao carregar produtos:", error);
+      console.error("❌ Erro ao carregar produtos:", error);
       return [];
     }
   };
 
   // Buscar produtos com base no texto digitado
   useEffect(() => {
+    console.log("🔤 Texto digitado:", value, "| Tamanho:", value.length);
+    
     if (value.length >= 3) {
       const products = loadProducts();
+      console.log("📦 Produtos carregados para filtrar:", products);
+      
       const filtered = products
-        .filter(product => 
-          product.description?.toLowerCase().includes(value.toLowerCase())
-        )
+        .filter(product => {
+          const hasDescription = product.description && product.description.toLowerCase().includes(value.toLowerCase());
+          console.log(`🔍 Produto ${product.description} - Match:`, hasDescription);
+          return hasDescription;
+        })
         .slice(0, 10) // Limitar a 10 sugestões
         .map(product => ({
           id: product.id,
@@ -71,10 +84,12 @@ export function ATAProductAutocomplete({
           item: product.item
         }));
       
+      console.log("✨ Produtos filtrados:", filtered);
       setSuggestions(filtered);
       setShowSuggestions(filtered.length > 0);
       setSelectedIndex(-1);
     } else {
+      console.log("⏳ Aguardando pelo menos 3 caracteres...");
       setSuggestions([]);
       setShowSuggestions(false);
       setSelectedIndex(-1);
@@ -82,10 +97,12 @@ export function ATAProductAutocomplete({
   }, [value]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("📝 Input mudou para:", e.target.value);
     onChange(e.target.value);
   };
 
   const handleProductClick = (product: ProductSuggestion) => {
+    console.log("🎯 Produto selecionado:", product);
     onChange(product.description);
     onProductSelect(product);
     setShowSuggestions(false);
@@ -127,6 +144,18 @@ export function ATAProductAutocomplete({
     }, 200);
   };
 
+  const handleFocus = () => {
+    console.log("🎯 Input focado com valor:", value);
+    if (value.length >= 3) {
+      const products = loadProducts();
+      console.log("🔄 Recarregando sugestões no foco...");
+      // Recarregar sugestões se já temos texto suficiente
+      if (products.length > 0) {
+        setShowSuggestions(suggestions.length > 0);
+      }
+    }
+  };
+
   return (
     <div className="relative">
       <Input
@@ -135,7 +164,7 @@ export function ATAProductAutocomplete({
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
-        onFocus={() => value.length >= 3 && setSuggestions(suggestions)}
+        onFocus={handleFocus}
         placeholder={placeholder}
         disabled={disabled}
         className="w-full"
