@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
 import { ATAContract } from "@/lib/types";
-import { ATAProductAutocomplete } from "./ATAProductAutocomplete";
+import { SimpleProductAutocomplete } from "./SimpleProductAutocomplete";
 
 const ataFormSchema = z.object({
   numeroProcesso: z.string().min(1, "Número do processo é obrigatório"),
@@ -55,11 +55,9 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
 
   const handleProductSelect = (index: number, product: any) => {
     console.log(`🎯 Produto selecionado para item ${index}:`, product);
-    // Preencher automaticamente os campos com dados do produto selecionado
     form.setValue(`items.${index}.nome`, product.description);
     form.setValue(`items.${index}.unidade`, product.unit);
     
-    // Se o produto tem um número de item, podemos sugerir
     if (product.item) {
       console.log(`📋 Produto selecionado tem item ${product.item}`);
     }
@@ -78,8 +76,8 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
         nome: item.nome,
         unidade: item.unidade,
         quantidade: item.quantidade,
-        valorUnitario: 0, // Valor padrão, pode ser definido posteriormente
-        valorTotal: 0, // Será calculado quando valor unitário for definido
+        valorUnitario: 0,
+        valorTotal: 0,
         descricao: item.descricao || "",
         saldoDisponivel: item.quantidade,
       })),
@@ -198,26 +196,31 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.nome`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Descrição do Produto *</FormLabel>
-                        <FormControl>
-                          <ATAProductAutocomplete
-                            ref={field.ref}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Descrição do Produto *
+                    </label>
+                    <Controller
+                      control={form.control}
+                      name={`items.${index}.nome`}
+                      render={({ field, fieldState }) => (
+                        <div>
+                          <SimpleProductAutocomplete
                             value={field.value}
                             onChange={field.onChange}
                             onProductSelect={(product) => handleProductSelect(index, product)}
                             placeholder="Digite para buscar produtos..."
                             disabled={field.disabled}
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          {fieldState.error && (
+                            <p className="text-sm font-medium text-destructive mt-1">
+                              {fieldState.error.message}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    />
+                  </div>
 
                   <FormField
                     control={form.control}
