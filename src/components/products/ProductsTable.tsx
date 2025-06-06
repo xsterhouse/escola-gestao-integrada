@@ -44,6 +44,7 @@ export function ProductsTable({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
   const productsPerPage = 15;
 
   // Start editing a product
@@ -56,6 +57,7 @@ export function ProductsTable({
   const cancelEditing = () => {
     setEditingId(null);
     setEditingProduct(null);
+    setModalOpen(false);
   };
 
   // Save edited product
@@ -64,7 +66,23 @@ export function ProductsTable({
       onUpdate(editingProduct);
       setEditingId(null);
       setEditingProduct(null);
+      setModalOpen(false);
     }
+  };
+
+  // Open modal for additional fields
+  const openModal = () => {
+    setModalOpen(true);
+  };
+
+  // Close modal without canceling editing
+  const closeModal = () => {
+    setModalOpen(false);
+  };
+
+  // Save additional fields from modal
+  const saveAdditionalFields = () => {
+    setModalOpen(false);
   };
 
   // Handle select all checkbox
@@ -270,6 +288,9 @@ export function ProductsTable({
                     <div className="flex items-center space-x-2">
                       {editingId === product.id ? (
                         <>
+                          <Button variant="ghost" size="icon" onClick={openModal} title="Campos Adicionais">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={saveProduct} title="Salvar">
                             <Save className="h-4 w-4" />
                           </Button>
@@ -300,8 +321,8 @@ export function ProductsTable({
       </div>
 
       {/* Product Editing Modal for Indication and Restriction */}
-      {editingId && editingProduct && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50" onClick={cancelEditing}>
+      {modalOpen && editingProduct && (
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
           <div className="bg-white p-4 rounded-md shadow-lg w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-medium mb-4">Campos Adicionais</h3>
             
@@ -333,8 +354,8 @@ export function ProductsTable({
               </div>
               
               <div className="flex justify-end gap-2 mt-4">
-                <Button variant="outline" onClick={cancelEditing}>Cancelar</Button>
-                <Button onClick={saveProduct}>Salvar</Button>
+                <Button variant="outline" onClick={closeModal}>Fechar</Button>
+                <Button onClick={saveAdditionalFields}>Salvar Campos</Button>
               </div>
             </div>
           </div>
