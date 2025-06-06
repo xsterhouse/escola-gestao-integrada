@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,6 +33,8 @@ interface ATAFormProps {
 }
 
 export function ATAForm({ onSubmit }: ATAFormProps) {
+  console.log("🏗️ ATAForm renderizado");
+  
   const form = useForm<ATAFormData>({
     resolver: zodResolver(ataFormSchema),
     defaultValues: {
@@ -53,13 +54,14 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
   });
 
   const handleProductSelect = (index: number, product: any) => {
+    console.log(`🎯 Produto selecionado para item ${index}:`, product);
     // Preencher automaticamente os campos com dados do produto selecionado
     form.setValue(`items.${index}.nome`, product.description);
     form.setValue(`items.${index}.unidade`, product.unit);
     
     // Se o produto tem um número de item, podemos sugerir
     if (product.item) {
-      console.log(`Produto selecionado tem item ${product.item}`);
+      console.log(`📋 Produto selecionado tem item ${product.item}`);
     }
   };
 
@@ -204,10 +206,12 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
                         <FormLabel>Descrição do Produto *</FormLabel>
                         <FormControl>
                           <ATAProductAutocomplete
+                            ref={field.ref}
                             value={field.value}
                             onChange={field.onChange}
                             onProductSelect={(product) => handleProductSelect(index, product)}
                             placeholder="Digite para buscar produtos..."
+                            disabled={field.disabled}
                           />
                         </FormControl>
                         <FormMessage />
