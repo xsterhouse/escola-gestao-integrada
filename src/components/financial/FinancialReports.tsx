@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,7 +65,7 @@ export function FinancialReports({
   payables,
   receivables,
 }: FinancialReportsProps) {
-  const { currentUser, currentSchool } = useAuth();
+  const { user, currentSchool } = useAuth();
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [resourceTypeFilter, setResourceTypeFilter] = useState("all");
@@ -97,7 +96,7 @@ export function FinancialReports({
       resourceType: reportData.filters?.resourceType || reportData.filters?.status || "Todos",
       period: reportData.period,
       createdAt: new Date().toISOString(),
-      createdBy: currentUser?.name || "Usuário",
+      createdBy: user?.name || "Usuário",
       schoolName: currentSchool?.name || "Escola",
       data: reportData.data,
       summary: reportData.summary
@@ -228,7 +227,7 @@ export function FinancialReports({
       },
       schoolName: currentSchool?.name || "Escola",
       purchasingCenters: purchasingCenters,
-      userName: currentUser?.name || "Usuário",
+      userName: user?.name || "Usuário",
       data: reportData,
       summary: {
         totalReceitas,
@@ -352,7 +351,7 @@ export function FinancialReports({
       },
       schoolName: currentSchool?.name || "Escola",
       purchasingCenters: purchasingCenters,
-      userName: currentUser?.name || "Usuário",
+      userName: user?.name || "Usuário",
       data: reportData,
       summary: {
         totalReceitas,
