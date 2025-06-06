@@ -47,6 +47,10 @@ export function ReceiptRegistrationDialog({
   const [isPartialPayment, setIsPartialPayment] = useState<boolean>(false);
   const [partialAmount, setPartialAmount] = useState<string>("");
 
+  // Debug: Log das contas bancárias
+  console.log('🏦 ReceiptRegistrationDialog - bankAccounts recebidas:', bankAccounts);
+  console.log('🏦 Número de contas bancárias:', bankAccounts?.length || 0);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -87,6 +91,10 @@ export function ReceiptRegistrationDialog({
     setIsPartialPayment(false);
     setPartialAmount("");
   };
+
+  // Debug: Filtro das contas bancárias
+  const validBankAccounts = bankAccounts?.filter(account => account.id && account.bankName) || [];
+  console.log('🏦 Contas bancárias válidas após filtro:', validBankAccounts);
 
   // Get selected bank account details
   const selectedAccountData = bankAccounts.find(acc => acc.id === selectedBankAccount);
@@ -174,11 +182,20 @@ export function ReceiptRegistrationDialog({
                     <SelectValue placeholder="Selecione a conta" />
                   </SelectTrigger>
                   <SelectContent>
-                    {bankAccounts.map(account => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.bankName} - {account.description} ({account.managementType || 'Sem gestão'})
+                    {validBankAccounts.length === 0 ? (
+                      <SelectItem value="no-accounts" disabled>
+                        Nenhuma conta bancária encontrada
                       </SelectItem>
-                    ))}
+                    ) : (
+                      validBankAccounts.map(account => {
+                        console.log('🏦 Renderizando conta bancária:', account);
+                        return (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.bankName} - {account.description} ({account.managementType || 'Sem gestão'})
+                          </SelectItem>
+                        );
+                      })
+                    )}
                   </SelectContent>
                 </Select>
                 {selectedAccountData && (

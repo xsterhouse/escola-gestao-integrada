@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -136,15 +135,15 @@ export default function Financial() {
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-6xl grid-cols-8 gap-1 p-1">
-            <TabsTrigger value="dashboard" className="px-3 py-2">Dashboard</TabsTrigger>
-            <TabsTrigger value="bank" className="px-3 py-2">Contas Bancárias</TabsTrigger>
-            <TabsTrigger value="reconciliation" className="px-3 py-2">Conciliação</TabsTrigger>
-            <TabsTrigger value="payable" className="px-3 py-2">Contas a Pagar</TabsTrigger>
-            <TabsTrigger value="receivable" className="px-3 py-2">Contas a Receber</TabsTrigger>
-            <TabsTrigger value="resource-categories" className="px-3 py-2">Categoria de Recursos</TabsTrigger>
-            <TabsTrigger value="expense-types" className="px-3 py-2">Tipo de Despesas</TabsTrigger>
-            <TabsTrigger value="reports" className="px-3 py-2">Relatórios</TabsTrigger>
+          <TabsList className="grid w-full max-w-6xl grid-cols-8 gap-2 p-1">
+            <TabsTrigger value="dashboard" className="px-2 py-2 text-xs">Dashboard</TabsTrigger>
+            <TabsTrigger value="bank" className="px-2 py-2 text-xs">Contas Bancárias</TabsTrigger>
+            <TabsTrigger value="reconciliation" className="px-2 py-2 text-xs">Conciliação</TabsTrigger>
+            <TabsTrigger value="payable" className="px-2 py-2 text-xs">Contas a Pagar</TabsTrigger>
+            <TabsTrigger value="receivable" className="px-2 py-2 text-xs">Contas a Receber</TabsTrigger>
+            <TabsTrigger value="resource-categories" className="px-2 py-2 text-xs">Categoria de Recursos</TabsTrigger>
+            <TabsTrigger value="expense-types" className="px-2 py-2 text-xs">Tipo de Despesas</TabsTrigger>
+            <TabsTrigger value="reports" className="px-2 py-2 text-xs">Relatórios</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-4">
@@ -188,6 +187,7 @@ export default function Financial() {
               receivableAccounts={receivableAccounts}
               setReceivableAccounts={setReceivableAccounts}
               calculateFinancialSummary={calculateFinancialSummary}
+              bankAccounts={bankAccounts}
             />
           </TabsContent>
 
