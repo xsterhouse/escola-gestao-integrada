@@ -68,8 +68,7 @@ const Planning = () => {
     numeroItem: "",
     descricaoProduto: "",
     unidade: "",
-    quantidade: "",
-    valorUnitario: ""
+    quantidade: ""
   });
 
   // Load data from localStorage
@@ -263,7 +262,7 @@ const Planning = () => {
   };
 
   const handleAddItem = () => {
-    if (!newItem.numeroItem || !newItem.descricaoProduto || !newItem.quantidade || !newItem.valorUnitario) {
+    if (!newItem.numeroItem || !newItem.descricaoProduto || !newItem.quantidade) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios",
@@ -272,15 +271,14 @@ const Planning = () => {
       return;
     }
 
-    const valorTotal = parseFloat(newItem.quantidade) * parseFloat(newItem.valorUnitario);
     const item: ATAItem = {
       id: Date.now().toString(),
       numeroItem: newItem.numeroItem,
       descricaoProduto: newItem.descricaoProduto,
       unidade: newItem.unidade,
       quantidade: parseFloat(newItem.quantidade),
-      valorUnitario: parseFloat(newItem.valorUnitario),
-      valorTotal: valorTotal
+      valorUnitario: 0, // Valor padrão
+      valorTotal: 0 // Será calculado quando valor unitário for definido
     };
 
     setAtaItems([...ataItems, item]);
@@ -288,8 +286,7 @@ const Planning = () => {
       numeroItem: "",
       descricaoProduto: "",
       unidade: "",
-      quantidade: "",
-      valorUnitario: ""
+      quantidade: ""
     });
 
     toast({
@@ -525,7 +522,7 @@ const Planning = () => {
 
                     <div className="border rounded-lg p-4">
                       <h3 className="font-medium mb-3">Adicionar Item</h3>
-                      <div className="grid grid-cols-6 gap-2 mb-4">
+                      <div className="grid grid-cols-5 gap-2 mb-4">
                         <Input
                           placeholder="Nº Item"
                           value={newItem.numeroItem}
@@ -554,13 +551,6 @@ const Planning = () => {
                           value={newItem.quantidade}
                           onChange={(e) => setNewItem({...newItem, quantidade: e.target.value})}
                         />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Vl Unit"
-                          value={newItem.valorUnitario}
-                          onChange={(e) => setNewItem({...newItem, valorUnitario: e.target.value})}
-                        />
                         <Button onClick={handleAddItem} size="sm">
                           <Plus className="h-4 w-4" />
                         </Button>
@@ -574,7 +564,7 @@ const Planning = () => {
                               <div>
                                 <p className="font-medium">{item.numeroItem} - {item.descricaoProduto}</p>
                                 <p className="text-sm text-gray-600">
-                                  {item.quantidade} {item.unidade} x R$ {item.valorUnitario.toFixed(2)} = R$ {item.valorTotal.toFixed(2)}
+                                  {item.quantidade} {item.unidade}
                                 </p>
                               </div>
                               <Button
@@ -590,7 +580,7 @@ const Planning = () => {
                           <div className="flex justify-between items-center pt-4 border-t">
                             <div>
                               <p className="font-bold">
-                                Total: R$ {ataItems.reduce((sum, item) => sum + item.valorTotal, 0).toFixed(2)}
+                                Total de Itens: {ataItems.length}
                               </p>
                             </div>
                             <Button onClick={handleSaveATA} className="bg-green-600 hover:bg-green-700">

@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
 import { ATAContract } from "@/lib/types";
+import { ATAProductAutocomplete } from "./ATAProductAutocomplete";
 
 const ataFormSchema = z.object({
   numeroProcesso: z.string().min(1, "Número do processo é obrigatório"),
@@ -22,7 +23,6 @@ const ataFormSchema = z.object({
     nome: z.string().min(1, "Nome do produto é obrigatório"),
     unidade: z.string().min(1, "Unidade é obrigatória"),
     quantidade: z.coerce.number().positive("Quantidade deve ser maior que zero"),
-    valorUnitario: z.coerce.number().positive("Valor unitário deve ser maior que zero"),
     descricao: z.string().optional(),
   })).min(1, "Pelo menos um item deve ser adicionado"),
 });
@@ -43,7 +43,7 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
       dataInicioVigencia: "",
       dataFimVigencia: "",
       observacoes: "",
-      items: [{ nome: "", unidade: "", quantidade: 0, valorUnitario: 0, descricao: "" }],
+      items: [{ nome: "", unidade: "", quantidade: 0, descricao: "" }],
     },
   });
 
@@ -51,6 +51,17 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
     control: form.control,
     name: "items",
   });
+
+  const handleProductSelect = (index: number, product: any) => {
+    // Preencher automaticamente os campos com dados do produto selecionado
+    form.setValue(`items.${index}.nome`, product.description);
+    form.setValue(`items.${index}.unidade`, product.unit);
+    
+    // Se o produto tem um número de item, podemos sugerir
+    if (product.item) {
+      console.log(`Produto selecionado tem item ${product.item}`);
+    }
+  };
 
   const handleSubmit = (data: ATAFormData) => {
     const processedData = {
@@ -65,8 +76,8 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
         nome: item.nome,
         unidade: item.unidade,
         quantidade: item.quantidade,
-        valorUnitario: item.valorUnitario,
-        valorTotal: item.quantidade * item.valorUnitario,
+        valorUnitario: 0, // Valor padrão, pode ser definido posteriormente
+        valorTotal: 0, // Será calculado quando valor unitário for definido
         descricao: item.descricao || "",
         saldoDisponivel: item.quantidade,
       })),
@@ -161,7 +172,7 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({ nome: "", unidade: "", quantidade: 0, valorUnitario: 0, descricao: "" })}
+              onClick={() => append({ nome: "", unidade: "", quantidade: 0, descricao: "" })}
             >
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Item
@@ -190,9 +201,14 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
                     name={`items.${index}.nome`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nome do Produto *</FormLabel>
+                        <FormLabel>Descrição do Produto *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ex: Leite em pó" {...field} />
+                          <ATAProductAutocomplete
+                            value={field.value}
+                            onChange={field.onChange}
+                            onProductSelect={(product) => handleProductSelect(index, product)}
+                            placeholder="Digite para buscar produtos..."
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -206,42 +222,7 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
                       <FormItem>
                         <FormLabel>Unidade *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ex: 400g, Kg, Unidade" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.quantidade`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Quantidade *</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="500" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.valorUnitario`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Valor Unitário (R$) *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.01" 
-                            placeholder="7.50" 
-                            {...field} 
-                          />
+                          <Input placeholder="Ex: Kg, Unidade, Litro" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -251,13 +232,27 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
 
                 <FormField
                   control={form.control}
+                  name={`items.${index}.quantidade`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantidade *</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="500" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name={`items.${index}.descricao`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Descrição</FormLabel>
+                      <FormLabel>Observações</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Descrição detalhada do produto..."
+                          placeholder="Observações adicionais sobre o produto..."
                           {...field} 
                         />
                       </FormControl>
