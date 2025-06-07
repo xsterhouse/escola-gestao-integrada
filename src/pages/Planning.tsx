@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Plus, Trash2, Save, Download, FileText, BarChart3, CheckCircle, Clock, History } from "lucide-react";
+import { Eye, Plus, Trash2, Save, Download, FileText, BarChart3, CheckCircle, Clock, History, Check, Lock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isSchoolLinkedToPurchasingCenter } from "@/utils/schoolPurchasingSync";
@@ -43,22 +43,29 @@ interface ATA {
 }
 
 const Planning = () => {
-  const { currentSchool } = useAuth();
+  const { currentSchool, user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("nova-ata");
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isNewATAModalOpen, setIsNewATAModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isVigencyItemsModalOpen, setIsVigencyItemsModalOpen] = useState(false);
+  const [isConferenceModalOpen, setIsConferenceModalOpen] = useState(false);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const [selectedProcess, setSelectedProcess] = useState<ATA | null>(null);
   const [selectedVigencyATA, setSelectedVigencyATA] = useState<ATA | null>(null);
   const [ataToDelete, setAtaToDelete] = useState<string | null>(null);
+  const [ataToConference, setAtaToConference] = useState<ATA | null>(null);
+  const [ataToApprove, setAtaToApprove] = useState<ATA | null>(null);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteJustification, setDeleteJustification] = useState("");
+  const [approvalPassword, setApprovalPassword] = useState("");
+  const [approvalJustification, setApprovalJustification] = useState("");
   const [atas, setAtas] = useState<ATA[]>([]);
   const [ataItems, setAtaItems] = useState<ATAItem[]>([]);
   const [transfers, setTransfers] = useState<any[]>([]);
   const [transferHistory, setTransferHistory] = useState<any[]>([]);
+  const [approvalHistory, setApprovalHistory] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     dataATA: "",
     dataInicioVigencia: "",
@@ -240,6 +247,98 @@ const Planning = () => {
     }
   };
 
+  const handleConferenceClick = (ata: ATA) => {
+    setAtaToConference(ata);
+    setIsConferenceModalOpen(true);
+  };
+
+  const handleConfirmConference = () => {
+    if (!ataToConference) return;
+    
+    const updatedATAs = atas.map(ata => 
+      ata.id === ataToConference.id ? { ...ata, status: "finalizada" as const } : ata
+    );
+    saveATAs(updatedATAs);
+    setIsConferenceModalOpen(false);
+    setAtaToConference(null);
+    
+    // Save conference action to history
+    const historyEntry = {
+      id: Date.now().toString(),
+      action: "conferencia",
+      ataId: ataToConference.numeroATA,
+      schoolName: getSchoolsFromSettings().find((s: any) => s.id === ataToConference.schoolId)?.name || "N/A",
+      userName: user?.name || "Sistema",
+      timestamp: new Date().toISOString(),
+      justification: "Conferência de itens realizada"
+    };
+    
+    const existingHistory = JSON.parse(localStorage.getItem("approvalHistory") || "[]");
+    localStorage.setItem("approvalHistory", JSON.stringify([...existingHistory, historyEntry]));
+    setApprovalHistory(prev => [...prev, historyEntry]);
+    
+    toast({
+      title: "ATA finalizada",
+      description: "ATA foi finalizada após conferência dos itens"
+    });
+  };
+
+  const handleApprovalClick = (ata: ATA) => {
+    setAtaToApprove(ata);
+    setIsApprovalModalOpen(true);
+  };
+
+  const handleConfirmApproval = () => {
+    if (!approvalPassword || !approvalJustification || !ataToApprove) {
+      toast({
+        title: "Erro",
+        description: "Senha e justificativa são obrigatórias para aprovação",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Simple password validation (in real app, this should be more secure)
+    if (approvalPassword !== "admin123") {
+      toast({
+        title: "Erro",
+        description: "Senha incorreta",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const updatedATAs = atas.map(ata => 
+      ata.id === ataToApprove.id ? { ...ata, status: "aprovada" as const } : ata
+    );
+    saveATAs(updatedATAs);
+    
+    // Save approval action to history
+    const historyEntry = {
+      id: Date.now().toString(),
+      action: "aprovacao",
+      ataId: ataToApprove.numeroATA,
+      schoolName: getSchoolsFromSettings().find((s: any) => s.id === ataToApprove.schoolId)?.name || "N/A",
+      userName: user?.name || "Sistema",
+      timestamp: new Date().toISOString(),
+      justification: approvalJustification
+    };
+    
+    const existingHistory = JSON.parse(localStorage.getItem("approvalHistory") || "[]");
+    localStorage.setItem("approvalHistory", JSON.stringify([...existingHistory, historyEntry]));
+    setApprovalHistory(prev => [...prev, historyEntry]);
+    
+    setIsApprovalModalOpen(false);
+    setAtaToApprove(null);
+    setApprovalPassword("");
+    setApprovalJustification("");
+    
+    toast({
+      title: "ATA aprovada",
+      description: "ATA foi aprovada e está disponível para transferências"
+    });
+  };
+
   const handleFinalizeATA = (ataId: string) => {
     const updatedATAs = atas.map(ata => 
       ata.id === ataId ? { ...ata, status: "finalizada" as const } : ata
@@ -378,7 +477,7 @@ const Planning = () => {
       case "rascunho":
         return <Badge variant="secondary">Rascunho</Badge>;
       case "finalizada":
-        return <Badge variant="outline">Finalizada</Badge>;
+        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Finalizada</Badge>;
       case "aprovada":
         return <Badge variant="default" className="bg-green-600">Aprovada</Badge>;
       default:
@@ -436,6 +535,12 @@ const Planning = () => {
     
     console.log(`Exporting report in ${format} format`);
   };
+
+  // Load approval history
+  useEffect(() => {
+    const storedApprovalHistory = JSON.parse(localStorage.getItem("approvalHistory") || "[]");
+    setApprovalHistory(storedApprovalHistory);
+  }, []);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -666,22 +771,22 @@ const Planning = () => {
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  onClick={() => handleFinalizeATA(ata.id)}
+                                  onClick={() => handleConferenceClick(ata)}
                                   className="text-blue-600 hover:text-blue-800"
-                                  title="Finalizar ATA"
+                                  title="Conferir itens e finalizar"
                                 >
-                                  <CheckCircle className="h-4 w-4" />
+                                  <Check className="h-4 w-4" />
                                 </Button>
                               )}
                               {ata.status === "finalizada" && (
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  onClick={() => handleApproveATA(ata.id)}
+                                  onClick={() => handleApprovalClick(ata)}
                                   className="text-green-600 hover:text-green-800"
                                   title="Aprovar ATA"
                                 >
-                                  <CheckCircle className="h-4 w-4" />
+                                  <Lock className="h-4 w-4" />
                                 </Button>
                               )}
                               <Button 
@@ -879,6 +984,55 @@ const Planning = () => {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Histórico de Operações</h2>
             
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Histórico de Aprovações de ATAs
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {approvalHistory.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhum histórico de aprovações encontrado.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data/Hora</TableHead>
+                          <TableHead>Ação</TableHead>
+                          <TableHead>ATA</TableHead>
+                          <TableHead>Escola</TableHead>
+                          <TableHead>Usuário</TableHead>
+                          <TableHead>Justificativa</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {approvalHistory.map((entry) => (
+                          <TableRow key={entry.id}>
+                            <TableCell>
+                              {new Date(entry.timestamp).toLocaleString('pt-BR')}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={entry.action === "aprovacao" ? "default" : "secondary"}>
+                                {entry.action === "aprovacao" ? "Aprovação" : "Conferência"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">{entry.ataId}</TableCell>
+                            <TableCell>{entry.schoolName}</TableCell>
+                            <TableCell>{entry.userName}</TableCell>
+                            <TableCell>{entry.justification}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -1123,6 +1277,86 @@ const Planning = () => {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Conferência de Itens */}
+        <Dialog open={isConferenceModalOpen} onOpenChange={setIsConferenceModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Conferir Itens da ATA {ataToConference?.numeroATA}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p>Confirme que todos os itens da ATA foram conferidos e estão corretos:</p>
+              
+              {ataToConference && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium mb-2">Itens da ATA:</h4>
+                  <div className="space-y-2">
+                    {ataToConference.items.map((item) => (
+                      <div key={item.id} className="flex justify-between p-2 bg-white rounded">
+                        <span>{item.numeroItem} - {item.descricaoProduto}</span>
+                        <span>{item.quantidade} {item.unidade}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setIsConferenceModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleConfirmConference} className="bg-blue-600 hover:bg-blue-700">
+                  Confirmar Conferência
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Aprovação */}
+        <Dialog open={isApprovalModalOpen} onOpenChange={setIsApprovalModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Aprovar ATA {ataToApprove?.numeroATA}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p>Para aprovar esta ATA, digite a senha do setor responsável e a justificativa:</p>
+              <div>
+                <label className="block text-sm font-medium mb-1">Senha do Setor *</label>
+                <Input
+                  type="password"
+                  value={approvalPassword}
+                  onChange={(e) => setApprovalPassword(e.target.value)}
+                  placeholder="Digite a senha do setor"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Justificativa da Aprovação *</label>
+                <Textarea
+                  value={approvalJustification}
+                  onChange={(e) => setApprovalJustification(e.target.value)}
+                  placeholder="Justifique a aprovação da ATA..."
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => {
+                  setIsApprovalModalOpen(false);
+                  setApprovalPassword("");
+                  setApprovalJustification("");
+                }}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleConfirmApproval}
+                  className="bg-green-600 hover:bg-green-700"
+                  disabled={!approvalPassword || !approvalJustification}
+                >
+                  Confirmar Aprovação
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
