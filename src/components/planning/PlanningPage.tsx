@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
@@ -9,6 +8,7 @@ import { PlanningHeader } from "./PlanningHeader";
 import { PlanningForm } from "./PlanningForm";
 import { PlanningActions } from "./PlanningActions";
 import { PlanningTable } from "./PlanningTable";
+import { savePendingTransfer } from "@/services/transferService";
 
 const PlanningPage = () => {
   const { currentSchool, user } = useAuth();
@@ -208,6 +208,81 @@ const PlanningPage = () => {
     console.log(`✅ Planejamento finalizado: ${newNumber}`);
   };
 
+  const handleTransferItem = (
+    itemId: string, 
+    toSchoolId: string, 
+    quantity: number, 
+    justificativa: string
+  ) => {
+    if (!currentPlan || !currentSchool || !user) return;
+    
+    const item = items.find(i => i.id === itemId);
+    if (!item) {
+      toast({
+        title: "Erro",
+        description: "Item não encontrado.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (quantity > (item.availableQuantity || item.quantity)) {
+      toast({
+        title: "Erro",
+        description: "Quantidade solicitada maior que o disponível.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Save as pending transfer
+    const pendingTransfer = savePendingTransfer(
+      currentSchool.id,
+      toSchoolId,
+      currentPlan.id,
+      itemId,
+      item.name,
+      quantity,
+      justificativa,
+      user.name
+    );
+    
+    // Update local item quantity (reserved)
+    const updatedItems = items.map(i => {
+      if (i.id === itemId) {
+        return {
+          ...i,
+          availableQuantity: (i.availableQuantity || i.quantity) - quantity
+        };
+      }
+      return i;
+    });
+    
+    setItems(updatedItems);
+    
+    // Update current plan
+    const updatedPlan = {
+      ...currentPlan,
+      items: updatedItems,
+      updatedAt: new Date()
+    };
+    
+    setCurrentPlan(updatedPlan);
+    updatePlan(currentPlan.id, updatedPlan);
+    
+    // Update plans list
+    setPlans(prev => 
+      prev.map(p => p.id === currentPlan.id ? updatedPlan : p)
+    );
+    
+    toast({
+      title: "Transferência solicitada",
+      description: `Transferência de ${item.name} enviada para aprovação da escola destino.`
+    });
+    
+    console.log(`📤 Transferência pendente criada: ${pendingTransfer.id}`);
+  };
+
   const filteredPlans = plans.filter(plan => {
     if (!searchTerm) return true;
     
@@ -261,6 +336,7 @@ const PlanningPage = () => {
             <PlanningTable 
               items={items} 
               onRemoveItem={removeItem}
+              onTransferItem={handleTransferItem}
               isFinalized={currentPlan?.status === "finalized"}
               currentPlan={currentPlan}
             />

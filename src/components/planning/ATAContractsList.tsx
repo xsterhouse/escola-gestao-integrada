@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ATAContract } from "@/lib/types";
 import { TransferButton } from "./TransferButton";
 
@@ -98,8 +98,6 @@ export function ATAContractsList({ contracts, onUpdateContract }: ATAContractsLi
                     <TableHead>Unidade</TableHead>
                     <TableHead>Qtd. Contratada</TableHead>
                     <TableHead>Saldo Disponível</TableHead>
-                    <TableHead>Valor Unitário</TableHead>
-                    <TableHead>Valor Total</TableHead>
                     <TableHead>Vigência</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
@@ -116,8 +114,6 @@ export function ATAContractsList({ contracts, onUpdateContract }: ATAContractsLi
                             {item.saldoDisponivel}
                           </span>
                         </TableCell>
-                        <TableCell>R$ {item.valorUnitario.toFixed(2)}</TableCell>
-                        <TableCell>R$ {item.valorTotal.toFixed(2)}</TableCell>
                         <TableCell>
                           <div className="text-xs">
                             <div>{new Date(contract.dataInicioVigencia).toLocaleDateString()}</div>

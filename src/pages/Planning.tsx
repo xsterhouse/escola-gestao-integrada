@@ -15,6 +15,8 @@ import { isSchoolLinkedToPurchasingCenter } from "@/utils/schoolPurchasingSync";
 import { VigencyCounter } from "@/components/planning/VigencyCounter";
 import { TransferFormComponent } from "@/components/planning/TransferFormComponent";
 import { TransferTable } from "@/components/planning/TransferTable";
+import { PendingTransfersTab } from "@/components/planning/PendingTransfersTab";
+import { getPendingTransfersForSchool } from "@/services/transferService";
 
 interface ATAItem {
   id: string;
@@ -70,11 +72,20 @@ const Planning = () => {
     unidade: "",
     quantidade: ""
   });
+  const [pendingTransfersCount, setPendingTransfersCount] = useState(0);
 
   // Load data from localStorage
   useEffect(() => {
     loadATAs();
   }, []);
+
+  // Load pending transfers count for current school
+  useEffect(() => {
+    if (currentSchool) {
+      const pendingTransfers = getPendingTransfersForSchool(currentSchool.id);
+      setPendingTransfersCount(pendingTransfers.length);
+    }
+  }, [currentSchool, activeTab]);
 
   const loadATAs = () => {
     try {
@@ -187,6 +198,10 @@ const Planning = () => {
     { id: "vigencia", label: "Vigência" },
     { id: "relatorios", label: "Relatórios" },
     { id: "transferencia", label: "Transferência de Saldos" },
+    { 
+      id: "aprovacoes", 
+      label: pendingTransfersCount > 0 ? `Aprovações (${pendingTransfersCount})` : "Aprovações" 
+    },
     { id: "historico", label: "Histórico" }
   ];
 
@@ -626,7 +641,6 @@ const Planning = () => {
                         <TableHead>ID ATA</TableHead>
                         <TableHead>Data ATA</TableHead>
                         <TableHead>Vigência</TableHead>
-                        <TableHead>Valor Total</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Ações</TableHead>
                       </TableRow>
@@ -637,7 +651,6 @@ const Planning = () => {
                           <TableCell className="font-medium">{ata.numeroATA}</TableCell>
                           <TableCell>{ata.dataATA}</TableCell>
                           <TableCell>{ata.dataInicioVigencia} - {ata.dataFimVigencia}</TableCell>
-                          <TableCell>R$ {ata.valorTotal.toFixed(2)}</TableCell>
                           <TableCell>{getStatusBadge(ata.status)}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
@@ -858,6 +871,9 @@ const Planning = () => {
           </div>
         );
 
+      case "aprovacoes":
+        return <PendingTransfersTab />;
+
       case "historico":
         return (
           <div className="space-y-4">
@@ -946,7 +962,11 @@ const Planning = () => {
                     ? { backgroundColor: "#012340", color: "white" }
                     : { backgroundColor: "#e5e7eb", color: "#374151" }
                   }
-                  className="hover:opacity-90 whitespace-nowrap"
+                  className={`hover:opacity-90 whitespace-nowrap ${
+                    tab.id === "aprovacoes" && pendingTransfersCount > 0 
+                      ? "relative after:absolute after:top-0 after:right-0 after:w-2 after:h-2 after:bg-red-500 after:rounded-full" 
+                      : ""
+                  }`}
                 >
                   {tab.label}
                 </Button>
@@ -988,10 +1008,6 @@ const Planning = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="font-medium">Valor Total:</label>
-                  <p>R$ {selectedProcess.valorTotal.toFixed(2)}</p>
-                </div>
-                <div>
                   <label className="font-medium mb-2 block">Itens da ATA:</label>
                   <Table>
                     <TableHeader>
@@ -1000,8 +1016,6 @@ const Planning = () => {
                         <TableHead>Produto</TableHead>
                         <TableHead>Unidade</TableHead>
                         <TableHead>Quantidade</TableHead>
-                        <TableHead>Valor Unitário</TableHead>
-                        <TableHead>Valor Total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1013,8 +1027,6 @@ const Planning = () => {
                             <Badge variant="outline">{item.unidade}</Badge>
                           </TableCell>
                           <TableCell>{item.quantidade}</TableCell>
-                          <TableCell>R$ {item.valorUnitario.toFixed(2)}</TableCell>
-                          <TableCell className="font-medium">R$ {item.valorTotal.toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -1093,8 +1105,6 @@ const Planning = () => {
                         <TableHead>Produto</TableHead>
                         <TableHead>Unidade</TableHead>
                         <TableHead>Quantidade</TableHead>
-                        <TableHead>Valor Unitário</TableHead>
-                        <TableHead>Valor Total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1106,8 +1116,6 @@ const Planning = () => {
                             <Badge variant="outline">{item.unidade}</Badge>
                           </TableCell>
                           <TableCell>{item.quantidade}</TableCell>
-                          <TableCell>R$ {item.valorUnitario.toFixed(2)}</TableCell>
-                          <TableCell className="font-medium">R$ {item.valorTotal.toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

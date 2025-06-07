@@ -42,7 +42,7 @@ export function ATATransferForm({ eligibleSchools, availableQuantity, onSubmit }
           name="toSchoolId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Escola Destino</FormLabel>
+              <FormLabel>Escola Destino *</FormLabel>
               <Select
                 onValueChange={field.onChange}
                 defaultValue={field.value}
@@ -91,7 +91,7 @@ export function ATATransferForm({ eligibleSchools, availableQuantity, onSubmit }
           name="justificativa"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Justificativa para Transferência</FormLabel>
+              <FormLabel>Justificativa para Transferência *</FormLabel>
               <FormControl>
                 <Textarea 
                   placeholder="Descreva o motivo da transferência..."
