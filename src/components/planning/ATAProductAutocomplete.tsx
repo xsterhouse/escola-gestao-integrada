@@ -20,7 +20,7 @@ interface ATAProductAutocompleteProps {
 }
 
 export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAutocompleteProps>(
-  ({ value, onChange, onProductSelect, placeholder = "Digite o nome do produto...", disabled = false }, ref) => {
+  ({ value, onChange, onProductSelect, placeholder = "Digite para buscar produtos...", disabled = false }, ref) => {
     console.log("🚀 ATAProductAutocomplete RENDERIZADO - valor atual:", value);
     
     const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
@@ -91,8 +91,8 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
         return;
       }
       
-      if (value.length < 3) {
-        console.log("📏 Valor muito curto (< 3 caracteres), limpando sugestões");
+      if (value.length < 2) {
+        console.log("📏 Valor muito curto (< 2 caracteres), limpando sugestões");
         setSuggestions([]);
         setShowSuggestions(false);
         setSelectedIndex(-1);
@@ -119,7 +119,7 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
           console.log(`   🔍 Produto "${product.description}" -> Match: ${hasDescription}`);
           return hasDescription;
         })
-        .slice(0, 10)
+        .slice(0, 8)
         .map(product => ({
           id: product.id,
           description: product.description,
@@ -188,7 +188,7 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
 
     const handleFocus = () => {
       console.log("🎯 INPUT ganhou foco, valor atual:", `"${value}"`);
-      if (value.length >= 3 && suggestions.length > 0) {
+      if (value.length >= 2 && suggestions.length > 0) {
         console.log("🔄 Reexibindo sugestões existentes");
         setShowSuggestions(true);
       }
@@ -210,30 +210,41 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
           onFocus={handleFocus}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full"
+          className="w-full min-h-[60px] text-base leading-relaxed px-4 py-3"
         />
         
         {isLoading && (
-          <div className="absolute z-50 w-full mt-1 p-2 bg-gray-100 rounded border">
-            <div className="text-sm text-gray-600">Carregando produtos...</div>
+          <div className="absolute z-50 w-full mt-1 p-3 bg-white border rounded-lg shadow-lg">
+            <div className="text-sm text-gray-600 flex items-center">
+              <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full mr-2"></div>
+              Carregando produtos do catálogo...
+            </div>
           </div>
         )}
         
         {showSuggestions && suggestions.length > 0 && !isLoading && (
-          <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto">
+          <Card className="absolute z-50 w-full mt-1 max-h-72 overflow-y-auto shadow-xl border-2">
             <CardContent className="p-0">
               {suggestions.map((product, index) => (
                 <div
                   key={product.id}
-                  className={`p-3 cursor-pointer border-b last:border-b-0 hover:bg-gray-50 ${
-                    index === selectedIndex ? 'bg-blue-50' : ''
+                  className={`p-4 cursor-pointer border-b last:border-b-0 hover:bg-blue-50 transition-colors ${
+                    index === selectedIndex ? 'bg-blue-100 border-l-4 border-l-blue-500' : ''
                   }`}
                   onClick={() => handleProductClick(product)}
                 >
-                  <div className="font-medium text-sm">{product.description}</div>
-                  <div className="text-xs text-gray-500">
-                    Unidade: {product.unit}
-                    {product.item && ` | Item: ${product.item}`}
+                  <div className="font-medium text-base text-gray-900 mb-1">
+                    {product.description}
+                  </div>
+                  <div className="text-sm text-gray-600 flex items-center gap-3">
+                    <span className="bg-gray-100 px-2 py-1 rounded text-xs font-medium">
+                      Unidade: {product.unit}
+                    </span>
+                    {product.item && (
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                        Item: {product.item}
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -241,11 +252,14 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
           </Card>
         )}
         
-        {showSuggestions && suggestions.length === 0 && value.length >= 3 && !isLoading && (
-          <Card className="absolute z-50 w-full mt-1">
-            <CardContent className="p-3">
-              <div className="text-sm text-gray-500">
-                Nenhum produto encontrado para "{value}". Continue digitando ou verifique a descrição.
+        {showSuggestions && suggestions.length === 0 && value.length >= 2 && !isLoading && (
+          <Card className="absolute z-50 w-full mt-1 shadow-lg">
+            <CardContent className="p-4">
+              <div className="text-sm text-gray-500 text-center">
+                <div className="mb-2">Nenhum produto encontrado para "{value}"</div>
+                <div className="text-xs text-gray-400">
+                  Verifique a descrição ou continue digitando para refinar a busca
+                </div>
               </div>
             </CardContent>
           </Card>

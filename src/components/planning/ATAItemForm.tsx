@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Trash2 } from "lucide-react";
-import { SimpleProductAutocomplete } from "./SimpleProductAutocomplete";
+import { ATAProductAutocomplete } from "./ATAProductAutocomplete";
 import { ATAFormData, ProductSuggestion } from "./types";
 
 interface ATAItemFormProps {
@@ -39,7 +39,7 @@ export function ATAItemForm({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
             Descrição do Produto *
@@ -49,11 +49,11 @@ export function ATAItemForm({
             name={`items.${index}.nome`}
             render={({ field, fieldState }) => (
               <div>
-                <SimpleProductAutocomplete
+                <ATAProductAutocomplete
                   value={field.value}
                   onChange={field.onChange}
                   onProductSelect={onProductSelect}
-                  placeholder="Digite para buscar produtos..."
+                  placeholder="Digite para buscar produtos do catálogo..."
                   disabled={field.disabled}
                 />
                 {fieldState.error && (
@@ -104,6 +104,7 @@ export function ATAItemForm({
             <FormControl>
               <Textarea 
                 placeholder="Observações adicionais sobre o produto..."
+                className="min-h-[100px] resize-y"
                 {...field} 
               />
             </FormControl>
