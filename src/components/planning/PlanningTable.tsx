@@ -10,11 +10,12 @@ import { TransferButton } from "./TransferButton";
 interface PlanningTableProps {
   items: PlanningItem[];
   onRemoveItem: (id: string) => void;
+  onTransferItem: (itemId: string, toSchoolId: string, quantity: number, justificativa: string) => void;
   isFinalized: boolean;
   currentPlan: Planning | null;
 }
 
-export function PlanningTable({ items, onRemoveItem, isFinalized, currentPlan }: PlanningTableProps) {
+export function PlanningTable({ items, onRemoveItem, onTransferItem, isFinalized, currentPlan }: PlanningTableProps) {
   const generateReport = () => {
     if (currentPlan) {
       generatePlanningPDF(currentPlan);
