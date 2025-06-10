@@ -9,13 +9,7 @@ import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
 import { ProductSuggestionsList } from "./ProductSuggestionsList";
 import { ProductSearchModal } from "./ProductSearchModal";
 import { Product } from "@/lib/types";
-
-interface ProductSuggestion {
-  id: string;
-  description: string;
-  unit: string;
-  item?: number;
-}
+import { ProductSuggestion } from "./types";
 
 interface ATAProductAutocompleteProps {
   value: string;
@@ -47,7 +41,7 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
         id: product.id,
         description: product.description,
         unit: product.unit,
-        item: product.item
+        item: product.item?.toString()
       };
       onChange(product.description);
       onProductSelect(productSuggestion);

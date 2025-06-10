@@ -18,7 +18,7 @@ import { TransferTable } from "@/components/planning/TransferTable";
 import { PendingTransfersTab } from "@/components/planning/PendingTransfersTab";
 import { getPendingTransfersForSchool } from "@/services/transferService";
 import { ATAForm } from "@/components/planning/ATAForm";
-import { ATAContract } from "@/lib/types";
+import { ATAFormData } from "@/components/planning/types";
 
 interface ATAItem {
   id: string;
@@ -42,15 +42,6 @@ interface ATA {
   schoolId?: string;
   centralComprasId?: string;
   valorTotal: number;
-}
-
-interface ATAFormData {
-  dataATA: string;
-  dataInicioVigencia: string;
-  dataFimVigencia: string;
-  escola: string;
-  centralCompras: string;
-  items: { nome: string, unidade: string, quantidade: number }[];
 }
 
 const Planning = () => {

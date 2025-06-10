@@ -68,7 +68,7 @@ export function SimpleProductAutocomplete({
           id: product.id,
           description: product.description,
           unit: product.unit,
-          item: product.item
+          item: product.item?.toString()
         }));
       
       setSuggestions(filtered);
