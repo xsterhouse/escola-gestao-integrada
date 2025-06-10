@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import { ATAContract } from "@/lib/types";
 import { ATAFormFields } from "./ATAFormFields";
 import { ATAFormData } from "./types";
 
@@ -27,7 +26,7 @@ const ataFormSchema = z.object({
 });
 
 interface ATAFormProps {
-  onSubmit: (data: Omit<ATAContract, "id" | "schoolId" | "createdBy" | "createdAt" | "updatedAt">) => void;
+  onSubmit: (data: ATAFormData) => void;
   schools?: any[];
   purchasingCenters?: any[];
 }
@@ -49,29 +48,7 @@ export function ATAForm({ onSubmit, schools = [], purchasingCenters = [] }: ATAF
   });
 
   const handleSubmit = (data: ATAFormData) => {
-    const processedData = {
-      numeroProcesso: "", // Campo removido, mantendo vazio para compatibilidade
-      fornecedor: "", // Campo removido, mantendo vazio para compatibilidade
-      escola: data.escola,
-      centralCompras: data.centralCompras,
-      dataATA: new Date(data.dataATA),
-      dataInicioVigencia: new Date(data.dataInicioVigencia),
-      dataFimVigencia: new Date(data.dataFimVigencia),
-      observacoes: data.observacoes || "",
-      items: data.items.map(item => ({
-        id: crypto.randomUUID(),
-        nome: item.nome,
-        unidade: item.unidade,
-        quantidade: item.quantidade,
-        valorUnitario: 0,
-        valorTotal: 0,
-        descricao: item.descricao || "",
-        saldoDisponivel: item.quantidade,
-      })),
-      status: "ativo" as const,
-    };
-
-    onSubmit(processedData);
+    onSubmit(data);
     form.reset();
   };
 
