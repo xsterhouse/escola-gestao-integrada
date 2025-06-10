@@ -6,23 +6,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Trash2 } from "lucide-react";
 import { ATAProductAutocomplete } from "./ATAProductAutocomplete";
-import { PlanningFormData, ProductSuggestion } from "./types";
+import { ATAFormData, ProductSuggestion } from "./types";
 
-interface ATAItemFormProps {
-  control: Control<PlanningFormData>;
+interface ATAFullItemFormProps {
+  control: Control<ATAFormData>;
   index: number;
   onRemove: () => void;
   canRemove: boolean;
   onProductSelect: (product: ProductSuggestion) => void;
 }
 
-export function ATAItemForm({ 
+export function ATAFullItemForm({ 
   control, 
   index, 
   onRemove, 
   canRemove, 
   onProductSelect 
-}: ATAItemFormProps) {
+}: ATAFullItemFormProps) {
   return (
     <div className="border rounded-lg p-4 space-y-4">
       <div className="flex justify-between items-center">

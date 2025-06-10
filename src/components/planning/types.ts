@@ -10,7 +10,16 @@ export interface ATAFormData {
     nome: string;
     unidade: string;
     quantidade: number;
-    descricao: string;
+    descricao?: string;
+  }>;
+}
+
+export interface PlanningFormData {
+  items: Array<{
+    nome: string;
+    unidade: string;
+    quantidade: number;
+    descricao?: string;
   }>;
 }
 

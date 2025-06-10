@@ -3,15 +3,15 @@ import { Control, useFieldArray } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus } from "lucide-react";
-import { ATAItemForm } from "./ATAItemForm";
-import { PlanningFormData, ProductSuggestion } from "./types";
+import { ATAFullItemForm } from "./ATAFullItemForm";
+import { ATAFormData, ProductSuggestion } from "./types";
 
-interface ATAItemsListProps {
-  control: Control<PlanningFormData>;
+interface ATAFullItemsListProps {
+  control: Control<ATAFormData>;
   setValue: (name: string, value: any) => void;
 }
 
-export function ATAItemsList({ control, setValue }: ATAItemsListProps) {
+export function ATAFullItemsList({ control, setValue }: ATAFullItemsListProps) {
   const { fields, append, remove } = useFieldArray({
     control,
     name: "items",
@@ -43,7 +43,7 @@ export function ATAItemsList({ control, setValue }: ATAItemsListProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         {fields.map((field, index) => (
-          <ATAItemForm
+          <ATAFullItemForm
             key={field.id}
             control={control}
             index={index}

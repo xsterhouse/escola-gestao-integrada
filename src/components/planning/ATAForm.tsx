@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { ATAContract } from "@/lib/types";
 import { ATAFormFields } from "./ATAFormFields";
-import { ATAItemsList } from "./ATAItemsList";
 import { ATAFormData } from "./types";
+
+// Create separate components for ATA items to avoid type conflicts
+import { ATAFullItemsList } from "./ATAFullItemsList";
 
 const ataFormSchema = z.object({
   numeroProcesso: z.string().min(1, "Número do processo é obrigatório"),
@@ -74,7 +76,7 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <ATAFormFields control={form.control} />
         
-        <ATAItemsList 
+        <ATAFullItemsList 
           control={form.control} 
           setValue={form.setValue}
         />
