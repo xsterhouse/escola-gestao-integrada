@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ATAForm } from "./ATAForm";
 import { ATAContractsList } from "./ATAContractsList";
 import { ATAContract, ATAItem } from "@/lib/types";
+import { ATAFormData } from "./types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage, useAutoSave } from "@/hooks/useLocalStorage";
@@ -41,8 +42,29 @@ export function ATARegistrationTab() {
     }
   }, [storedContracts, isLoading]);
 
-  const handleAddContract = (contractData: Omit<ATAContract, "id" | "schoolId" | "createdBy" | "createdAt" | "updatedAt">) => {
+  const handleAddContract = (formData: ATAFormData) => {
     if (!currentSchool || !user) return;
+
+    // Transformar ATAFormData em ATAContract
+    const contractData: Omit<ATAContract, "id" | "schoolId" | "createdBy" | "createdAt" | "updatedAt"> = {
+      numeroProcesso: `ATA-${Date.now()}`, // Gerar número do processo automaticamente
+      fornecedor: "Fornecedor não especificado", // Valor padrão
+      dataATA: new Date(formData.dataATA),
+      dataInicioVigencia: new Date(formData.dataInicioVigencia),
+      dataFimVigencia: new Date(formData.dataFimVigencia),
+      observacoes: formData.observacoes || "",
+      items: formData.items.map(item => ({
+        id: uuidv4(),
+        nome: item.nome,
+        unidade: item.unidade,
+        quantidade: item.quantidade,
+        valorUnitario: 0, // Valor padrão
+        valorTotal: 0, // Valor padrão
+        descricao: item.descricao || "",
+        saldoDisponivel: item.quantidade,
+      })),
+      status: "ativo" as const,
+    };
 
     // Verificar duplicata por número do processo
     const existingContract = contracts.find(
@@ -74,7 +96,7 @@ export function ATARegistrationTab() {
 
       toast({
         title: "ATA registrada com sucesso",
-        description: `ATA ${contractData.numeroProcesso} do fornecedor ${contractData.fornecedor} foi registrada.`,
+        description: `ATA ${contractData.numeroProcesso} foi registrada.`,
       });
 
       console.log(`📄 Nova ATA registrada: ${contractData.numeroProcesso} - ID: ${savedId}`);
