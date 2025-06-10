@@ -28,6 +28,7 @@ interface ATAItem {
   quantidade: number;
   valorUnitario: number;
   valorTotal: number;
+  item?: number;
 }
 
 interface ATA {
@@ -421,7 +422,8 @@ const Planning = () => {
         unidade: item.unidade,
         quantidade: item.quantidade,
         valorUnitario: item.valorUnitario,
-        valorTotal: item.valorTotal
+        valorTotal: item.valorTotal,
+        item: item.item
       })),
       createdAt: new Date().toISOString(),
       schoolId: currentSchool?.id,
