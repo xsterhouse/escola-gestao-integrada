@@ -1,10 +1,14 @@
 
-import { forwardRef } from "react";
+import { forwardRef, useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
 import { useProductLoader } from "@/hooks/useProductLoader";
 import { useProductSearch } from "@/hooks/useProductSearch";
 import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
 import { ProductSuggestionsList } from "./ProductSuggestionsList";
+import { ProductSearchModal } from "./ProductSearchModal";
+import { Product } from "@/lib/types";
 
 interface ProductSuggestion {
   id: string;
@@ -25,6 +29,7 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
   ({ value, onChange, onProductSelect, placeholder = "Digite para buscar produtos...", disabled = false }, ref) => {
     console.log("🚀 ATAProductAutocomplete RENDERIZADO - valor atual:", value);
     
+    const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
     const { products, isLoading } = useProductLoader();
     const { suggestions, showSuggestions, setShowSuggestions } = useProductSearch(products, value, isLoading);
     
@@ -34,6 +39,19 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
       onProductSelect(product);
       setShowSuggestions(false);
       resetSelection();
+    };
+
+    const handleProductSelectFromModal = (product: Product) => {
+      console.log("🎯 PRODUTO SELECIONADO DO MODAL:", product);
+      const productSuggestion: ProductSuggestion = {
+        id: product.id,
+        description: product.description,
+        unit: product.unit,
+        item: product.item
+      };
+      onChange(product.description);
+      onProductSelect(productSuggestion);
+      setIsSearchModalOpen(false);
     };
 
     const handleHideSuggestions = () => {
@@ -77,25 +95,46 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
 
     return (
       <div className="relative">
-        <Input
-          ref={ref}
-          value={value}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onBlur={handleBlur}
-          onFocus={handleFocus}
-          placeholder={placeholder}
-          disabled={disabled}
-          className="w-full min-h-[60px] text-base leading-relaxed px-4 py-3"
-        />
-        
-        <ProductSuggestionsList
-          suggestions={suggestions}
-          selectedIndex={selectedIndex}
-          onProductClick={handleProductClick}
-          searchValue={value}
-          isLoading={isLoading}
-          showSuggestions={showSuggestions}
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <Input
+              ref={ref}
+              value={value}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+              onFocus={handleFocus}
+              placeholder={placeholder}
+              disabled={disabled}
+              className="w-full min-h-[60px] text-base leading-relaxed px-4 py-3"
+            />
+            
+            <ProductSuggestionsList
+              suggestions={suggestions}
+              selectedIndex={selectedIndex}
+              onProductClick={handleProductClick}
+              searchValue={value}
+              isLoading={isLoading}
+              showSuggestions={showSuggestions}
+            />
+          </div>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsSearchModalOpen(true)}
+            disabled={disabled}
+            className="min-h-[60px] px-4"
+            title="Buscar no catálogo de produtos"
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <ProductSearchModal
+          isOpen={isSearchModalOpen}
+          onClose={() => setIsSearchModalOpen(false)}
+          onProductSelect={handleProductSelectFromModal}
         />
       </div>
     );
