@@ -52,8 +52,19 @@ export function ExitMovementDialog({
     ? calculateProductStock(selectedProduct.description, selectedProduct.unitOfMeasure, invoices, movements)
     : null;
 
+  const handleProductSelect = (product: { description: string; unitOfMeasure: string; unitPrice: number }) => {
+    console.log("🔍 Produto selecionado:", product);
+    setSelectedProduct({
+      description: product.description,
+      unitOfMeasure: product.unitOfMeasure
+    });
+    // Limpar erros quando um produto for selecionado
+    setErrors([]);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("📝 Iniciando validação do formulário...");
     
     const newErrors: string[] = [];
     
@@ -91,10 +102,14 @@ export function ExitMovementDialog({
       }
     }
 
+    console.log("🔍 Erros encontrados:", newErrors);
+
     if (newErrors.length > 0) {
       setErrors(newErrors);
       return;
     }
+
+    console.log("✅ Formulário válido, criando movimento...");
 
     const unitPrice = currentStock?.averageUnitCost || 0;
     const totalCost = parseFloat(quantity) * unitPrice;
@@ -104,15 +119,15 @@ export function ExitMovementDialog({
     const destination = destinationOptions.find(d => d.id === destinationId);
     const destinationName = destination?.name || '';
 
-    onSubmit({
-      type: 'saida',
+    const movementData = {
+      type: 'saida' as const,
       date: new Date(),
       productDescription: selectedProduct!.description,
       quantity: parseFloat(quantity),
       unitOfMeasure: selectedProduct!.unitOfMeasure,
       unitPrice,
       totalCost,
-      source: 'manual',
+      source: 'manual' as const,
       reason: `${EXIT_TYPES.find(t => t.value === exitType)?.label}: ${reason}`,
       createdBy: user?.name || 'Sistema',
       exitType,
@@ -122,23 +137,34 @@ export function ExitMovementDialog({
       originSchoolId: currentSchool?.id,
       originSchoolName: currentSchool?.name,
       documentReference: document || undefined,
-      status: 'saida'
-    });
+      status: 'saida' as const
+    };
 
-    // Reset form
-    setSelectedProduct(null);
-    setQuantity("");
-    setExitType("");
-    setReason("");
-    setDestinationId("");
-    setDestinationType('school');
-    setDocument("");
-    setErrors([]);
+    console.log("📤 Enviando movimento:", movementData);
+
+    try {
+      onSubmit(movementData);
+      
+      // Reset form
+      setSelectedProduct(null);
+      setQuantity("");
+      setExitType("");
+      setReason("");
+      setDestinationId("");
+      setDestinationType('school');
+      setDocument("");
+      setErrors([]);
+      
+      console.log("✅ Movimento enviado com sucesso!");
+    } catch (error) {
+      console.error("❌ Erro ao enviar movimento:", error);
+      setErrors(["Erro ao registrar a saída. Tente novamente."]);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -156,8 +182,9 @@ export function ExitMovementDialog({
               <Label htmlFor="product">Produto *</Label>
               <ProductAutocomplete
                 invoices={invoices}
-                onProductSelect={setSelectedProduct}
+                onProductSelect={handleProductSelect}
                 value={selectedProduct?.description || ""}
+                placeholder="Selecione um produto..."
               />
             </div>
 
@@ -217,8 +244,12 @@ export function ExitMovementDialog({
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+            >
               Cancelar
             </Button>
             <Button type="submit">
