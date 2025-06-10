@@ -44,6 +44,15 @@ interface ATA {
   valorTotal: number;
 }
 
+interface ATAFormData {
+  dataATA: string;
+  dataInicioVigencia: string;
+  dataFimVigencia: string;
+  escola: string;
+  centralCompras: string;
+  items: { nome: string, unidade: string, quantidade: number }[];
+}
+
 const Planning = () => {
   const { currentSchool, user } = useAuth();
   const { toast } = useToast();
@@ -402,30 +411,30 @@ const Planning = () => {
   }, []);
 
   // Handle ATA form submission
-  const handleATASubmit = (data: Omit<ATAContract, "id" | "schoolId" | "createdBy" | "createdAt" | "updatedAt">) => {
+  const handleATASubmit = (data: ATAFormData) => {
     console.log("🚀 Dados recebidos do ATAForm:", data);
     
     // Transform the data to match the existing ATA structure
     const newATA: ATA = {
       id: Date.now().toString(),
       numeroATA: generateATAId(),
-      dataATA: data.dataATA.toISOString().split('T')[0],
-      dataInicioVigencia: data.dataInicioVigencia.toISOString().split('T')[0],
-      dataFimVigencia: data.dataFimVigencia.toISOString().split('T')[0],
+      dataATA: data.dataATA,
+      dataInicioVigencia: data.dataInicioVigencia,
+      dataFimVigencia: data.dataFimVigencia,
       status: "rascunho",
-      items: data.items.map(item => ({
-        id: item.id,
-        numeroItem: "",
+      items: data.items.map((item, index) => ({
+        id: (Date.now() + index).toString(),
+        numeroItem: `${index + 1}`.padStart(3, '0'),
         descricaoProduto: item.nome,
         unidade: item.unidade,
         quantidade: item.quantidade,
-        valorUnitario: item.valorUnitario,
-        valorTotal: item.valorTotal
+        valorUnitario: 0,
+        valorTotal: 0
       })),
       createdAt: new Date().toISOString(),
       schoolId: data.escola || currentSchool?.id,
       centralComprasId: data.centralCompras,
-      valorTotal: data.items.reduce((sum, item) => sum + item.valorTotal, 0)
+      valorTotal: 0
     };
 
     const updatedATAs = [...atas, newATA];
@@ -888,13 +897,13 @@ const Planning = () => {
 
         {/* Modal de Visualização de ATA */}
         <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>Detalhes da ATA {selectedProcess?.numeroATA}</DialogTitle>
             </DialogHeader>
             {selectedProcess && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+                <div className="grid grid-cols-2 gap-4 flex-shrink-0">
                   <div>
                     <label className="font-medium">Data da ATA:</label>
                     <p>{selectedProcess.dataATA}</p>
@@ -904,7 +913,7 @@ const Planning = () => {
                     <p>{getStatusBadge(selectedProcess.status)}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 flex-shrink-0">
                   <div>
                     <label className="font-medium">Início da Vigência:</label>
                     <p>{selectedProcess.dataInicioVigencia}</p>
@@ -914,30 +923,32 @@ const Planning = () => {
                     <p>{selectedProcess.dataFimVigencia}</p>
                   </div>
                 </div>
-                <div>
-                  <label className="font-medium mb-2 block">Itens da ATA:</label>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nº Item</TableHead>
-                        <TableHead>Produto</TableHead>
-                        <TableHead>Unidade</TableHead>
-                        <TableHead>Quantidade</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedProcess.items.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.numeroItem}</TableCell>
-                          <TableCell>{item.descricaoProduto}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{item.unidade}</Badge>
-                          </TableCell>
-                          <TableCell>{item.quantidade}</TableCell>
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  <label className="font-medium mb-2 block flex-shrink-0">Itens da ATA:</label>
+                  <div className="flex-1 overflow-auto border rounded-lg bg-white">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-white z-10">
+                        <TableRow>
+                          <TableHead className="w-20">Nº Item</TableHead>
+                          <TableHead>Produto</TableHead>
+                          <TableHead className="w-24">Unidade</TableHead>
+                          <TableHead className="w-24">Quantidade</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedProcess.items.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.numeroItem}</TableCell>
+                            <TableCell>{item.descricaoProduto}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{item.unidade}</Badge>
+                            </TableCell>
+                            <TableCell>{item.quantidade}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               </div>
             )}
