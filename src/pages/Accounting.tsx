@@ -20,7 +20,7 @@ const Accounting = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-7xl mx-auto space-y-6 p-6">
+      <div className="w-full space-y-6 p-4 lg:p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -32,7 +32,7 @@ const Accounting = () => {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-6xl grid-cols-7 mb-6">
+          <TabsList className="grid w-full grid-cols-7 mb-6">
             <TabsTrigger value="dashboard" className="text-sm font-medium">Dashboard</TabsTrigger>
             <TabsTrigger value="entries" className="text-sm font-medium">Lançamentos</TabsTrigger>
             <TabsTrigger value="entries-list" className="text-sm font-medium">Visualizar</TabsTrigger>
