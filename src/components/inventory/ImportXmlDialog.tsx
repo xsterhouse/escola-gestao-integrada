@@ -36,10 +36,6 @@ interface ImportXmlDialogProps {
 
 const formSchema = z.object({
   xmlFile: z.any().refine((file) => file?.length === 1, "Arquivo XML é obrigatório"),
-  financialProgrammingDate: z.string()
-    .regex(/^\d{2}\/\d{2}\/\d{4}$/, "Data deve estar no formato dd/mm/aaaa")
-    .optional(),
-  installments: z.number().min(1, "Número de parcelas deve ser maior que 0").optional(),
   danfeSearch: z.string().optional(),
 });
 
@@ -57,13 +53,12 @@ export function ImportXmlDialog({
   const [searchResults, setSearchResults] = useState<Invoice[]>([]);
   const [parsedData, setParsedData] = useState<any>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [importSuccessful, setImportSuccessful] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      financialProgrammingDate: "",
-      installments: 1,
       danfeSearch: "",
     },
   });
@@ -120,28 +115,6 @@ export function ImportXmlDialog({
     setSearchResults(results);
   };
 
-  const formatDateInput = (value: string) => {
-    // Remove all non-numeric characters
-    const numeric = value.replace(/\D/g, '');
-    
-    // Apply dd/mm/yyyy formatting
-    if (numeric.length >= 2) {
-      let formatted = numeric.substring(0, 2);
-      if (numeric.length >= 4) {
-        formatted += '/' + numeric.substring(2, 4);
-        if (numeric.length >= 8) {
-          formatted += '/' + numeric.substring(4, 8);
-        } else if (numeric.length > 4) {
-          formatted += '/' + numeric.substring(4);
-        }
-      } else if (numeric.length > 2) {
-        formatted += '/' + numeric.substring(2);
-      }
-      return formatted;
-    }
-    return numeric;
-  };
-
   const checkDuplicateInvoice = (danfeNumber: string): Invoice | null => {
     return existingInvoices.find(invoice => 
       invoice.danfeNumber === danfeNumber && 
@@ -189,9 +162,6 @@ export function ImportXmlDialog({
         danfeNumber: parsedData.danfeNumber,
         totalValue: parsedData.totalValue,
         items,
-        financialProgramming: values.financialProgrammingDate 
-          ? `${values.financialProgrammingDate} - ${values.installments || 1} parcela(s)`
-          : undefined,
         status: 'pendente',
         isActive: false,
         createdAt: new Date(),
@@ -201,6 +171,7 @@ export function ImportXmlDialog({
       setTimeout(() => {
         setIsLoading(false);
         onSubmit(invoice);
+        setImportSuccessful(true);
         
         // Reset form
         form.reset();
@@ -227,6 +198,14 @@ export function ImportXmlDialog({
   };
 
   const handleClose = () => {
+    // Se houve importação bem-sucedida, mostrar alerta
+    if (importSuccessful) {
+      setTimeout(() => {
+        alert("Não esqueça de Efetuar a programação financeira!");
+      }, 300);
+      setImportSuccessful(false);
+    }
+    
     form.reset();
     setFileName("");
     setFileContent(null);
@@ -346,49 +325,6 @@ export function ImportXmlDialog({
                 </AlertDescription>
               </Alert>
             )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="financialProgrammingDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data da Programação Financeira</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field}
-                        placeholder="dd/mm/aaaa"
-                        maxLength={10}
-                        onChange={(e) => {
-                          const formatted = formatDateInput(e.target.value);
-                          field.onChange(formatted);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="installments"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número de Parcelas</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number"
-                        min="1"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <DialogFooter>
               <Button 
