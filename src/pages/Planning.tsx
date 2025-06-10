@@ -28,7 +28,6 @@ interface ATAItem {
   quantidade: number;
   valorUnitario: number;
   valorTotal: number;
-  item?: number;
 }
 
 interface ATA {
@@ -416,7 +415,7 @@ const Planning = () => {
       status: "rascunho",
       items: data.items.map(item => ({
         id: item.id,
-        numeroItem: item.item?.toString() || "",
+        numeroItem: "",
         descricaoProduto: item.nome,
         unidade: item.unidade,
         quantidade: item.quantidade,
