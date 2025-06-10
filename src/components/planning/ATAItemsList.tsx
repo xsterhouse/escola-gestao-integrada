@@ -12,7 +12,7 @@ interface ProductSuggestion {
   item?: number;
 }
 
-interface ATAFormData {
+interface PlanningFormData {
   items: Array<{
     nome: string;
     unidade: string;
@@ -22,7 +22,7 @@ interface ATAFormData {
 }
 
 interface ATAItemsListProps {
-  control: Control<ATAFormData>;
+  control: Control<PlanningFormData>;
   setValue: (name: string, value: any) => void;
 }
 

@@ -9,7 +9,8 @@ import { Form } from "@/components/ui/form";
 import { ATAItemsList } from "./ATAItemsList";
 import { PlanningItem } from "@/lib/types";
 
-const ataFormSchema = z.object({
+// Simplified form schema just for the items in the planning form
+const planningFormSchema = z.object({
   items: z.array(
     z.object({
       nome: z.string().min(1, "Nome é obrigatório"),
@@ -20,7 +21,7 @@ const ataFormSchema = z.object({
   ).min(1, "Adicione pelo menos um item"),
 });
 
-type ATAFormData = z.infer<typeof ataFormSchema>;
+type PlanningFormData = z.infer<typeof planningFormSchema>;
 
 interface ProductSuggestion {
   id: string;
@@ -37,14 +38,14 @@ interface PlanningFormProps {
 export function PlanningForm({ addItem, disabled = false }: PlanningFormProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const form = useForm<ATAFormData>({
-    resolver: zodResolver(ataFormSchema),
+  const form = useForm<PlanningFormData>({
+    resolver: zodResolver(planningFormSchema),
     defaultValues: {
       items: [{ nome: "", unidade: "", quantidade: 0, descricao: "" }],
     },
   });
 
-  const onSubmit = (data: ATAFormData) => {
+  const onSubmit = (data: PlanningFormData) => {
     console.log("📝 Dados do formulário ATA:", data);
     
     // Adicionar cada item do formulário
@@ -62,12 +63,6 @@ export function PlanningForm({ addItem, disabled = false }: PlanningFormProps) {
       items: [{ nome: "", unidade: "", quantidade: 0, descricao: "" }],
     });
     setIsModalOpen(false);
-  };
-
-  const handleProductSelect = (index: number, product: ProductSuggestion) => {
-    console.log(`🎯 Produto selecionado para item ${index}:`, product);
-    form.setValue(`items.${index}.nome`, product.description);
-    form.setValue(`items.${index}.unidade`, product.unit);
   };
 
   return (
