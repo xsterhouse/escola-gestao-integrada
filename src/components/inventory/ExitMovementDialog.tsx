@@ -40,6 +40,7 @@ export function ExitMovementDialog({
     description: string;
     unitOfMeasure: string;
   } | null>(null);
+  const [selectedProductDescription, setSelectedProductDescription] = useState("");
   const [quantity, setQuantity] = useState("");
   const [exitType, setExitType] = useState("");
   const [reason, setReason] = useState("");
@@ -69,6 +70,7 @@ export function ExitMovementDialog({
 
   const resetForm = () => {
     setSelectedProduct(null);
+    setSelectedProductDescription("");
     setQuantity("");
     setExitType("");
     setReason("");
@@ -81,10 +83,13 @@ export function ExitMovementDialog({
   };
 
   const handleProductSelect = (product: { description: string; unitOfMeasure: string; unitPrice: number }) => {
+    console.log("📦 Produto selecionado no modal:", product);
+    
     setSelectedProduct({
       description: product.description,
       unitOfMeasure: product.unitOfMeasure
     });
+    setSelectedProductDescription(product.description);
     setErrors([]);
   };
 
@@ -157,18 +162,7 @@ export function ExitMovementDialog({
       productDescription: selectedProduct!.description,
       quantity: parseFloat(quantity),
       unitOfMeasure: selectedProduct!.unitOfMeasure,
-      totalCost,
-      source: 'manual' as const,
       reason: `${EXIT_TYPES.find(t => t.value === exitType)?.label}: ${reason}`,
-      createdBy: user?.name || 'Sistema',
-      exitType,
-      destinationType,
-      destinationId,
-      destinationName,
-      originSchoolId: currentSchool?.id,
-      originSchoolName: currentSchool?.name,
-      documentReference: document || undefined,
-      status: 'saida' as const
     };
 
     try {
@@ -262,6 +256,7 @@ export function ExitMovementDialog({
                   <Label className="text-base font-medium">Produto *</Label>
                   <ProductAutocomplete
                     invoices={invoices}
+                    value={selectedProductDescription}
                     onProductSelect={handleProductSelect}
                     placeholder="Digite para buscar produtos..."
                   />

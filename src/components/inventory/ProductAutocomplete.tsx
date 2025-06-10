@@ -37,7 +37,6 @@ export function ProductAutocomplete({
   placeholder = "Selecione um produto..." 
 }: ProductAutocompleteProps) {
   const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
   const [selectedValue, setSelectedValue] = useState(value || "");
   
   // Update selectedValue when value prop changes
@@ -61,41 +60,33 @@ export function ProductAutocomplete({
   const uniqueProducts = allProducts.filter((product, index, self) =>
     index === self.findIndex(p => p.key === product.key)
   );
-  
-  const filteredProducts = uniqueProducts.filter(product =>
-    product.description.toLowerCase().includes(searchValue.toLowerCase())
-  );
 
-  const handleSelect = (product: typeof uniqueProducts[0]) => {
-    console.log("🎯 Produto selecionado:", product);
+  const handleSelect = (currentValue: string) => {
+    console.log("🎯 Produto sendo selecionado:", currentValue);
     
-    setSelectedValue(product.description);
+    const selectedProduct = uniqueProducts.find(p => p.description === currentValue);
     
-    onProductSelect({
-      description: product.description,
-      unitOfMeasure: product.unitOfMeasure,
-      unitPrice: product.unitPrice
-    });
-    
-    setSearchValue("");
-    setOpen(false);
-  };
-
-  const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
-    if (!newOpen) {
-      setSearchValue("");
+    if (selectedProduct) {
+      console.log("✅ Produto encontrado:", selectedProduct);
+      setSelectedValue(currentValue);
+      
+      onProductSelect({
+        description: selectedProduct.description,
+        unitOfMeasure: selectedProduct.unitOfMeasure,
+        unitPrice: selectedProduct.unitPrice
+      });
     }
+    
+    setOpen(false);
   };
 
   const clearSelection = () => {
     setSelectedValue("");
-    setSearchValue("");
   };
 
   return (
     <div className="space-y-2">
-      <Popover open={open} onOpenChange={handleOpenChange}>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -116,8 +107,6 @@ export function ProductAutocomplete({
           <Command>
             <CommandInput 
               placeholder="Digite para buscar produtos..." 
-              value={searchValue}
-              onValueChange={setSearchValue}
               className="h-12"
             />
             <CommandList className="max-h-[300px]">
@@ -131,11 +120,11 @@ export function ProductAutocomplete({
                 </div>
               </CommandEmpty>
               <CommandGroup>
-                {filteredProducts.map((product) => (
+                {uniqueProducts.map((product) => (
                   <CommandItem
                     key={product.key}
                     value={product.description}
-                    onSelect={() => handleSelect(product)}
+                    onSelect={handleSelect}
                     className="cursor-pointer py-3"
                   >
                     <Check
