@@ -19,6 +19,7 @@ import { PendingTransfersTab } from "@/components/planning/PendingTransfersTab";
 import { getPendingTransfersForSchool } from "@/services/transferService";
 import { ATAForm } from "@/components/planning/ATAForm";
 import { ATAFormData } from "@/components/planning/types";
+import { generatePlanningReportPDF } from "@/lib/planning-report-pdf";
 
 interface ATAItem {
   id: string;
@@ -387,12 +388,33 @@ const Planning = () => {
   }, []);
 
   const handleExportReport = (format: 'pdf' | 'excel') => {
-    toast({
-      title: "Exportando relatório",
-      description: `Relatório em formato ${format.toUpperCase()} será baixado em instantes`
-    });
-    
-    console.log(`Exporting report in ${format} format`);
+    if (format === 'pdf') {
+      const reportData = {
+        schoolName: currentSchool?.name || 'Escola não informada',
+        purchasingCenterName: getPurchasingCentersFromSettings()
+          .find(center => isSchoolLinkedToPurchasingCenter(currentSchool?.id || '', center.id))?.name || 'Central de Compras Municipal',
+        userName: user?.name || 'Usuário não informado',
+        date: new Date().toLocaleDateString('pt-BR'),
+        time: new Date().toLocaleTimeString('pt-BR'),
+        atas: atas,
+        reportType: 'school' as const
+      };
+      
+      generatePlanningReportPDF(reportData);
+      
+      toast({
+        title: "Relatório PDF gerado",
+        description: "O relatório foi gerado e está sendo baixado automaticamente"
+      });
+    } else {
+      // Keep existing Excel logic
+      toast({
+        title: "Exportando relatório",
+        description: `Relatório em formato ${format.toUpperCase()} será baixado em instantes`
+      });
+      
+      console.log(`Exporting report in ${format} format`);
+    }
   };
 
   // Load approval history
@@ -1157,3 +1179,5 @@ const Planning = () => {
 };
 
 export default Planning;
+
+</initial_code>
