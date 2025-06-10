@@ -1,4 +1,5 @@
 
+
 export interface School {
   id: string;
   name: string;
@@ -165,6 +166,10 @@ export interface AccountingEntry {
   totalValue: number;
   entryType?: 'manual' | 'automatic';
   reconciled?: boolean;
+  reconciledAt?: Date;
+  reconciledBy?: string;
+  debitHistory?: string;
+  auditTrail?: any;
   createdAt: string;
   updatedAt?: string;
 }
@@ -245,11 +250,12 @@ export interface ContractData {
   dataInicio: Date;
   dataFim: Date;
   valor: number;
-  status: 'ativo' | 'inativo' | 'suspenso';
+  status: 'ativo' | 'inativo' | 'suspenso' | 'divergencia_dados' | 'liquidado';
   items: ContractItem[];
   contracts?: Contract[];
   totalItems?: number;
   hasDivergences?: boolean;
+  divergencias?: any[];
   createdAt: Date;
   updatedAt?: Date;
 }
@@ -258,11 +264,15 @@ export interface Contract {
   id: string;
   number: string;
   supplier: string;
+  fornecedor?: string;
   startDate: Date;
   endDate: Date;
+  dataInicio?: Date;
+  dataFim?: Date;
   value: number;
   status: 'active' | 'inactive' | 'suspended';
   items: ContractItem[];
+  itensContratados?: number;
 }
 
 export interface ContractItem {
@@ -272,11 +282,22 @@ export interface ContractItem {
   unitPrice: number;
   totalPrice: number;
   unit: string;
+  produto?: string;
+  quantidadeContratada?: number;
+  precoUnitario?: number;
+  valorTotalContrato?: number;
+  saldoValor?: number;
+  valorPago?: number;
+  quantidadePaga?: number;
+  saldoQuantidade?: number;
+  notasFiscais?: any[];
 }
 
 export interface ContractFilter {
   status?: string;
   supplier?: string;
+  fornecedor?: string;
+  produto?: string;
   dateRange?: {
     start: Date;
     end: Date;
@@ -341,3 +362,4 @@ export interface PlanningItem {
   priority: 'high' | 'medium' | 'low';
   status: 'planned' | 'approved' | 'purchased';
 }
+
