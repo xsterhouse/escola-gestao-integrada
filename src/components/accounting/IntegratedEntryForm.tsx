@@ -21,6 +21,12 @@ import { useAccountingNavigation } from "@/hooks/useAccountingNavigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+interface ValidationResult {
+  isValid: boolean;
+  message: string;
+  suggestion?: string;
+}
+
 export function IntegratedEntryForm() {
   const { navigateToTab, guidedFlow, startGuidedFlow, completeStep, getCurrentStepInfo } = useAccountingNavigation();
   const { formatAndValidate, suggestAccounts } = useAccountValidation();
@@ -40,7 +46,10 @@ export function IntegratedEntryForm() {
     entryType: "manual" as const
   });
   
-  const [validationState, setValidationState] = useState({
+  const [validationState, setValidationState] = useState<{
+    debitAccount: ValidationResult;
+    creditAccount: ValidationResult;
+  }>({
     debitAccount: { isValid: false, message: '', suggestion: '' },
     creditAccount: { isValid: false, message: '', suggestion: '' }
   });
@@ -71,7 +80,14 @@ export function IntegratedEntryForm() {
   useEffect(() => {
     if (formData.debitAccount) {
       const result = formatAndValidate(formData.debitAccount);
-      setValidationState(prev => ({ ...prev, debitAccount: result.validation }));
+      setValidationState(prev => ({ 
+        ...prev, 
+        debitAccount: {
+          isValid: result.validation.isValid,
+          message: result.validation.message,
+          suggestion: result.validation.suggestion || ''
+        }
+      }));
       if (result.description && result.description !== formData.debitDescription) {
         setFormData(prev => ({ ...prev, debitDescription: result.description }));
       }
@@ -84,7 +100,14 @@ export function IntegratedEntryForm() {
   useEffect(() => {
     if (formData.creditAccount) {
       const result = formatAndValidate(formData.creditAccount);
-      setValidationState(prev => ({ ...prev, creditAccount: result.validation }));
+      setValidationState(prev => ({ 
+        ...prev, 
+        creditAccount: {
+          isValid: result.validation.isValid,
+          message: result.validation.message,
+          suggestion: result.validation.suggestion || ''
+        }
+      }));
       if (result.description && result.description !== formData.creditDescription) {
         setFormData(prev => ({ ...prev, creditDescription: result.description }));
       }
