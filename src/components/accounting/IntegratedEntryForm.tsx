@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,12 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Zap, FileText, DollarSign, Building } from "lucide-react";
+import { Save, Zap, FileText, DollarSign, Building, Search, Trash2 } from "lucide-react";
 import { AccountingEntry, Invoice, PaymentAccount, ReceivableAccount, BankTransaction } from "@/lib/types";
 import { accountingAutomationService } from "@/services/accountingAutomationService";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatAccountMask, validateAccountCode, isValidAccountFormat } from "@/utils/accountMask";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export function IntegratedEntryForm() {
   const [activeTab, setActiveTab] = useState("manual");
@@ -38,12 +42,18 @@ export function IntegratedEntryForm() {
     pendingTransactions: [] as BankTransaction[]
   });
 
+  const [reconciledTransactions, setReconciledTransactions] = useState<BankTransaction[]>([]);
+  const [savedAutomaticEntries, setSavedAutomaticEntries] = useState<AccountingEntry[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredTransactions, setFilteredTransactions] = useState<BankTransaction[]>([]);
   const [autoGenerateEnabled, setAutoGenerateEnabled] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
 
   useEffect(() => {
     loadPendingItems();
+    loadReconciledTransactions();
+    loadSavedAutomaticEntries();
   }, []);
 
   const loadPendingItems = () => {
@@ -79,6 +89,33 @@ export function IntegratedEntryForm() {
     });
   };
 
+  const loadReconciledTransactions = () => {
+    const transactions = JSON.parse(localStorage.getItem('bankTransactions') || '[]')
+      .filter((transaction: BankTransaction) => 
+        transaction.reconciliationStatus === 'conciliado'
+      );
+    setReconciledTransactions(transactions);
+    setFilteredTransactions(transactions);
+  };
+
+  const loadSavedAutomaticEntries = () => {
+    const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]')
+      .filter((entry: AccountingEntry) => entry.entryType === 'automatic');
+    setSavedAutomaticEntries(entries);
+  };
+
+  // Filter reconciled transactions based on search term
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredTransactions(reconciledTransactions);
+    } else {
+      const filtered = reconciledTransactions.filter(transaction =>
+        transaction.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredTransactions(filtered);
+    }
+  }, [searchTerm, reconciledTransactions]);
+
   const createEntryBase = (entryType: 'debit' | 'credit' | 'complete') => {
     const baseEntry = {
       id: `${entryType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -101,114 +138,6 @@ export function IntegratedEntryForm() {
 
     baseEntry.auditTrail[0].entryId = baseEntry.id;
     return baseEntry;
-  };
-
-  const handleSaveDebitOnly = () => {
-    if (!formData.date || !formData.debitAccount || !formData.debitHistory) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Preencha data, conta de débito e histórico do débito.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!isValidAccountFormat(formData.debitAccount) || !validateAccountCode(formData.debitAccount)) {
-      toast({
-        title: "Conta de débito inválida",
-        description: "O código da conta de débito deve seguir o formato 0.0.00.00.0000 com valores válidos.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
-    const debitValue = parseFloat(formData.debitValue.replace(/\D/g, '')) / 100 || 0;
-
-    const newEntry: AccountingEntry = {
-      ...createEntryBase('debit'),
-      debitAccount: formData.debitAccount,
-      debitValue: debitValue,
-      debitDescription: formData.debitDescription,
-      debitHistory: formData.debitHistory,
-      creditAccount: '',
-      creditValue: 0,
-      creditDescription: '',
-      creditHistory: '',
-      history: `Débito: ${formData.debitHistory}`,
-      totalValue: debitValue,
-    };
-
-    entries.push(newEntry);
-    localStorage.setItem('accountingEntries', JSON.stringify(entries));
-
-    toast({
-      title: "Lançamento de débito salvo",
-      description: "O lançamento de débito foi registrado com sucesso.",
-    });
-
-    // Reset debit fields only
-    setFormData(prev => ({
-      ...prev,
-      debitAccount: "",
-      debitValue: "",
-      debitDescription: "",
-      debitHistory: ""
-    }));
-  };
-
-  const handleSaveCreditOnly = () => {
-    if (!formData.date || !formData.creditAccount || !formData.creditHistory) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Preencha data, conta de crédito e histórico do crédito.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!isValidAccountFormat(formData.creditAccount) || !validateAccountCode(formData.creditAccount)) {
-      toast({
-        title: "Conta de crédito inválida", 
-        description: "O código da conta de crédito deve seguir o formato 0.0.00.00.0000 com valores válidos.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
-    const creditValue = parseFloat(formData.creditValue.replace(/\D/g, '')) / 100 || 0;
-
-    const newEntry: AccountingEntry = {
-      ...createEntryBase('credit'),
-      debitAccount: '',
-      debitValue: 0,
-      debitDescription: '',
-      debitHistory: '',
-      creditAccount: formData.creditAccount,
-      creditValue: creditValue,
-      creditDescription: formData.creditDescription,
-      creditHistory: formData.creditHistory,
-      history: `Crédito: ${formData.creditHistory}`,
-      totalValue: creditValue,
-    };
-
-    entries.push(newEntry);
-    localStorage.setItem('accountingEntries', JSON.stringify(entries));
-
-    toast({
-      title: "Lançamento de crédito salvo",
-      description: "O lançamento de crédito foi registrado com sucesso.",
-    });
-
-    // Reset credit fields only
-    setFormData(prev => ({
-      ...prev,
-      creditAccount: "",
-      creditValue: "",
-      creditDescription: "",
-      creditHistory: ""
-    }));
   };
 
   const handleSaveManualEntry = () => {
@@ -278,6 +207,63 @@ export function IntegratedEntryForm() {
     });
   };
 
+  const saveTransactionAsEntry = (transaction: BankTransaction) => {
+    const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
+    
+    const newEntry: AccountingEntry = {
+      id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      schoolId: user?.schoolId || '',
+      date: new Date(transaction.date),
+      entryType: 'automatic' as const,
+      debitAccount: transaction.transactionType === 'debito' ? '1.1.01.01.0001' : '1.1.01.01.0001',
+      debitValue: transaction.transactionType === 'debito' ? 0 : transaction.value,
+      debitDescription: 'Banco',
+      debitHistory: `Transação bancária: ${transaction.description}`,
+      creditAccount: transaction.transactionType === 'credito' ? '4.1.01.01.0001' : '3.1.01.01.0001',
+      creditValue: transaction.transactionType === 'credito' ? 0 : transaction.value,
+      creditDescription: transaction.transactionType === 'credito' ? 'Receita' : 'Despesa',
+      creditHistory: `Transação bancária: ${transaction.description}`,
+      history: `Lançamento automático da transação: ${transaction.description}`,
+      totalValue: transaction.value,
+      auditTrail: [{
+        id: Date.now().toString(),
+        entryId: '',
+        action: 'created' as const,
+        userId: user?.id || '',
+        userName: user?.name || '',
+        timestamp: new Date(),
+        reason: 'Lançamento automático gerado a partir de transação bancária conciliada'
+      }],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: user?.id || ''
+    };
+
+    newEntry.auditTrail[0].entryId = newEntry.id;
+    entries.push(newEntry);
+    localStorage.setItem('accountingEntries', JSON.stringify(entries));
+    
+    loadSavedAutomaticEntries();
+
+    toast({
+      title: "Transação salva",
+      description: "A transação foi salva como lançamento automático.",
+    });
+  };
+
+  const deleteAutomaticEntry = (entryId: string) => {
+    const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
+    const updatedEntries = entries.filter((entry: AccountingEntry) => entry.id !== entryId);
+    localStorage.setItem('accountingEntries', JSON.stringify(updatedEntries));
+    
+    loadSavedAutomaticEntries();
+
+    toast({
+      title: "Lançamento excluído",
+      description: "O lançamento automático foi removido com sucesso.",
+    });
+  };
+
   const generateAutomaticEntries = (type: 'all' | 'invoices' | 'payments' | 'receivables' | 'transactions') => {
     const entriesToGenerate: AccountingEntry[] = [];
 
@@ -318,6 +304,7 @@ export function IntegratedEntryForm() {
       });
 
       loadPendingItems();
+      loadSavedAutomaticEntries();
     } else {
       toast({
         title: "Nenhum lançamento pendente",
@@ -584,32 +571,16 @@ export function IntegratedEntryForm() {
                 </div>
               </div>
 
-              {/* Botões de Salvamento */}
+              {/* Botão de Salvamento */}
               <div className="pt-6 border-t border-gray-200">
-                <div className="flex flex-wrap gap-4 justify-center">
-                  <Button
-                    onClick={handleSaveDebitOnly}
-                    className="h-12 px-6 text-white text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg bg-red-600 hover:bg-red-700"
-                  >
-                    <Save className="mr-2 h-5 w-5" />
-                    Salvar Débito
-                  </Button>
-
-                  <Button
-                    onClick={handleSaveCreditOnly}
-                    className="h-12 px-6 text-white text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg bg-green-600 hover:bg-green-700"
-                  >
-                    <Save className="mr-2 h-5 w-5" />
-                    Salvar Crédito
-                  </Button>
-
+                <div className="flex justify-center">
                   <Button
                     onClick={handleSaveManualEntry}
-                    className="h-12 px-6 text-white text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg"
+                    className="h-12 px-8 text-white text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg"
                     style={{ backgroundColor: '#041c43' }}
                   >
                     <Save className="mr-2 h-5 w-5" />
-                    Salvar Lançamento Completo
+                    Salvar Lançamento
                   </Button>
                 </div>
               </div>
@@ -619,10 +590,145 @@ export function IntegratedEntryForm() {
 
         <TabsContent value="automatic" className="mt-6">
           <div className="space-y-6">
+            {/* Busca de Transações Conciliadas */}
+            <Card className="shadow-lg border-0">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+                <CardTitle className="text-xl text-gray-800">Transações Conciliadas do Financeiro</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium text-gray-700">Buscar Transações</Label>
+                      <div className="relative mt-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <Input
+                          placeholder="Digite para buscar transações conciliadas..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {filteredTransactions.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead className="text-right">Valor</TableHead>
+                          <TableHead className="text-center">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredTransactions.map((transaction) => (
+                          <TableRow key={transaction.id}>
+                            <TableCell className="font-medium">
+                              {format(new Date(transaction.date), 'dd/MM/yyyy', { locale: ptBR })}
+                            </TableCell>
+                            <TableCell className="max-w-xs">
+                              <div className="truncate" title={transaction.description}>
+                                {transaction.description}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={transaction.transactionType === 'credito' ? 'default' : 'secondary'}>
+                                {transaction.transactionType === 'credito' ? 'Crédito' : 'Débito'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">
+                              <span className={transaction.transactionType === 'credito' ? 'text-green-600' : 'text-red-600'}>
+                                {transaction.transactionType === 'debito' ? '-' : '+'}
+                                {transaction.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => saveTransactionAsEntry(transaction)}
+                              >
+                                Salvar
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      {searchTerm ? 'Nenhuma transação encontrada com os filtros aplicados.' : 'Nenhuma transação conciliada encontrada.'}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tabela de Lançamentos Automáticos Salvos */}
+            <Card className="shadow-lg border-0">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
+                <CardTitle className="text-xl text-gray-800">Lançamentos Automáticos Salvos</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {savedAutomaticEntries.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Histórico</TableHead>
+                        <TableHead>Conta Débito</TableHead>
+                        <TableHead>Conta Crédito</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead className="text-center">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {savedAutomaticEntries.map((entry) => (
+                        <TableRow key={entry.id}>
+                          <TableCell className="font-medium">
+                            {format(new Date(entry.date), 'dd/MM/yyyy', { locale: ptBR })}
+                          </TableCell>
+                          <TableCell className="max-w-xs">
+                            <div className="truncate" title={entry.history}>
+                              {entry.history}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">{entry.debitAccount}</TableCell>
+                          <TableCell className="font-mono text-sm">{entry.creditAccount}</TableCell>
+                          <TableCell className="text-right font-semibold">
+                            <Badge variant="outline" className="bg-green-50 text-green-800">
+                              {entry.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteAutomaticEntry(entry.id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    Nenhum lançamento automático salvo ainda.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {autoGenerateEnabled && (
               <Card className="shadow-lg border-0">
                 <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
-                  <CardTitle className="text-xl text-gray-800">Gerar Lançamentos Automáticos</CardTitle>
+                  <CardTitle className="text-xl text-gray-800">Processar Pendências dos Módulos</CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
