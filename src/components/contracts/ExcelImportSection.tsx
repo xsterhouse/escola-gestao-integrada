@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -89,11 +90,18 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
         // Item not found in ATA - major divergence
         divergences.push({
           id: `div-${contractIndex}-notfound`,
+          contractId: 'temp',
           contractItemId: `contract-item-${contractIndex}`,
-          ataItemId: '',
+          itemId: '',
           field: 'descricao',
+          type: 'specification',
+          description: 'Item não encontrado na ATA',
+          expectedValue: 'Não encontrado na ATA',
+          actualValue: contractItem.produto,
           valorContrato: contractItem.produto,
           valorATA: 'Não encontrado na ATA',
+          status: 'pending',
+          createdAt: new Date(),
           resolved: false
         });
         return;
@@ -103,11 +111,18 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
       if (contractItem.produto.toLowerCase() !== ataItem.description.toLowerCase()) {
         divergences.push({
           id: `div-${contractIndex}-desc`,
+          contractId: 'temp',
           contractItemId: `contract-item-${contractIndex}`,
-          ataItemId: ataItem.id,
+          itemId: ataItem.id,
           field: 'descricao',
+          type: 'specification',
+          description: 'Descrição divergente',
+          expectedValue: ataItem.description,
+          actualValue: contractItem.produto,
           valorContrato: contractItem.produto,
           valorATA: ataItem.description,
+          status: 'pending',
+          createdAt: new Date(),
           resolved: false
         });
       }
@@ -117,11 +132,18 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
           contractItem.unidade.toLowerCase() !== ataItem.unit.toLowerCase()) {
         divergences.push({
           id: `div-${contractIndex}-unit`,
+          contractId: 'temp',
           contractItemId: `contract-item-${contractIndex}`,
-          ataItemId: ataItem.id,
+          itemId: ataItem.id,
           field: 'unidade',
+          type: 'specification',
+          description: 'Unidade divergente',
+          expectedValue: ataItem.unit,
+          actualValue: contractItem.unidade,
           valorContrato: contractItem.unidade,
           valorATA: ataItem.unit,
+          status: 'pending',
+          createdAt: new Date(),
           resolved: false
         });
       }
@@ -130,11 +152,18 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
       if (contractItem.quantidadeContratada > ataItem.quantity) {
         divergences.push({
           id: `div-${contractIndex}-qty`,
+          contractId: 'temp',
           contractItemId: `contract-item-${contractIndex}`,
-          ataItemId: ataItem.id,
+          itemId: ataItem.id,
           field: 'quantidade',
+          type: 'quantity',
+          description: 'Quantidade divergente',
+          expectedValue: ataItem.quantity.toString(),
+          actualValue: contractItem.quantidadeContratada.toString(),
           valorContrato: contractItem.quantidadeContratada,
           valorATA: ataItem.quantity,
+          status: 'pending',
+          createdAt: new Date(),
           resolved: false
         });
       }
@@ -147,11 +176,18 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
         if (priceDiff > tolerance) {
           divergences.push({
             id: `div-${contractIndex}-price`,
+            contractId: 'temp',
             contractItemId: `contract-item-${contractIndex}`,
-            ataItemId: ataItem.id,
+            itemId: ataItem.id,
             field: 'valorUnitario',
+            type: 'price',
+            description: 'Valor unitário divergente',
+            expectedValue: ataItem.unitPrice.toString(),
+            actualValue: contractItem.precoUnitario.toString(),
             valorContrato: contractItem.precoUnitario,
             valorATA: ataItem.unitPrice,
+            status: 'pending',
+            createdAt: new Date(),
             resolved: false
           });
         }
@@ -299,10 +335,16 @@ export function ExcelImportSection({ onImport }: ExcelImportSectionProps) {
         },
         dataInicio: new Date(ata.dataInicioVigencia),
         dataFim: new Date(ata.dataFimVigencia),
+        valor: mockContractItems.reduce((total, item) => total + (item.quantidadeContratada * item.precoUnitario), 0),
         status: divergences.length > 0 ? 'divergencia_dados' : 'ativo',
         items: mockContractItems.map((item, index) => ({
           id: `item-${index + 1}`,
           contractId: `contract-${Date.now()}`,
+          description: item.produto,
+          quantity: item.quantidadeContratada,
+          unitPrice: item.precoUnitario,
+          totalPrice: item.quantidadeContratada * item.precoUnitario,
+          unit: item.unidade,
           produto: item.produto,
           quantidadeContratada: item.quantidadeContratada,
           precoUnitario: item.precoUnitario,

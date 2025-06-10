@@ -85,7 +85,7 @@ export function AdvancedBankReconciliationTab() {
     let matchCount = 0;
 
     // Algoritmo de conciliação automática
-    unreconciledEntries.forEach(entry => {
+    const updatedEntries = unreconciledEntries.map(entry => {
       const matchingTransaction = unreconciledTransactions.find(transaction => {
         const entryValue = entry.debitAccount.startsWith('1.1.1') ? entry.debitValue : entry.creditValue;
         const valueDifference = Math.abs(entryValue - transaction.value);
@@ -98,17 +98,32 @@ export function AdvancedBankReconciliationTab() {
 
       if (matchingTransaction) {
         // Marcar como reconciliado
-        entry.reconciled = true;
-        entry.reconciledAt = new Date();
-        entry.reconciledBy = 'Sistema Automático';
-
         matchingTransaction.reconciliationStatus = 'conciliado';
         matchCount++;
+        
+        return {
+          ...entry,
+          reconciled: true,
+          reconciledAt: new Date().toISOString(),
+          reconciledBy: 'Sistema Automático'
+        };
       }
+      return entry;
     });
 
+    // Update state with reconciled entries
+    setAccountingEntries(prev => prev.map(entry => {
+      const updated = updatedEntries.find(u => u.id === entry.id);
+      return updated || entry;
+    }));
+
     // Salvar alterações
-    localStorage.setItem('accountingEntries', JSON.stringify(accountingEntries));
+    const allEntries = accountingEntries.map(entry => {
+      const updated = updatedEntries.find(u => u.id === entry.id);
+      return updated || entry;
+    });
+    
+    localStorage.setItem('accountingEntries', JSON.stringify(allEntries));
     localStorage.setItem('bankTransactions', JSON.stringify(bankTransactions));
 
     setIsReconciling(false);
@@ -133,7 +148,7 @@ export function AdvancedBankReconciliationTab() {
     // Marcar como reconciliado
     const updatedEntries = accountingEntries.map(entry =>
       entry.id === selectedItems.accountingEntry!.id
-        ? { ...entry, reconciled: true, reconciledAt: new Date(), reconciledBy: 'Manual' }
+        ? { ...entry, reconciled: true, reconciledAt: new Date().toISOString(), reconciledBy: 'Manual' }
         : entry
     );
 

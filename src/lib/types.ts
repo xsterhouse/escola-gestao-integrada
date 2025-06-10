@@ -1,3 +1,4 @@
+
 export interface School {
   id: string;
   name: string;
@@ -38,6 +39,7 @@ export interface Supplier {
   state: string;
   zipCode: string;
   razaoSocial?: string;
+  endereco?: string;
   isActive: boolean;
 }
 
@@ -210,16 +212,16 @@ export interface BankAccount {
   bankName: string;
   accountNumber: string;
   agency: string;
+  agencyNumber?: string;
   accountType: 'movimento' | 'aplicacao';
   managementType?: string;
+  description?: string;
+  initialBalance?: number;
   currentBalance: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt?: Date;
   schoolId?: string;
-  agencyNumber?: string;
-  description?: string;
-  initialBalance?: number;
 }
 
 export interface PaymentAccount {
@@ -237,6 +239,8 @@ export interface PaymentAccount {
   schoolId?: string;
   expenseType?: string;
   resourceCategory?: string;
+  documentUrl?: string;
+  invoiceId?: string;
 }
 
 export interface ReceivableAccount {
@@ -259,6 +263,7 @@ export interface ReceivableAccount {
   expectedDate?: Date;
   resourceType?: string;
   notes?: string;
+  documentUrl?: string;
 }
 
 // Fornecedor type for Brazilian system
@@ -293,6 +298,7 @@ export interface ContractData {
   createdAt: Date;
   updatedAt?: Date;
   lastValidationAt?: Date;
+  fornecedorId?: string;
 }
 
 export interface Contract {
@@ -309,7 +315,7 @@ export interface Contract {
   valorContratado?: number;
   status: 'active' | 'inactive' | 'suspended' | 'ativo' | 'vencido' | 'liquidado';
   items: ContractItem[];
-  itensContratados?: string[] | number;
+  itensContratados?: string[];
 }
 
 export interface ContractItem {
@@ -407,4 +413,22 @@ export interface PlanningItem {
   category: string;
   priority: 'high' | 'medium' | 'low';
   status: 'planned' | 'approved' | 'purchased';
+}
+
+// Financial Types
+export interface FinancialSummary {
+  totalReceivables: number;
+  totalPayables: number;
+  totalBankBalance: number;
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  netCashFlow: number;
+}
+
+export interface FinancialReportFilter {
+  startDate: Date;
+  endDate: Date;
+  accountType?: string;
+  category?: string;
+  status?: string;
 }
