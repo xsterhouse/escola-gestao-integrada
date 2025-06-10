@@ -14,6 +14,10 @@ import { CloseExerciseTab } from "@/components/accounting/CloseExerciseTab";
 const Accounting = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
 
+  const handleNavigateToTab = (tab: string) => {
+    setActiveTab(tab);
+  };
+
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto space-y-6 p-6">
@@ -39,7 +43,7 @@ const Accounting = () => {
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-6">
-            <AccountingDashboard />
+            <AccountingDashboard onNavigateToTab={handleNavigateToTab} />
           </TabsContent>
 
           <TabsContent value="entries" className="mt-6">

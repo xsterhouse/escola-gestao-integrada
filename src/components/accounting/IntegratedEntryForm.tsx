@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,17 +10,22 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Zap, FileText, DollarSign, Building, Search, Trash2 } from "lucide-react";
+import { Save, Zap, FileText, DollarSign, Building, Search, Trash2, CheckCircle, ArrowRight, Lightbulb } from "lucide-react";
 import { AccountingEntry, Invoice, PaymentAccount, ReceivableAccount, BankTransaction } from "@/lib/types";
 import { accountingAutomationService } from "@/services/accountingAutomationService";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatAccountMask, validateAccountCode, isValidAccountFormat } from "@/utils/accountMask";
+import { useAccountValidation } from "@/hooks/useAccountValidation";
+import { useAccountingNavigation } from "@/hooks/useAccountingNavigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export function IntegratedEntryForm() {
+  const { navigateToTab, guidedFlow, startGuidedFlow, completeStep, getCurrentStepInfo } = useAccountingNavigation();
+  const { formatAndValidate, suggestAccounts } = useAccountValidation();
   const [activeTab, setActiveTab] = useState("manual");
+  
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     debitAccount: "",
@@ -34,6 +40,11 @@ export function IntegratedEntryForm() {
     entryType: "manual" as const
   });
   
+  const [validationState, setValidationState] = useState({
+    debitAccount: { isValid: false, message: '', suggestion: '' },
+    creditAccount: { isValid: false, message: '', suggestion: '' }
+  });
+
   const [automaticEntries, setAutomaticEntries] = useState({
     pendingInvoices: [] as Invoice[],
     pendingPayments: [] as PaymentAccount[],
@@ -46,6 +57,7 @@ export function IntegratedEntryForm() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredTransactions, setFilteredTransactions] = useState<BankTransaction[]>([]);
   const [autoGenerateEnabled, setAutoGenerateEnabled] = useState(true);
+  const [showAccountSuggestions, setShowAccountSuggestions] = useState({ debit: false, credit: false });
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -54,6 +66,40 @@ export function IntegratedEntryForm() {
     loadReconciledTransactions();
     loadSavedAutomaticEntries();
   }, []);
+
+  // Validação em tempo real das contas
+  useEffect(() => {
+    if (formData.debitAccount) {
+      const result = formatAndValidate(formData.debitAccount);
+      setValidationState(prev => ({ ...prev, debitAccount: result.validation }));
+      if (result.description && result.description !== formData.debitDescription) {
+        setFormData(prev => ({ ...prev, debitDescription: result.description }));
+      }
+      if (result.validation.isValid) {
+        completeStep('debit');
+      }
+    }
+  }, [formData.debitAccount, formatAndValidate, completeStep]);
+
+  useEffect(() => {
+    if (formData.creditAccount) {
+      const result = formatAndValidate(formData.creditAccount);
+      setValidationState(prev => ({ ...prev, creditAccount: result.validation }));
+      if (result.description && result.description !== formData.creditDescription) {
+        setFormData(prev => ({ ...prev, creditDescription: result.description }));
+      }
+      if (result.validation.isValid) {
+        completeStep('credit');
+      }
+    }
+  }, [formData.creditAccount, formatAndValidate, completeStep]);
+
+  // Controle do fluxo guiado
+  useEffect(() => {
+    if (formData.date) completeStep('date');
+    if (formData.totalValue) completeStep('value');
+    if (formData.debitHistory && formData.creditHistory) completeStep('history');
+  }, [formData.date, formData.totalValue, formData.debitHistory, formData.creditHistory, completeStep]);
 
   const loadPendingItems = () => {
     const invoices = JSON.parse(localStorage.getItem('invoices') || '[]')
@@ -149,19 +195,19 @@ export function IntegratedEntryForm() {
       return;
     }
 
-    if (!isValidAccountFormat(formData.debitAccount) || !validateAccountCode(formData.debitAccount)) {
+    if (!validationState.debitAccount.isValid) {
       toast({
         title: "Conta de débito inválida",
-        description: "O código da conta de débito deve seguir o formato 0.0.00.00.0000 com valores válidos.",
+        description: validationState.debitAccount.message,
         variant: "destructive",
       });
       return;
     }
 
-    if (!isValidAccountFormat(formData.creditAccount) || !validateAccountCode(formData.creditAccount)) {
+    if (!validationState.creditAccount.isValid) {
       toast({
         title: "Conta de crédito inválida", 
-        description: "O código da conta de crédito deve seguir o formato 0.0.00.00.0000 com valores válidos.",
+        description: validationState.creditAccount.message,
         variant: "destructive",
       });
       return;
@@ -185,12 +231,14 @@ export function IntegratedEntryForm() {
     entries.push(newEntry);
     localStorage.setItem('accountingEntries', JSON.stringify(entries));
 
+    completeStep('save');
+
     toast({
-      title: "Lançamento completo salvo",
-      description: "O lançamento completo foi registrado com sucesso.",
+      title: "Lançamento salvo com sucesso!",
+      description: "O lançamento foi registrado e está disponível para consulta.",
     });
 
-    // Reset all form fields
+    // Reset form
     setFormData({
       date: new Date().toISOString().split('T')[0],
       debitAccount: "",
@@ -327,33 +375,11 @@ export function IntegratedEntryForm() {
   };
 
   const handleAccountChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatAccountMask(e.target.value);
-    setFormData(prev => ({ ...prev, [field]: formatted }));
+    const result = formatAndValidate(e.target.value);
+    setFormData(prev => ({ ...prev, [field]: result.formatted }));
   };
 
-  const getAccountDescription = (accountCode: string) => {
-    const accounts = JSON.parse(localStorage.getItem('accountingAccounts') || '[]');
-    const account = accounts.find((acc: any) => acc.code === accountCode);
-    return account ? account.description : "";
-  };
-
-  useEffect(() => {
-    if (formData.debitAccount) {
-      const description = getAccountDescription(formData.debitAccount);
-      if (description && description !== formData.debitDescription) {
-        setFormData(prev => ({ ...prev, debitDescription: description }));
-      }
-    }
-  }, [formData.debitAccount]);
-
-  useEffect(() => {
-    if (formData.creditAccount) {
-      const description = getAccountDescription(formData.creditAccount);
-      if (description && description !== formData.creditDescription) {
-        setFormData(prev => ({ ...prev, creditDescription: description }));
-      }
-    }
-  }, [formData.creditAccount]);
+  const stepInfo = getCurrentStepInfo();
 
   return (
     <div className="space-y-6">
@@ -437,21 +463,59 @@ export function IntegratedEntryForm() {
       {/* Abas de Lançamentos */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="manual">Lançamento Manual</TabsTrigger>
-          <TabsTrigger value="automatic">Lançamentos Automáticos</TabsTrigger>
+          <TabsTrigger value="manual" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Lançamento Manual
+          </TabsTrigger>
+          <TabsTrigger value="automatic" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            Lançamentos Automáticos
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="manual" className="mt-6">
           <Card className="shadow-lg border-0">
             <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b">
-              <CardTitle className="text-xl text-gray-800">Novo Lançamento Manual</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl text-gray-800">Novo Lançamento Manual</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={startGuidedFlow}
+                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                  >
+                    <Lightbulb className="h-4 w-4 mr-2" />
+                    Guia Passo a Passo
+                  </Button>
+                </div>
+              </div>
+              
+              {guidedFlow.showGuide && (
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-blue-800">
+                      Progresso: {Math.round(stepInfo.progress)}%
+                    </span>
+                    <span className="text-xs text-blue-600">
+                      Passo {guidedFlow.currentStep + 1} de {guidedFlow.steps.length}
+                    </span>
+                  </div>
+                  <Progress value={stepInfo.progress} className="h-2 mb-3" />
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className={`h-4 w-4 ${stepInfo.current?.completed ? 'text-green-600' : 'text-blue-600'}`} />
+                    <span className="text-sm text-blue-800">{stepInfo.current?.label}</span>
+                  </div>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="p-8 space-y-6">
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="date" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor="date" className="text-sm font-medium text-gray-700 flex items-center gap-2">
                     Data do Lançamento *
+                    {formData.date && <CheckCircle className="h-4 w-4 text-green-600" />}
                   </Label>
                   <Input
                     id="date"
@@ -463,8 +527,9 @@ export function IntegratedEntryForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="totalValue" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor="totalValue" className="text-sm font-medium text-gray-700 flex items-center gap-2">
                     Valor Total *
+                    {formData.totalValue && <CheckCircle className="h-4 w-4 text-green-600" />}
                   </Label>
                   <Input
                     id="totalValue"
@@ -478,29 +543,59 @@ export function IntegratedEntryForm() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4 p-6 bg-red-50 rounded-xl border border-red-200">
-                  <h3 className="font-semibold text-red-800 text-lg">Débito</h3>
+                  <h3 className="font-semibold text-red-800 text-lg flex items-center gap-2">
+                    Débito
+                    {validationState.debitAccount.isValid && <CheckCircle className="h-5 w-5 text-green-600" />}
+                  </h3>
                   <div className="space-y-4">
                     <div>
                       <Label className="text-sm font-medium text-gray-700">Conta Contábil *</Label>
-                      <Input
-                        placeholder="0.0.00.00.0000"
-                        value={formData.debitAccount}
-                        onChange={handleAccountChange('debitAccount')}
-                        className="h-10 mt-1 rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
-                        maxLength={12}
-                      />
+                      <div className="relative">
+                        <Input
+                          placeholder="0.0.00.00.0000"
+                          value={formData.debitAccount}
+                          onChange={handleAccountChange('debitAccount')}
+                          className={`h-10 mt-1 rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500 ${
+                            formData.debitAccount && !validationState.debitAccount.isValid ? 'border-red-500' : ''
+                          } ${validationState.debitAccount.isValid ? 'border-green-500' : ''}`}
+                          maxLength={12}
+                          onFocus={() => setShowAccountSuggestions(prev => ({ ...prev, debit: true }))}
+                          onBlur={() => setTimeout(() => setShowAccountSuggestions(prev => ({ ...prev, debit: false })), 200)}
+                        />
+                        {validationState.debitAccount.isValid && (
+                          <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-600" />
+                        )}
+                      </div>
+                      {formData.debitAccount && !validationState.debitAccount.isValid && (
+                        <div className="mt-1 text-xs text-red-600">
+                          {validationState.debitAccount.message}
+                          {validationState.debitAccount.suggestion && (
+                            <div className="text-gray-500 mt-1">
+                              Dica: {validationState.debitAccount.suggestion}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {showAccountSuggestions.debit && formData.debitAccount && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                          {suggestAccounts(formData.debitAccount).map((account, index) => (
+                            <div
+                              key={index}
+                              className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, debitAccount: account.code }));
+                                setShowAccountSuggestions(prev => ({ ...prev, debit: false }));
+                              }}
+                            >
+                              <div className="font-medium">{account.code}</div>
+                              <div className="text-gray-600">{account.description}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <p className="text-xs text-gray-500 mt-1">
                         Formato: 0.0.00.00.0000 (1-9.1-9.01-99.01-99.0001-9999)
                       </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Valor Débito</Label>
-                      <Input
-                        placeholder="R$ 0,00"
-                        value={formData.debitValue ? formatCurrency(formData.debitValue) : ""}
-                        onChange={handleCurrencyChange('debitValue')}
-                        className="h-10 mt-1 rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
-                      />
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-gray-700">Descrição da Conta</Label>
@@ -509,10 +604,14 @@ export function IntegratedEntryForm() {
                         value={formData.debitDescription}
                         onChange={(e) => setFormData(prev => ({ ...prev, debitDescription: e.target.value }))}
                         className="h-10 mt-1 rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
+                        readOnly={!!validationState.debitAccount.isValid}
                       />
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-700">Histórico do Débito *</Label>
+                      <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        Histórico do Débito *
+                        {formData.debitHistory && <CheckCircle className="h-4 w-4 text-green-600" />}
+                      </Label>
                       <Textarea
                         placeholder="Descreva o histórico específico para o lançamento a débito..."
                         value={formData.debitHistory}
@@ -524,29 +623,59 @@ export function IntegratedEntryForm() {
                 </div>
 
                 <div className="space-y-4 p-6 bg-green-50 rounded-xl border border-green-200">
-                  <h3 className="font-semibold text-green-800 text-lg">Crédito</h3>
+                  <h3 className="font-semibold text-green-800 text-lg flex items-center gap-2">
+                    Crédito
+                    {validationState.creditAccount.isValid && <CheckCircle className="h-5 w-5 text-green-600" />}
+                  </h3>
                   <div className="space-y-4">
                     <div>
                       <Label className="text-sm font-medium text-gray-700">Conta Contábil *</Label>
-                      <Input
-                        placeholder="0.0.00.00.0000"
-                        value={formData.creditAccount}
-                        onChange={handleAccountChange('creditAccount')}
-                        className="h-10 mt-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
-                        maxLength={12}
-                      />
+                      <div className="relative">
+                        <Input
+                          placeholder="0.0.00.00.0000"
+                          value={formData.creditAccount}
+                          onChange={handleAccountChange('creditAccount')}
+                          className={`h-10 mt-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500 ${
+                            formData.creditAccount && !validationState.creditAccount.isValid ? 'border-red-500' : ''
+                          } ${validationState.creditAccount.isValid ? 'border-green-500' : ''}`}
+                          maxLength={12}
+                          onFocus={() => setShowAccountSuggestions(prev => ({ ...prev, credit: true }))}
+                          onBlur={() => setTimeout(() => setShowAccountSuggestions(prev => ({ ...prev, credit: false })), 200)}
+                        />
+                        {validationState.creditAccount.isValid && (
+                          <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-600" />
+                        )}
+                      </div>
+                      {formData.creditAccount && !validationState.creditAccount.isValid && (
+                        <div className="mt-1 text-xs text-red-600">
+                          {validationState.creditAccount.message}
+                          {validationState.creditAccount.suggestion && (
+                            <div className="text-gray-500 mt-1">
+                              Dica: {validationState.creditAccount.suggestion}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {showAccountSuggestions.credit && formData.creditAccount && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                          {suggestAccounts(formData.creditAccount).map((account, index) => (
+                            <div
+                              key={index}
+                              className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, creditAccount: account.code }));
+                                setShowAccountSuggestions(prev => ({ ...prev, credit: false }));
+                              }}
+                            >
+                              <div className="font-medium">{account.code}</div>
+                              <div className="text-gray-600">{account.description}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <p className="text-xs text-gray-500 mt-1">
                         Formato: 0.0.00.00.0000 (1-9.1-9.01-99.01-99.0001-9999)
                       </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Valor Crédito</Label>
-                      <Input
-                        placeholder="R$ 0,00"
-                        value={formData.creditValue ? formatCurrency(formData.creditValue) : ""}
-                        onChange={handleCurrencyChange('creditValue')}
-                        className="h-10 mt-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
-                      />
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-gray-700">Descrição da Conta</Label>
@@ -555,10 +684,14 @@ export function IntegratedEntryForm() {
                         value={formData.creditDescription}
                         onChange={(e) => setFormData(prev => ({ ...prev, creditDescription: e.target.value }))}
                         className="h-10 mt-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
+                        readOnly={!!validationState.creditAccount.isValid}
                       />
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-700">Histórico do Crédito *</Label>
+                      <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        Histórico do Crédito *
+                        {formData.creditHistory && <CheckCircle className="h-4 w-4 text-green-600" />}
+                      </Label>
                       <Textarea
                         placeholder="Descreva o histórico específico para o lançamento a crédito..."
                         value={formData.creditHistory}
@@ -577,6 +710,7 @@ export function IntegratedEntryForm() {
                     onClick={handleSaveManualEntry}
                     className="h-12 px-8 text-white text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg"
                     style={{ backgroundColor: '#041c43' }}
+                    disabled={!validationState.debitAccount.isValid || !validationState.creditAccount.isValid || !formData.debitHistory || !formData.creditHistory || !formData.date || !formData.totalValue}
                   >
                     <Save className="mr-2 h-5 w-5" />
                     Salvar Lançamento
@@ -649,7 +783,9 @@ export function IntegratedEntryForm() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => saveTransactionAsEntry(transaction)}
+                                className="hover:bg-blue-50 hover:border-blue-500"
                               >
+                                <Save className="h-4 w-4 mr-2" />
                                 Salvar
                               </Button>
                             </TableCell>
@@ -707,7 +843,7 @@ export function IntegratedEntryForm() {
                               variant="ghost"
                               size="sm"
                               onClick={() => deleteAutomaticEntry(entry.id)}
-                              className="text-red-600 hover:text-red-800"
+                              className="text-red-600 hover:text-red-800 hover:bg-red-50"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -718,7 +854,13 @@ export function IntegratedEntryForm() {
                   </Table>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
-                    Nenhum lançamento automático salvo ainda.
+                    <Zap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                      Nenhum lançamento automático salvo
+                    </h3>
+                    <p className="text-gray-600">
+                      Use a busca acima para encontrar transações conciliadas e salvá-las como lançamentos automáticos.
+                    </p>
                   </div>
                 )}
               </CardContent>

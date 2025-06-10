@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -11,11 +12,16 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  BarChart3
+  BarChart3,
+  ArrowRight
 } from "lucide-react";
 import { AccountingEntry, BankReconciliation } from "@/lib/types";
 
-export function AccountingDashboard() {
+interface AccountingDashboardProps {
+  onNavigateToTab?: (tab: string) => void;
+}
+
+export function AccountingDashboard({ onNavigateToTab }: AccountingDashboardProps) {
   const [entries, setEntries] = useState<AccountingEntry[]>([]);
   const [reconciliations, setReconciliations] = useState<BankReconciliation[]>([]);
   const [summary, setSummary] = useState({
@@ -53,11 +59,11 @@ export function AccountingDashboard() {
     });
 
     const totalRevenue = monthlyEntries
-      .filter(entry => entry.creditAccount.startsWith('4')) // Contas de receita
+      .filter(entry => entry.creditAccount.startsWith('4'))
       .reduce((sum, entry) => sum + entry.creditValue, 0);
 
     const totalExpenses = monthlyEntries
-      .filter(entry => entry.debitAccount.startsWith('3')) // Contas de despesa
+      .filter(entry => entry.debitAccount.startsWith('3'))
       .reduce((sum, entry) => sum + entry.debitValue, 0);
 
     const automaticCount = entriesData.filter(entry => entry.entryType === 'automatic').length;
@@ -85,11 +91,47 @@ export function AccountingDashboard() {
     }).format(value);
   };
 
+  const handleCardClick = (type: string) => {
+    switch (type) {
+      case 'entries':
+        onNavigateToTab?.('entries');
+        break;
+      case 'revenue':
+        onNavigateToTab?.('entries-list');
+        break;
+      case 'expenses':
+        onNavigateToTab?.('entries-list');
+        break;
+      case 'balance':
+        onNavigateToTab?.('reports');
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleAlertClick = (alertType: string) => {
+    switch (alertType) {
+      case 'pending-reconciliation':
+        onNavigateToTab?.('reconciliation');
+        break;
+      case 'negative-balance':
+        onNavigateToTab?.('entries');
+        break;
+      default:
+        onNavigateToTab?.('entries');
+        break;
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Cards de Resumo */}
+      {/* Cards de Resumo Clicáveis */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-lg">
+        <Card 
+          className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105"
+          onClick={() => handleCardClick('entries')}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -104,12 +146,18 @@ export function AccountingDashboard() {
                   </Badge>
                 </div>
               </div>
-              <FileText className="h-8 w-8 text-blue-600" />
+              <div className="flex items-center gap-2">
+                <FileText className="h-8 w-8 text-blue-600" />
+                <ArrowRight className="h-4 w-4 text-gray-400" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg">
+        <Card 
+          className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105"
+          onClick={() => handleCardClick('revenue')}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -122,12 +170,18 @@ export function AccountingDashboard() {
                   <span className="text-xs text-green-600">Entrada</span>
                 </div>
               </div>
-              <DollarSign className="h-8 w-8 text-green-600" />
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-8 w-8 text-green-600" />
+                <ArrowRight className="h-4 w-4 text-gray-400" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg">
+        <Card 
+          className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105"
+          onClick={() => handleCardClick('expenses')}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -140,12 +194,18 @@ export function AccountingDashboard() {
                   <span className="text-xs text-red-600">Saída</span>
                 </div>
               </div>
-              <DollarSign className="h-8 w-8 text-red-600" />
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-8 w-8 text-red-600" />
+                <ArrowRight className="h-4 w-4 text-gray-400" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg">
+        <Card 
+          className="border-0 shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105"
+          onClick={() => handleCardClick('balance')}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -160,13 +220,16 @@ export function AccountingDashboard() {
                   </span>
                 </div>
               </div>
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                summary.currentBalance >= 0 ? 'bg-green-100' : 'bg-red-100'
-              }`}>
-                {summary.currentBalance >= 0 ? 
-                  <TrendingUp className="h-5 w-5 text-green-600" /> : 
-                  <TrendingDown className="h-5 w-5 text-red-600" />
-                }
+              <div className="flex items-center gap-2">
+                <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                  summary.currentBalance >= 0 ? 'bg-green-100' : 'bg-red-100'
+                }`}>
+                  {summary.currentBalance >= 0 ? 
+                    <TrendingUp className="h-5 w-5 text-green-600" /> : 
+                    <TrendingDown className="h-5 w-5 text-red-600" />
+                  }
+                </div>
+                <ArrowRight className="h-4 w-4 text-gray-400" />
               </div>
             </div>
           </CardContent>
@@ -200,10 +263,12 @@ export function AccountingDashboard() {
             
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-orange-600" />
+                <Clock className={`h-4 w-4 text-orange-600 ${summary.pendingReconciliation > 0 ? 'animate-pulse' : ''}`} />
                 <span className="text-sm text-gray-600">Pendentes</span>
               </div>
-              <span className="text-sm font-medium">{summary.pendingReconciliation}</span>
+              <span className={`text-sm font-medium ${summary.pendingReconciliation > 0 ? 'text-orange-600 animate-pulse' : ''}`}>
+                {summary.pendingReconciliation}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -214,30 +279,38 @@ export function AccountingDashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             {summary.pendingReconciliation > 0 && (
-              <div className="flex items-center gap-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <div 
+                className="flex items-center gap-3 p-3 bg-orange-50 border border-orange-200 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors"
+                onClick={() => handleAlertClick('pending-reconciliation')}
+              >
                 <AlertTriangle className="h-5 w-5 text-orange-600" />
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-medium text-orange-800">
                     {summary.pendingReconciliation} lançamentos pendentes de conciliação
                   </p>
                   <p className="text-xs text-orange-600">
-                    Recomenda-se conciliar regularmente para manter a integridade contábil
+                    Clique para conciliar agora
                   </p>
                 </div>
+                <ArrowRight className="h-4 w-4 text-orange-600" />
               </div>
             )}
 
             {summary.currentBalance < 0 && (
-              <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div 
+                className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg cursor-pointer hover:bg-red-100 transition-colors"
+                onClick={() => handleAlertClick('negative-balance')}
+              >
                 <TrendingDown className="h-5 w-5 text-red-600" />
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-medium text-red-800">
                     Resultado negativo no mês atual
                   </p>
                   <p className="text-xs text-red-600">
-                    Déficit de {formatCurrency(Math.abs(summary.currentBalance))}
+                    Clique para criar lançamento de ajuste
                   </p>
                 </div>
+                <ArrowRight className="h-4 w-4 text-red-600" />
               </div>
             )}
 
@@ -252,6 +325,24 @@ export function AccountingDashboard() {
                     Todas as conciliações estão atualizadas
                   </p>
                 </div>
+              </div>
+            )}
+
+            {summary.totalEntries === 0 && (
+              <div 
+                className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors"
+                onClick={() => handleAlertClick('no-entries')}
+              >
+                <FileText className="h-5 w-5 text-blue-600" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-800">
+                    Nenhum lançamento registrado
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    Clique para criar seu primeiro lançamento
+                  </p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-blue-600" />
               </div>
             )}
           </CardContent>
