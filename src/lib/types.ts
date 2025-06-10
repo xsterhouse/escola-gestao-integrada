@@ -1,3 +1,4 @@
+
 export interface School {
   id: string;
   name: string;
@@ -9,6 +10,7 @@ export interface School {
   city: string;
   state: string;
   zipCode: string;
+  cnpj: string;
   isActive: boolean;
 }
 
@@ -36,6 +38,7 @@ export interface Supplier {
   city: string;
   state: string;
   zipCode: string;
+  razaoSocial?: string;
   isActive: boolean;
 }
 
@@ -64,6 +67,10 @@ export interface Invoice {
   supplier: Supplier;
   items: InvoiceItem[];
   totalAmount: number;
+  totalValue?: number;
+  danfeNumber?: string;
+  xmlContent?: string;
+  supplierId?: string;
   status: 'pendente' | 'aprovada' | 'rejeitada';
   paymentStatus: 'pendente' | 'pago' | 'parcialmente_pago';
   notes?: string;
@@ -77,6 +84,7 @@ export interface InvoiceItem {
   unitOfMeasure: string;
   unitPrice: number;
   totalPrice: number;
+  invoiceId?: string;
 }
 
 export interface InventoryReport {
@@ -136,9 +144,200 @@ export interface ATAItem {
   id: string;
   numeroItem: string;
   descricaoProduto: string;
-  descricao?: string; // Adding optional description field
+  descricao?: string;
   unidade: string;
   quantidade: number;
   valorUnitario: number;
   valorTotal: number;
+}
+
+// Financial and Accounting Types
+export interface AccountingEntry {
+  id: string;
+  date: string;
+  debitAccount: string;
+  debitValue: number;
+  debitDescription: string;
+  creditAccount: string;
+  creditValue: number;
+  creditDescription: string;
+  history: string;
+  totalValue: number;
+  entryType?: 'manual' | 'automatic';
+  reconciled?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface BankReconciliation {
+  id: string;
+  bankAccountId: string;
+  reconciliationDate: Date;
+  startingBalance: number;
+  endingBalance: number;
+  transactions: BankTransaction[];
+  status: 'pending' | 'completed' | 'cancelled';
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+export interface BankTransaction {
+  id: string;
+  date: string;
+  description: string;
+  value: number;
+  transactionType: 'credito' | 'debito';
+  reconciliationStatus: 'conciliado' | 'pendente';
+  bankAccountId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BankAccount {
+  id: string;
+  bankName: string;
+  accountNumber: string;
+  agency: string;
+  accountType: 'movimento' | 'aplicacao';
+  managementType?: string;
+  currentBalance: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+export interface PaymentAccount {
+  id: string;
+  description: string;
+  value: number;
+  dueDate: Date;
+  supplier: string;
+  category: string;
+  status: 'pendente' | 'pago' | 'cancelado';
+  paymentDate?: Date;
+  bankAccountId?: string;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+export interface ReceivableAccount {
+  id: string;
+  description: string;
+  value: number;
+  originalValue?: number;
+  receivedAmount?: number;
+  isPartialPayment?: boolean;
+  dueDate: Date;
+  source: string;
+  category: string;
+  status: 'pendente' | 'recebido' | 'cancelado';
+  receivedDate?: Date;
+  bankAccountId?: string;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+// Contracts Types
+export interface ContractData {
+  id: string;
+  numeroContrato: string;
+  fornecedor: string;
+  dataInicio: Date;
+  dataFim: Date;
+  valor: number;
+  status: 'ativo' | 'inativo' | 'suspenso';
+  items: ContractItem[];
+  contracts?: Contract[];
+  totalItems?: number;
+  hasDivergences?: boolean;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+export interface Contract {
+  id: string;
+  number: string;
+  supplier: string;
+  startDate: Date;
+  endDate: Date;
+  value: number;
+  status: 'active' | 'inactive' | 'suspended';
+  items: ContractItem[];
+}
+
+export interface ContractItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  unit: string;
+}
+
+export interface ContractFilter {
+  status?: string;
+  supplier?: string;
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+}
+
+export interface ContractDivergence {
+  id: string;
+  contractId: string;
+  itemId: string;
+  type: 'price' | 'quantity' | 'specification';
+  description: string;
+  expectedValue: string;
+  actualValue: string;
+  status: 'pending' | 'resolved' | 'dismissed';
+  createdAt: Date;
+  resolvedAt?: Date;
+}
+
+export interface ContractImportData {
+  contracts: ContractData[];
+  divergences: ContractDivergence[];
+  importSummary: {
+    total: number;
+    successful: number;
+    failed: number;
+    warnings: number;
+  };
+}
+
+export interface InvoiceData {
+  id: string;
+  number: string;
+  supplier: string;
+  issueDate: Date;
+  dueDate: Date;
+  totalValue: number;
+  items: InvoiceItem[];
+  xmlContent?: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
+// Dashboard Types
+export interface DashboardMetric {
+  id: string;
+  title: string;
+  value: string | number;
+  icon: string;
+  color: string;
+  additionalInfo?: string;
+}
+
+// Planning Types
+export interface PlanningItem {
+  id: string;
+  productName: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  estimatedPrice: number;
+  category: string;
+  priority: 'high' | 'medium' | 'low';
+  status: 'planned' | 'approved' | 'purchased';
 }
