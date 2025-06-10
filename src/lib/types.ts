@@ -1,4 +1,3 @@
-
 export interface School {
   id: string;
   name: string;
@@ -75,6 +74,8 @@ export interface Invoice {
   paymentStatus: 'pendente' | 'pago' | 'parcialmente_pago';
   notes?: string;
   isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface InvoiceItem {
@@ -85,6 +86,8 @@ export interface InvoiceItem {
   unitPrice: number;
   totalPrice: number;
   invoiceId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface InventoryReport {
@@ -165,7 +168,7 @@ export interface AccountingEntry {
   totalValue: number;
   entryType?: 'manual' | 'automatic';
   reconciled?: boolean;
-  reconciledAt?: Date;
+  reconciledAt?: string;
   reconciledBy?: string;
   debitHistory?: string;
   creditHistory?: string;
@@ -196,6 +199,10 @@ export interface BankTransaction {
   bankAccountId?: string;
   createdAt?: string;
   updatedAt?: string;
+  isPartialPayment?: boolean;
+  partialAmount?: number;
+  isDuplicate?: boolean;
+  remainingAmount?: number;
 }
 
 export interface BankAccount {
@@ -209,6 +216,10 @@ export interface BankAccount {
   isActive: boolean;
   createdAt: Date;
   updatedAt?: Date;
+  schoolId?: string;
+  agencyNumber?: string;
+  description?: string;
+  initialBalance?: number;
 }
 
 export interface PaymentAccount {
@@ -218,11 +229,14 @@ export interface PaymentAccount {
   dueDate: Date;
   supplier: string;
   category: string;
-  status: 'pendente' | 'pago' | 'cancelado';
+  status: 'pendente' | 'pago' | 'cancelado' | 'a_pagar' | 'pgt_parcial';
   paymentDate?: Date;
   bankAccountId?: string;
   createdAt: Date;
   updatedAt?: Date;
+  schoolId?: string;
+  expenseType?: string;
+  resourceCategory?: string;
 }
 
 export interface ReceivableAccount {
@@ -240,6 +254,11 @@ export interface ReceivableAccount {
   bankAccountId?: string;
   createdAt: Date;
   updatedAt?: Date;
+  schoolId?: string;
+  origin?: string;
+  expectedDate?: Date;
+  resourceType?: string;
+  notes?: string;
 }
 
 // Fornecedor type for Brazilian system
@@ -273,6 +292,7 @@ export interface ContractData {
   ataValidated?: boolean;
   createdAt: Date;
   updatedAt?: Date;
+  lastValidationAt?: Date;
 }
 
 export interface Contract {
@@ -289,7 +309,7 @@ export interface Contract {
   valorContratado?: number;
   status: 'active' | 'inactive' | 'suspended' | 'ativo' | 'vencido' | 'liquidado';
   items: ContractItem[];
-  itensContratados?: string[];
+  itensContratados?: string[] | number;
 }
 
 export interface ContractItem {
@@ -339,6 +359,7 @@ export interface ContractDivergence {
   status: 'pending' | 'resolved' | 'dismissed';
   createdAt: Date;
   resolvedAt?: Date;
+  resolved?: boolean;
 }
 
 export interface ContractImportData {

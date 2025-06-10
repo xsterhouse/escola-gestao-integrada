@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Dialog,
@@ -46,9 +47,9 @@ export function DivergenceEditModal({
     // Recalculate derived values
     if (field === 'precoUnitario' || field === 'quantidadeContratada') {
       const item = updatedItems[itemIndex];
-      item.valorTotalContrato = item.quantidadeContratada * item.precoUnitario;
-      item.saldoQuantidade = item.quantidadeContratada - item.quantidadePaga;
-      item.saldoValor = item.valorTotalContrato - item.valorPago;
+      item.valorTotalContrato = (item.quantidadeContratada || 0) * (item.precoUnitario || 0);
+      item.saldoQuantidade = (item.quantidadeContratada || 0) - (item.quantidadePaga || 0);
+      item.saldoValor = (item.valorTotalContrato || 0) - (item.valorPago || 0);
     }
 
     setEditedItems(updatedItems);
@@ -113,7 +114,7 @@ export function DivergenceEditModal({
 
       editedItems.forEach((contractItem, contractIndex) => {
         const ataItem = planningItems.find(item => {
-          const contractDesc = contractItem.produto.toLowerCase().trim();
+          const contractDesc = (contractItem.produto || contractItem.description).toLowerCase().trim();
           const ataDesc = item.description.toLowerCase().trim();
           
           const contractWords = contractDesc.split(' ');
@@ -129,53 +130,77 @@ export function DivergenceEditModal({
           newDivergences.push({
             id: `div-${contractIndex}-notfound-${Date.now()}`,
             contractItemId: contractItem.id,
-            ataItemId: '',
+            itemId: '',
             field: 'descricao',
-            valorContrato: contractItem.produto,
+            type: 'specification',
+            description: 'Item não encontrado na ATA',
+            expectedValue: 'Não encontrado na ATA',
+            actualValue: contractItem.produto || contractItem.description,
+            valorContrato: contractItem.produto || contractItem.description,
             valorATA: 'Não encontrado na ATA',
-            resolved: false
+            status: 'pending',
+            contractId: contract.id,
+            createdAt: new Date()
           });
           return;
         }
 
         // Check for remaining divergences
-        if (contractItem.produto.toLowerCase() !== ataItem.description.toLowerCase()) {
+        if ((contractItem.produto || contractItem.description).toLowerCase() !== ataItem.description.toLowerCase()) {
           newDivergences.push({
             id: `div-${contractIndex}-desc-${Date.now()}`,
             contractItemId: contractItem.id,
-            ataItemId: ataItem.id,
+            itemId: ataItem.id,
             field: 'descricao',
-            valorContrato: contractItem.produto,
+            type: 'specification',
+            description: 'Descrição divergente',
+            expectedValue: ataItem.description,
+            actualValue: contractItem.produto || contractItem.description,
+            valorContrato: contractItem.produto || contractItem.description,
             valorATA: ataItem.description,
-            resolved: false
+            status: 'pending',
+            contractId: contract.id,
+            createdAt: new Date()
           });
         }
 
-        if (contractItem.quantidadeContratada > ataItem.quantity) {
+        if ((contractItem.quantidadeContratada || contractItem.quantity) > ataItem.quantity) {
           newDivergences.push({
             id: `div-${contractIndex}-qty-${Date.now()}`,
             contractItemId: contractItem.id,
-            ataItemId: ataItem.id,
+            itemId: ataItem.id,
             field: 'quantidade',
-            valorContrato: contractItem.quantidadeContratada,
+            type: 'quantity',
+            description: 'Quantidade divergente',
+            expectedValue: ataItem.quantity.toString(),
+            actualValue: (contractItem.quantidadeContratada || contractItem.quantity).toString(),
+            valorContrato: contractItem.quantidadeContratada || contractItem.quantity,
             valorATA: ataItem.quantity,
-            resolved: false
+            status: 'pending',
+            contractId: contract.id,
+            createdAt: new Date()
           });
         }
 
         if (ataItem.unitPrice) {
           const tolerance = ataItem.unitPrice * 0.05;
-          const priceDiff = Math.abs(contractItem.precoUnitario - ataItem.unitPrice);
+          const priceDiff = Math.abs((contractItem.precoUnitario || contractItem.unitPrice) - ataItem.unitPrice);
           
           if (priceDiff > tolerance) {
             newDivergences.push({
               id: `div-${contractIndex}-price-${Date.now()}`,
               contractItemId: contractItem.id,
-              ataItemId: ataItem.id,
+              itemId: ataItem.id,
               field: 'valorUnitario',
-              valorContrato: contractItem.precoUnitario,
+              type: 'price',
+              description: 'Valor unitário divergente',
+              expectedValue: ataItem.unitPrice.toString(),
+              actualValue: (contractItem.precoUnitario || contractItem.unitPrice).toString(),
+              valorContrato: contractItem.precoUnitario || contractItem.unitPrice,
               valorATA: ataItem.unitPrice,
-              resolved: false
+              status: 'pending',
+              contractId: contract.id,
+              createdAt: new Date()
             });
           }
         }
@@ -226,7 +251,7 @@ export function DivergenceEditModal({
     }
   };
 
-  const unresolvedDivergences = contract.divergencias?.filter(d => !d.resolved) || [];
+  const unresolvedDivergences = contract.divergencias?.filter(d => d.status === 'pending') || [];
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -287,7 +312,7 @@ export function DivergenceEditModal({
                     <TableRow key={item.id}>
                       <TableCell>
                         <Input
-                          value={item.produto}
+                          value={item.produto || item.description}
                           onChange={(e) => handleItemChange(index, 'produto', e.target.value)}
                           className={itemDivergences.some(d => d.field === 'descricao') ? 'border-yellow-300' : ''}
                         />
@@ -295,7 +320,7 @@ export function DivergenceEditModal({
                       <TableCell>
                         <Input
                           type="number"
-                          value={item.quantidadeContratada}
+                          value={item.quantidadeContratada || item.quantity}
                           onChange={(e) => handleItemChange(index, 'quantidadeContratada', e.target.value)}
                           className={itemDivergences.some(d => d.field === 'quantidade') ? 'border-yellow-300' : ''}
                         />
@@ -304,7 +329,7 @@ export function DivergenceEditModal({
                         <Input
                           type="number"
                           step="0.01"
-                          value={item.precoUnitario}
+                          value={item.precoUnitario || item.unitPrice}
                           onChange={(e) => handleItemChange(index, 'precoUnitario', e.target.value)}
                           className={itemDivergences.some(d => d.field === 'valorUnitario') ? 'border-yellow-300' : ''}
                         />
@@ -314,7 +339,7 @@ export function DivergenceEditModal({
                           {new Intl.NumberFormat('pt-BR', {
                             style: 'currency',
                             currency: 'BRL'
-                          }).format(item.valorTotalContrato)}
+                          }).format(item.valorTotalContrato || item.totalPrice)}
                         </span>
                       </TableCell>
                       <TableCell>
