@@ -37,7 +37,6 @@ export function ProductAutocomplete({
 }: ProductAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const [selectedValue, setSelectedValue] = useState(value || "");
   
   // Extract unique products from all invoices
   const allProducts = invoices.flatMap(invoice => 
@@ -59,22 +58,30 @@ export function ProductAutocomplete({
   );
 
   const handleSelect = (product: typeof uniqueProducts[0]) => {
-    setSelectedValue(product.description);
+    console.log("🎯 Produto clicado:", product);
+    
     onProductSelect({
       description: product.description,
       unitOfMeasure: product.unitOfMeasure,
       unitPrice: product.unitPrice
     });
+    
+    setSearchValue(""); // Limpar busca após seleção
     setOpen(false);
+    
+    console.log("✅ Produto selecionado e popover fechado");
   };
 
-  // Update selectedValue when value prop changes
-  useEffect(() => {
-    setSelectedValue(value || "");
-  }, [value]);
+  // Reset search when popover closes
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (!newOpen) {
+      setSearchValue("");
+    }
+  };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -82,18 +89,18 @@ export function ProductAutocomplete({
           aria-expanded={open}
           className="w-full justify-between"
         >
-          {selectedValue || placeholder}
+          {value || placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" style={{ zIndex: 9999 }}>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" style={{ zIndex: 9999 }}>
         <Command>
           <CommandInput 
             placeholder="Digite para buscar produtos..." 
             value={searchValue}
             onValueChange={setSearchValue}
           />
-          <CommandList>
+          <CommandList className="max-h-[200px]">
             <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
             <CommandGroup>
               {filteredProducts.map((product) => (
@@ -106,7 +113,7 @@ export function ProductAutocomplete({
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      selectedValue === product.description ? "opacity-100" : "opacity-0"
+                      value === product.description ? "opacity-100" : "opacity-0"
                     )}
                   />
                   <div className="flex flex-col">
