@@ -37,6 +37,9 @@ export function AccountFormFields({
   accounts, 
   onCodeChange 
 }: AccountFormFieldsProps) {
+  // Filter accounts to only include those with valid, non-empty codes
+  const validAccounts = accounts.filter(account => account.code && account.code.trim() !== '');
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -106,7 +109,7 @@ export function AccountFormFields({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Nenhuma (Conta Principal)</SelectItem>
-              {accounts.map(account => (
+              {validAccounts.map(account => (
                 <SelectItem key={account.id} value={account.code}>
                   {account.code} - {account.description}
                 </SelectItem>
