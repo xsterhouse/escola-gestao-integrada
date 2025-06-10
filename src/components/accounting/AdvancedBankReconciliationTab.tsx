@@ -7,32 +7,26 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, 
-  Filter, 
   CheckCircle, 
   AlertCircle, 
   DollarSign, 
-  Eye, 
   Link,
   Unlink,
-  Save,
   Download,
   RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { AccountingEntry, BankTransaction, BankReconciliation, ReconciledItem } from "@/lib/types";
+import { AccountingEntry, BankTransaction, BankAccount } from "@/lib/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export function AdvancedBankReconciliationTab() {
   const [accountingEntries, setAccountingEntries] = useState<AccountingEntry[]>([]);
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
-  const [reconciliations, setReconciliations] = useState<BankReconciliation[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [selectedBankAccount, setSelectedBankAccount] = useState("");
   const [reconciliationPeriod, setReconciliationPeriod] = useState({
     startDate: new Date().toISOString().split('T')[0],
@@ -52,19 +46,20 @@ export function AdvancedBankReconciliationTab() {
   }, []);
 
   const loadData = () => {
+    // Carregar apenas dados reais do localStorage
     const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
     const transactions = JSON.parse(localStorage.getItem('bankTransactions') || '[]');
-    const reconciliationsData = JSON.parse(localStorage.getItem('bankReconciliations') || '[]');
+    const accounts = JSON.parse(localStorage.getItem('bankAccounts') || '[]');
     
     setAccountingEntries(entries);
     setBankTransactions(transactions);
-    setReconciliations(reconciliationsData);
+    setBankAccounts(accounts);
   };
 
   const getUnreconciledEntries = () => {
     return accountingEntries.filter(entry => 
       !entry.reconciled && 
-      entry.debitAccount.startsWith('1.1.1') || entry.creditAccount.startsWith('1.1.1') // Contas bancárias
+      (entry.debitAccount.startsWith('1.1.1') || entry.creditAccount.startsWith('1.1.1')) // Contas bancárias
     );
   };
 
@@ -79,7 +74,7 @@ export function AdvancedBankReconciliationTab() {
     
     const unreconciledEntries = getUnreconciledEntries();
     const unreconciledTransactions = getUnreconciledTransactions();
-    const matches: ReconciledItem[] = [];
+    let matchCount = 0;
 
     // Algoritmo de conciliação automática
     unreconciledEntries.forEach(entry => {
@@ -94,22 +89,13 @@ export function AdvancedBankReconciliationTab() {
       });
 
       if (matchingTransaction) {
-        matches.push({
-          id: Date.now().toString() + Math.random(),
-          reconciliationId: '',
-          bankTransactionId: matchingTransaction.id,
-          accountingEntryId: entry.id,
-          reconciledAmount: entry.totalValue,
-          reconciledAt: new Date(),
-          reconciledBy: 'Sistema Automático'
-        });
-
         // Marcar como reconciliado
         entry.reconciled = true;
         entry.reconciledAt = new Date();
         entry.reconciledBy = 'Sistema Automático';
 
         matchingTransaction.reconciliationStatus = 'conciliado';
+        matchCount++;
       }
     });
 
@@ -122,7 +108,7 @@ export function AdvancedBankReconciliationTab() {
 
     toast({
       title: "Conciliação automática concluída",
-      description: `${matches.length} itens foram conciliados automaticamente.`,
+      description: `${matchCount} itens foram conciliados automaticamente.`,
     });
   };
 
@@ -286,8 +272,16 @@ export function AdvancedBankReconciliationTab() {
                   <SelectValue placeholder="Selecione a conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="conta_corrente">Conta Corrente - 12345-6</SelectItem>
-                  <SelectItem value="conta_poupanca">Conta Poupança - 78910-1</SelectItem>
+                  {bankAccounts.length === 0 ? (
+                    <SelectItem value="" disabled>Nenhuma conta bancária cadastrada</SelectItem>
+                  ) : (
+                    bankAccounts.map(account => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.bankName} - {account.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}
+                        {account.managementType && ` (${account.managementType})`}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -327,7 +321,7 @@ export function AdvancedBankReconciliationTab() {
           <div className="flex gap-2 flex-wrap">
             <Button
               onClick={performAutomaticReconciliation}
-              disabled={isReconciling}
+              disabled={isReconciling || getUnreconciledEntries().length === 0}
               className="bg-blue-600 hover:bg-blue-700"
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isReconciling ? 'animate-spin' : ''}`} />
@@ -346,6 +340,7 @@ export function AdvancedBankReconciliationTab() {
             <Button
               onClick={generateReconciliationReport}
               variant="outline"
+              disabled={accountingEntries.length === 0}
             >
               <Download className="mr-2 h-4 w-4" />
               Gerar Relatório
@@ -363,92 +358,122 @@ export function AdvancedBankReconciliationTab() {
         </TabsList>
 
         <TabsContent value="automatic" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Lançamentos Contábeis Não Conciliados */}
+          {accountingEntries.length === 0 && bankTransactions.length === 0 ? (
             <Card className="shadow-lg border-0">
-              <CardHeader>
-                <CardTitle className="text-lg text-gray-800">
-                  Lançamentos Contábeis Pendentes ({getUnreconciledEntries().length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="max-h-96 overflow-y-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Histórico</TableHead>
-                        <TableHead className="text-right">Valor</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {getUnreconciledEntries().map((entry) => (
-                        <TableRow 
-                          key={entry.id}
-                          className={selectedItems.accountingEntry?.id === entry.id ? 'bg-blue-50' : ''}
-                          onClick={() => setSelectedItems(prev => ({ ...prev, accountingEntry: entry }))}
-                        >
-                          <TableCell className="font-medium">
-                            {format(new Date(entry.date), 'dd/MM/yyyy')}
-                          </TableCell>
-                          <TableCell className="max-w-xs truncate">
-                            {entry.history}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {formatCurrency(entry.totalValue)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+              <CardContent className="p-12 text-center">
+                <AlertCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                  Nenhum dado disponível
+                </h3>
+                <p className="text-gray-600">
+                  Não há lançamentos contábeis ou transações bancárias cadastradas no sistema.
+                </p>
               </CardContent>
             </Card>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Lançamentos Contábeis Não Conciliados */}
+              <Card className="shadow-lg border-0">
+                <CardHeader>
+                  <CardTitle className="text-lg text-gray-800">
+                    Lançamentos Contábeis Pendentes ({getUnreconciledEntries().length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="max-h-96 overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Histórico</TableHead>
+                          <TableHead className="text-right">Valor</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {getUnreconciledEntries().length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center py-8 text-gray-500">
+                              Nenhum lançamento pendente
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          getUnreconciledEntries().map((entry) => (
+                            <TableRow 
+                              key={entry.id}
+                              className={selectedItems.accountingEntry?.id === entry.id ? 'bg-blue-50' : 'cursor-pointer hover:bg-gray-50'}
+                              onClick={() => setSelectedItems(prev => ({ ...prev, accountingEntry: entry }))}
+                            >
+                              <TableCell className="font-medium">
+                                {format(new Date(entry.date), 'dd/MM/yyyy')}
+                              </TableCell>
+                              <TableCell className="max-w-xs truncate">
+                                {entry.history}
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {formatCurrency(entry.totalValue)}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
 
-            {/* Transações Bancárias Não Conciliadas */}
-            <Card className="shadow-lg border-0">
-              <CardHeader>
-                <CardTitle className="text-lg text-gray-800">
-                  Transações Bancárias Pendentes ({getUnreconciledTransactions().length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="max-h-96 overflow-y-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead className="text-right">Valor</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {getUnreconciledTransactions().map((transaction) => (
-                        <TableRow 
-                          key={transaction.id}
-                          className={selectedItems.bankTransaction?.id === transaction.id ? 'bg-green-50' : ''}
-                          onClick={() => setSelectedItems(prev => ({ ...prev, bankTransaction: transaction }))}
-                        >
-                          <TableCell className="font-medium">
-                            {format(new Date(transaction.date), 'dd/MM/yyyy')}
-                          </TableCell>
-                          <TableCell className="max-w-xs truncate">
-                            {transaction.description}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            <span className={transaction.transactionType === 'credito' ? 'text-green-600' : 'text-red-600'}>
-                              {transaction.transactionType === 'debito' ? '-' : '+'}
-                              {formatCurrency(transaction.value)}
-                            </span>
-                          </TableCell>
+              {/* Transações Bancárias Não Conciliadas */}
+              <Card className="shadow-lg border-0">
+                <CardHeader>
+                  <CardTitle className="text-lg text-gray-800">
+                    Transações Bancárias Pendentes ({getUnreconciledTransactions().length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="max-h-96 overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead className="text-right">Valor</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                      </TableHeader>
+                      <TableBody>
+                        {getUnreconciledTransactions().length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center py-8 text-gray-500">
+                              Nenhuma transação pendente
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          getUnreconciledTransactions().map((transaction) => (
+                            <TableRow 
+                              key={transaction.id}
+                              className={selectedItems.bankTransaction?.id === transaction.id ? 'bg-green-50' : 'cursor-pointer hover:bg-gray-50'}
+                              onClick={() => setSelectedItems(prev => ({ ...prev, bankTransaction: transaction }))}
+                            >
+                              <TableCell className="font-medium">
+                                {format(new Date(transaction.date), 'dd/MM/yyyy')}
+                              </TableCell>
+                              <TableCell className="max-w-xs truncate">
+                                {transaction.description}
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">
+                                <span className={transaction.transactionType === 'credito' ? 'text-green-600' : 'text-red-600'}>
+                                  {transaction.transactionType === 'debito' ? '-' : '+'}
+                                  {formatCurrency(transaction.value)}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="manual" className="mt-6">
