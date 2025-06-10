@@ -82,7 +82,7 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
 
     const handleFocus = () => {
       console.log("🎯 INPUT ganhou foco, valor atual:", `"${value}"`);
-      if (value.length >= 2 && suggestions.length > 0) {
+      if (value && value.length >= 2 && suggestions.length > 0) {
         console.log("🔄 Reexibindo sugestões existentes");
         setShowSuggestions(true);
       }
@@ -99,7 +99,7 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
           <div className="flex-1 relative">
             <Input
               ref={ref}
-              value={value}
+              value={value || ""}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               onBlur={handleBlur}
@@ -113,7 +113,7 @@ export const ATAProductAutocomplete = forwardRef<HTMLInputElement, ATAProductAut
               suggestions={suggestions}
               selectedIndex={selectedIndex}
               onProductClick={handleProductClick}
-              searchValue={value}
+              searchValue={value || ""}
               isLoading={isLoading}
               showSuggestions={showSuggestions}
             />

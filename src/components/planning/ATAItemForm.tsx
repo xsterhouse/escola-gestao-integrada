@@ -6,7 +6,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Trash2 } from "lucide-react";
 import { ATAProductAutocomplete } from "./ATAProductAutocomplete";
-import { ATAFormData, ProductSuggestion } from "./types";
+import { ATAFormData } from "./types";
+
+interface ProductSuggestion {
+  id: string;
+  description: string;
+  unit: string;
+  item?: number;
+}
 
 interface ATAItemFormProps {
   control: Control<ATAFormData>;
@@ -50,7 +57,7 @@ export function ATAItemForm({
             render={({ field, fieldState }) => (
               <div>
                 <ATAProductAutocomplete
-                  value={field.value}
+                  value={field.value || ""}
                   onChange={field.onChange}
                   onProductSelect={onProductSelect}
                   placeholder="Digite para buscar produtos do catálogo..."
