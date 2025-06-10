@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 import { InvoiceItem } from "@/lib/types";
 
 interface ProductAutocompleteProps {
@@ -66,7 +67,7 @@ export function ProductAutocomplete({
   );
 
   const handleSelect = (product: typeof uniqueProducts[0]) => {
-    console.log("🎯 Produto selecionado no autocomplete:", product);
+    console.log("🎯 Produto selecionado:", product);
     
     setSelectedValue(product.description);
     
@@ -76,69 +77,107 @@ export function ProductAutocomplete({
       unitPrice: product.unitPrice
     });
     
-    setSearchValue(""); // Limpar busca após seleção
+    setSearchValue("");
     setOpen(false);
-    
-    console.log("✅ Produto selecionado e popover fechado:", product.description);
   };
 
-  // Reset search when popover closes
   const handleOpenChange = (newOpen: boolean) => {
-    console.log("🔄 Mudando estado do popover:", newOpen);
     setOpen(newOpen);
     if (!newOpen) {
       setSearchValue("");
     }
   };
 
+  const clearSelection = () => {
+    setSelectedValue("");
+    setSearchValue("");
+  };
+
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-        >
-          {selectedValue || placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" style={{ zIndex: 9999 }}>
-        <Command>
-          <CommandInput 
-            placeholder="Digite para buscar produtos..." 
-            value={searchValue}
-            onValueChange={setSearchValue}
-          />
-          <CommandList className="max-h-[200px]">
-            <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
-            <CommandGroup>
-              {filteredProducts.map((product) => (
-                <CommandItem
-                  key={product.key}
-                  value={product.description}
-                  onSelect={() => handleSelect(product)}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedValue === product.description ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <div className="flex flex-col">
-                    <span>{product.description}</span>
-                    <span className="text-sm text-gray-500">
-                      {product.unitOfMeasure} - R$ {product.unitPrice.toFixed(2)}
-                    </span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <div className="space-y-2">
+      <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between h-12 text-left"
+          >
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-gray-500" />
+              <span className={selectedValue ? "text-gray-900" : "text-gray-500"}>
+                {selectedValue || placeholder}
+              </span>
+            </div>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" sideOffset={4}>
+          <Command>
+            <CommandInput 
+              placeholder="Digite para buscar produtos..." 
+              value={searchValue}
+              onValueChange={setSearchValue}
+              className="h-12"
+            />
+            <CommandList className="max-h-[300px]">
+              <CommandEmpty>
+                <div className="py-6 text-center text-sm">
+                  <Search className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                  <p className="text-gray-500">Nenhum produto encontrado.</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Tente buscar com outros termos
+                  </p>
+                </div>
+              </CommandEmpty>
+              <CommandGroup>
+                {filteredProducts.map((product) => (
+                  <CommandItem
+                    key={product.key}
+                    value={product.description}
+                    onSelect={() => handleSelect(product)}
+                    className="cursor-pointer py-3"
+                  >
+                    <Check
+                      className={cn(
+                        "mr-3 h-4 w-4",
+                        selectedValue === product.description ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{product.description}</span>
+                        <Badge variant="secondary" className="ml-2">
+                          R$ {product.unitPrice.toFixed(2)}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Unidade: {product.unitOfMeasure}
+                      </p>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      
+      {selectedValue && (
+        <div className="flex items-center justify-between">
+          <Badge variant="outline" className="text-sm">
+            Produto selecionado: {selectedValue}
+          </Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearSelection}
+            className="h-6 px-2 text-xs"
+          >
+            Limpar
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
