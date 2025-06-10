@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Plus, Edit2, Trash2, Search, CheckCircle } from "lucide-react";
-import { formatAccountMask, isValidAccountFormat, validateAccountCode } from "@/utils/accountMask";
+import { applyAccountMask, isValidAccountFormat, validateAccountCode } from "@/utils/accountMask";
 
 interface Account {
   id: string;
@@ -56,8 +55,9 @@ export function AccountsTab() {
   };
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatAccountMask(e.target.value);
-    setFormData(prev => ({ ...prev, code: formatted }));
+    const inputValue = e.target.value;
+    const maskedValue = applyAccountMask(inputValue);
+    setFormData(prev => ({ ...prev, code: maskedValue }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -202,7 +202,7 @@ export function AccountsTab() {
                   className={`h-12 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 ${
                     formData.code && !isCodeValid ? 'border-red-500' : ''
                   } ${isCodeValid ? 'border-green-500' : ''}`}
-                  maxLength={12}
+                  maxLength={13}
                 />
                 {formData.code && !isCodeValid && (
                   <p className="text-xs text-red-600">

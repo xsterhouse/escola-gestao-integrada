@@ -43,3 +43,32 @@ export const isValidAccountFormat = (code: string): boolean => {
   const regex = /^\d\.\d\.\d{2}\.\d{2}\.\d{4}$/;
   return regex.test(code);
 };
+
+export const applyAccountMask = (value: string): string => {
+  // Remove tudo que não é número
+  let numbers = value.replace(/\D/g, '');
+  
+  // Limita a 10 dígitos
+  numbers = numbers.substring(0, 10);
+  
+  // Aplica a máscara progressivamente
+  let result = '';
+  
+  if (numbers.length > 0) {
+    result += numbers[0]; // Primeiro dígito
+  }
+  if (numbers.length > 1) {
+    result += '.' + numbers[1]; // Segundo dígito com ponto
+  }
+  if (numbers.length > 2) {
+    result += '.' + numbers.substring(2, 4); // Terceiro e quarto dígitos
+  }
+  if (numbers.length > 4) {
+    result += '.' + numbers.substring(4, 6); // Quinto e sexto dígitos
+  }
+  if (numbers.length > 6) {
+    result += '.' + numbers.substring(6, 10); // Últimos quatro dígitos
+  }
+  
+  return result;
+};
