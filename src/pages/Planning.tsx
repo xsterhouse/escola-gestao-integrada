@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Plus, Trash2, Save, Download, FileText, BarChart3, CheckCircle, Clock, History, Check, Lock } from "lucide-react";
+import { Eye, Plus, Trash2, Save, Download, FileText, BarChart3, CheckCircle, Clock, History, Check, Lock, Calendar } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isSchoolLinkedToPurchasingCenter } from "@/utils/schoolPurchasingSync";
@@ -918,9 +918,9 @@ const Planning = () => {
                   <label className="font-medium mb-2 block flex-shrink-0">Itens da ATA:</label>
                   <div className="flex-1 overflow-auto border rounded-lg bg-white">
                     <Table>
-                      <TableHeader className="sticky top-0 bg-white z-10">
+                      <TableHeader>
                         <TableRow>
-                          <TableHead className="w-20">Nº Item</TableHead>
+                          <TableHead>Nº Item</TableHead>
                           <TableHead>Produto</TableHead>
                           <TableHead className="w-24">Unidade</TableHead>
                           <TableHead className="w-24">Quantidade</TableHead>
@@ -985,50 +985,87 @@ const Planning = () => {
 
         {/* Modal de Itens da Vigência */}
         <Dialog open={isVigencyItemsModalOpen} onOpenChange={setIsVigencyItemsModalOpen}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Itens da ATA {selectedVigencyATA?.numeroATA}</DialogTitle>
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+            <DialogHeader className="flex-shrink-0 pb-4 border-b">
+              <DialogTitle className="flex items-center gap-2 text-xl">
+                <Calendar className="h-5 w-5" />
+                Detalhes da ATA {selectedVigencyATA?.numeroATA}
+              </DialogTitle>
             </DialogHeader>
             {selectedVigencyATA && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="font-medium">Vigência:</label>
-                    <p>{selectedVigencyATA.dataInicioVigencia} até {selectedVigencyATA.dataFimVigencia}</p>
+              <div className="flex-1 overflow-hidden flex flex-col space-y-6 pt-4">
+                {/* Informações da ATA */}
+                <div className="flex-shrink-0 grid grid-cols-2 gap-6 p-4 bg-gray-50 rounded-lg border">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-600">Início da Vigência:</label>
+                    <p className="text-base font-semibold text-gray-900">
+                      {new Date(selectedVigencyATA.dataInicioVigencia).toLocaleDateString('pt-BR')}
+                    </p>
                   </div>
-                  <div>
-                    <label className="font-medium">Status:</label>
-                    <p>{getStatusBadge(selectedVigencyATA.status)}</p>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-600">Término da Vigência:</label>
+                    <p className="text-base font-semibold text-gray-900">
+                      {new Date(selectedVigencyATA.dataFimVigencia).toLocaleDateString('pt-BR')}
+                    </p>
                   </div>
-                  <div>
-                    <label className="font-medium">Valor Total:</label>
-                    <p>R$ {selectedVigencyATA.valorTotal.toFixed(2)}</p>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-600">Status:</label>
+                    <div>{getStatusBadge(selectedVigencyATA.status)}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-600">Total de Itens:</label>
+                    <p className="text-base font-semibold text-gray-900">
+                      {selectedVigencyATA.items.length} item(s)
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <label className="font-medium mb-2 block">Itens da ATA:</label>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nº Item</TableHead>
-                        <TableHead>Produto</TableHead>
-                        <TableHead>Unidade</TableHead>
-                        <TableHead>Quantidade</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedVigencyATA.items.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.numeroItem}</TableCell>
-                          <TableCell>{item.descricaoProduto}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{item.unidade}</Badge>
-                          </TableCell>
-                          <TableCell>{item.quantidade}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+
+                {/* Tabela de Itens com Scroll */}
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  <div className="flex-shrink-0 mb-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Itens da ATA</h3>
+                    <p className="text-sm text-gray-600">Lista completa dos produtos incluídos nesta ATA</p>
+                  </div>
+                  
+                  <div className="flex-1 overflow-hidden border rounded-lg bg-white shadow-sm">
+                    <div className="h-full overflow-auto">
+                      <Table>
+                        <TableHeader className="sticky top-0 bg-white z-10 border-b-2">
+                          <TableRow>
+                            <TableHead className="w-20 font-semibold">Nº Item</TableHead>
+                            <TableHead className="font-semibold">Produto</TableHead>
+                            <TableHead className="w-24 text-center font-semibold">Unidade</TableHead>
+                            <TableHead className="w-28 text-right font-semibold">Quantidade</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedVigencyATA.items.map((item, index) => (
+                            <TableRow key={item.id} className="hover:bg-gray-50 transition-colors">
+                              <TableCell className="font-medium text-center">
+                                {String(index + 1).padStart(3, '0')}
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                <div className="space-y-1">
+                                  <p className="text-gray-900">{item.descricaoProduto}</p>
+                                  {item.descricao && (
+                                    <p className="text-xs text-gray-500">{item.descricao}</p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant="outline" className="font-medium">
+                                  {item.unidade}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-medium">
+                                {item.quantidade.toLocaleString('pt-BR')}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1120,3 +1157,5 @@ const Planning = () => {
 };
 
 export default Planning;
+
+}
