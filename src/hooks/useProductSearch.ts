@@ -1,13 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Product } from "@/lib/types";
-
-interface ProductSuggestion {
-  id: string;
-  description: string;
-  unit: string;
-  item?: number;
-}
+import { ProductSuggestion } from "@/components/planning/types";
 
 export function useProductSearch(products: Product[], searchValue: string, isLoading: boolean) {
   const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
@@ -57,7 +51,7 @@ export function useProductSearch(products: Product[], searchValue: string, isLoa
         id: product.id,
         description: product.description,
         unit: product.unit,
-        item: product.item
+        item: product.item?.toString()
       }));
     
     console.log("✨ RESULTADOS da busca:", filtered.length, "produtos encontrados");
