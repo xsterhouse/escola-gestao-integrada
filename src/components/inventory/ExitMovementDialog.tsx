@@ -40,6 +40,7 @@ export function ExitMovementDialog({
     description: string;
     unitOfMeasure: string;
   } | null>(null);
+  const [selectedProductDescription, setSelectedProductDescription] = useState("");
   const [quantity, setQuantity] = useState("");
   const [exitType, setExitType] = useState("");
   const [reason, setReason] = useState("");
@@ -53,13 +54,22 @@ export function ExitMovementDialog({
     : null;
 
   const handleProductSelect = (product: { description: string; unitOfMeasure: string; unitPrice: number }) => {
-    console.log("🔍 Produto selecionado:", product);
+    console.log("🔍 Produto selecionado no dialog:", product);
+    
     setSelectedProduct({
       description: product.description,
       unitOfMeasure: product.unitOfMeasure
     });
+    
+    setSelectedProductDescription(product.description);
+    
     // Limpar erros quando um produto for selecionado
     setErrors([]);
+    
+    console.log("✅ Estado do produto atualizado:", {
+      description: product.description,
+      unitOfMeasure: product.unitOfMeasure
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -125,7 +135,6 @@ export function ExitMovementDialog({
       productDescription: selectedProduct!.description,
       quantity: parseFloat(quantity),
       unitOfMeasure: selectedProduct!.unitOfMeasure,
-      unitPrice,
       totalCost,
       source: 'manual' as const,
       reason: `${EXIT_TYPES.find(t => t.value === exitType)?.label}: ${reason}`,
@@ -147,6 +156,7 @@ export function ExitMovementDialog({
       
       // Reset form
       setSelectedProduct(null);
+      setSelectedProductDescription("");
       setQuantity("");
       setExitType("");
       setReason("");
@@ -162,8 +172,25 @@ export function ExitMovementDialog({
     }
   };
 
+  // Reset form when dialog closes
+  const handleOpenChangeWrapper = (open: boolean) => {
+    if (!open) {
+      // Reset form when closing
+      setSelectedProduct(null);
+      setSelectedProductDescription("");
+      setQuantity("");
+      setExitType("");
+      setReason("");
+      setDestinationId("");
+      setDestinationType('school');
+      setDocument("");
+      setErrors([]);
+    }
+    onOpenChange(open);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChangeWrapper}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -183,7 +210,7 @@ export function ExitMovementDialog({
               <ProductAutocomplete
                 invoices={invoices}
                 onProductSelect={handleProductSelect}
-                value={selectedProduct?.description || ""}
+                value={selectedProductDescription}
                 placeholder="Selecione um produto..."
               />
             </div>
@@ -248,7 +275,7 @@ export function ExitMovementDialog({
             <Button 
               type="button" 
               variant="outline" 
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChangeWrapper(false)}
             >
               Cancelar
             </Button>

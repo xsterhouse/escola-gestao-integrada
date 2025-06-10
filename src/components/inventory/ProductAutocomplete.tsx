@@ -37,16 +37,24 @@ export function ProductAutocomplete({
 }: ProductAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [selectedValue, setSelectedValue] = useState(value || "");
   
-  // Extract unique products from all invoices
-  const allProducts = invoices.flatMap(invoice => 
-    invoice.items.map((item: InvoiceItem) => ({
-      description: item.description,
-      unitOfMeasure: item.unitOfMeasure,
-      unitPrice: item.unitPrice,
-      key: `${item.description}-${item.unitOfMeasure}` // Create unique key
-    }))
-  );
+  // Update selectedValue when value prop changes
+  useEffect(() => {
+    setSelectedValue(value || "");
+  }, [value]);
+  
+  // Extract unique products from all approved invoices
+  const allProducts = invoices
+    .filter(invoice => invoice.status === 'aprovada' && invoice.isActive)
+    .flatMap(invoice => 
+      invoice.items.map((item: InvoiceItem) => ({
+        description: item.description,
+        unitOfMeasure: item.unitOfMeasure,
+        unitPrice: item.unitPrice,
+        key: `${item.description}-${item.unitOfMeasure}` // Create unique key
+      }))
+    );
   
   // Remove duplicates based on description and unit
   const uniqueProducts = allProducts.filter((product, index, self) =>
@@ -58,7 +66,9 @@ export function ProductAutocomplete({
   );
 
   const handleSelect = (product: typeof uniqueProducts[0]) => {
-    console.log("🎯 Produto clicado:", product);
+    console.log("🎯 Produto selecionado no autocomplete:", product);
+    
+    setSelectedValue(product.description);
     
     onProductSelect({
       description: product.description,
@@ -69,11 +79,12 @@ export function ProductAutocomplete({
     setSearchValue(""); // Limpar busca após seleção
     setOpen(false);
     
-    console.log("✅ Produto selecionado e popover fechado");
+    console.log("✅ Produto selecionado e popover fechado:", product.description);
   };
 
   // Reset search when popover closes
   const handleOpenChange = (newOpen: boolean) => {
+    console.log("🔄 Mudando estado do popover:", newOpen);
     setOpen(newOpen);
     if (!newOpen) {
       setSearchValue("");
@@ -89,7 +100,7 @@ export function ProductAutocomplete({
           aria-expanded={open}
           className="w-full justify-between"
         >
-          {value || placeholder}
+          {selectedValue || placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -113,7 +124,7 @@ export function ProductAutocomplete({
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      value === product.description ? "opacity-100" : "opacity-0"
+                      selectedValue === product.description ? "opacity-100" : "opacity-0"
                     )}
                   />
                   <div className="flex flex-col">
