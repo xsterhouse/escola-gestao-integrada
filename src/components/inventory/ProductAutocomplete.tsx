@@ -37,6 +37,7 @@ export function ProductAutocomplete({
 }: ProductAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [selectedValue, setSelectedValue] = useState(value || "");
   
   // Extract unique products from all invoices
   const allProducts = invoices.flatMap(invoice => 
@@ -58,6 +59,7 @@ export function ProductAutocomplete({
   );
 
   const handleSelect = (product: typeof uniqueProducts[0]) => {
+    setSelectedValue(product.description);
     onProductSelect({
       description: product.description,
       unitOfMeasure: product.unitOfMeasure,
@@ -65,6 +67,11 @@ export function ProductAutocomplete({
     });
     setOpen(false);
   };
+
+  // Update selectedValue when value prop changes
+  useEffect(() => {
+    setSelectedValue(value || "");
+  }, [value]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -75,11 +82,11 @@ export function ProductAutocomplete({
           aria-expanded={open}
           className="w-full justify-between"
         >
-          {value || placeholder}
+          {selectedValue || placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-full p-0" style={{ zIndex: 9999 }}>
         <Command>
           <CommandInput 
             placeholder="Digite para buscar produtos..." 
@@ -94,11 +101,12 @@ export function ProductAutocomplete({
                   key={product.key}
                   value={product.description}
                   onSelect={() => handleSelect(product)}
+                  className="cursor-pointer"
                 >
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      value === product.description ? "opacity-100" : "opacity-0"
+                      selectedValue === product.description ? "opacity-100" : "opacity-0"
                     )}
                   />
                   <div className="flex flex-col">

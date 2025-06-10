@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertTriangle, Package } from "lucide-react";
-import { Invoice, InventoryMovement } from "@/lib/types";
+import { Invoice, InventoryMovement, School, PurchasingCenter } from "@/lib/types";
 import { ProductAutocomplete } from "./ProductAutocomplete";
 import { validateExitQuantity, calculateProductStock } from "@/lib/inventory-calculations";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 
 interface ExitMovementDialogProps {
   open: boolean;
@@ -37,7 +38,10 @@ export function ExitMovementDialog({
   invoices,
   movements 
 }: ExitMovementDialogProps) {
-  const { user } = useAuth();
+  const { user, currentSchool } = useAuth();
+  const { data: schools } = useLocalStorageSync<School>('schools', []);
+  const { data: purchasingCenters } = useLocalStorageSync<PurchasingCenter>('purchasing-centers', []);
+  
   const [selectedProduct, setSelectedProduct] = useState<{
     description: string;
     unitOfMeasure: string;
@@ -45,13 +49,17 @@ export function ExitMovementDialog({
   const [quantity, setQuantity] = useState("");
   const [exitType, setExitType] = useState("");
   const [reason, setReason] = useState("");
-  const [destination, setDestination] = useState("");
+  const [destinationId, setDestinationId] = useState("");
+  const [destinationType, setDestinationType] = useState<'school' | 'purchasing_center'>('school');
   const [document, setDocument] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
 
   const currentStock = selectedProduct 
     ? calculateProductStock(selectedProduct.description, selectedProduct.unitOfMeasure, invoices, movements)
     : null;
+
+  // Get destination options based on type
+  const destinationOptions = destinationType === 'school' ? schools : purchasingCenters;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +80,10 @@ export function ExitMovementDialog({
     
     if (!reason.trim()) {
       newErrors.push("Justificativa é obrigatória");
+    }
+
+    if (!destinationId) {
+      newErrors.push("Selecione o destino");
     }
 
     if (selectedProduct && quantity) {
@@ -96,6 +108,10 @@ export function ExitMovementDialog({
     const unitPrice = currentStock?.averageUnitCost || 0;
     const totalCost = parseFloat(quantity) * unitPrice;
 
+    // Find destination name
+    const destination = destinationOptions.find(d => d.id === destinationId);
+    const destinationName = destination?.name || '';
+
     onSubmit({
       type: 'saida',
       date: new Date(),
@@ -108,8 +124,13 @@ export function ExitMovementDialog({
       reason: `${EXIT_TYPES.find(t => t.value === exitType)?.label}: ${reason}`,
       createdBy: user?.name || 'Sistema',
       exitType,
-      destination: destination || undefined,
-      documentReference: document || undefined
+      destinationType,
+      destinationId,
+      destinationName,
+      originSchoolId: currentSchool?.id,
+      originSchoolName: currentSchool?.name,
+      documentReference: document || undefined,
+      status: 'saida'
     });
 
     // Reset form
@@ -117,14 +138,15 @@ export function ExitMovementDialog({
     setQuantity("");
     setExitType("");
     setReason("");
-    setDestination("");
+    setDestinationId("");
+    setDestinationType('school');
     setDocument("");
     setErrors([]);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -146,6 +168,21 @@ export function ExitMovementDialog({
                       ))}
                     </ul>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Origin School Info */}
+          {currentSchool && (
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="pt-4">
+                <div>
+                  <p className="font-medium text-blue-900">Escola de Origem</p>
+                  <p className="text-blue-700">{currentSchool.name}</p>
+                  {currentSchool.code && (
+                    <p className="text-sm text-blue-600">Código: {currentSchool.code}</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -220,24 +257,59 @@ export function ExitMovementDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="destination">Destino/Beneficiário</Label>
+              <Label htmlFor="document">Documento de Referência</Label>
               <Input
-                id="destination"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="Para onde está sendo destinado"
+                id="document"
+                value={document}
+                onChange={(e) => setDocument(e.target.value)}
+                placeholder="Número de requisição, termo de doação, etc."
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="document">Documento de Referência</Label>
-            <Input
-              id="document"
-              value={document}
-              onChange={(e) => setDocument(e.target.value)}
-              placeholder="Número de requisição, termo de doação, etc."
-            />
+          {/* Destination Section */}
+          <div className="space-y-4">
+            <h4 className="font-medium">Destino</h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="destinationType">Tipo de Destino *</Label>
+                <Select 
+                  value={destinationType} 
+                  onValueChange={(value: 'school' | 'purchasing_center') => {
+                    setDestinationType(value);
+                    setDestinationId(""); // Reset destination when type changes
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo de destino" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="school">Escola</SelectItem>
+                    <SelectItem value="purchasing_center">Central de Compras</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="destination">
+                  {destinationType === 'school' ? 'Escola de Destino' : 'Central de Compras de Destino'} *
+                </Label>
+                <Select value={destinationId} onValueChange={setDestinationId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={`Selecione ${destinationType === 'school' ? 'a escola' : 'a central'}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {destinationOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.name}
+                        {option.code && ` (${option.code})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">

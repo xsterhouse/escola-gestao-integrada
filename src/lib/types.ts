@@ -250,6 +250,13 @@ export interface InventoryMovement {
   exitType?: string;
   destination?: string;
   documentReference?: string;
+  // New fields for origin and destination tracking
+  originSchoolId?: string;
+  originSchoolName?: string;
+  destinationId?: string;
+  destinationName?: string;
+  destinationType?: 'school' | 'purchasing_center';
+  status?: 'entrada' | 'saida';
 }
 
 export interface InventoryReport {

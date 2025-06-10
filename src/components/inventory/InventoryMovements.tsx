@@ -14,7 +14,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Search, FileDown, Plus, Eye, Edit, Trash2, AlertTriangle, Minus, ChevronDown, ChevronRight, FileText, User } from "lucide-react";
+import { Search, FileDown, Eye, Edit, Trash2, AlertTriangle, Minus, ChevronDown, ChevronRight, FileText, User } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Invoice, InventoryMovement } from "@/lib/types";
 import { format } from "date-fns";
@@ -66,6 +66,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
         totalCost: item.totalPrice,
         invoiceId: invoice.id,
         source: 'invoice' as const,
+        status: 'entrada' as const,
         createdAt: invoice.createdAt,
         updatedAt: invoice.updatedAt,
       }))
@@ -198,6 +199,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       ...movement,
       id: `manual-${Date.now()}`,
       source: 'manual',
+      status: movement.type === 'saida' ? 'saida' : 'entrada',
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -217,6 +219,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       ...movement,
       id: `exit-${Date.now()}`,
       source: 'manual',
+      status: 'saida',
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -240,7 +243,8 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       'Unidade',
       'Valor Unitário',
       'Custo Total',
-      'Origem'
+      'Origem',
+      'Status'
     ];
     
     const csvData = filteredMovements.map(movement => [
@@ -252,7 +256,8 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       movement.unitPrice.toFixed(2),
       movement.totalCost.toFixed(2),
       movement.source === 'manual' ? 'Manual' : 
-      movement.source === 'invoice' ? 'Nota Fiscal' : 'Sistema'
+      movement.source === 'invoice' ? 'Nota Fiscal' : 'Sistema',
+      movement.status === 'saida' ? 'SAÍDA' : 'ENTRADA'
     ]);
     
     const csvContent = [csvHeaders, ...csvData]
@@ -316,13 +321,14 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
             <TableHead>Valor Unit.</TableHead>
             <TableHead>Custo Total</TableHead>
             <TableHead>Origem</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {movements.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center">
+              <TableCell colSpan={10} className="text-center">
                 Nenhuma movimentação encontrada
               </TableCell>
             </TableRow>
@@ -367,6 +373,15 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
                   )}
                 </TableCell>
                 <TableCell>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    movement.status === 'saida' ? 
+                    'bg-red-100 text-red-800' : 
+                    'bg-green-100 text-green-800'
+                  }`}>
+                    {movement.status === 'saida' ? 'SAÍDA' : 'ENTRADA'}
+                  </span>
+                </TableCell>
+                <TableCell>
                   <div className="flex space-x-2">
                     <Button 
                       size="sm" 
@@ -408,10 +423,6 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle>Movimentação de Produtos</CardTitle>
         <div className="flex items-center gap-2">
-          <Button onClick={() => setIsAddManualMovementOpen(true)} variant="outline" size="sm">
-            <Plus className="h-4 w-4 mr-1" />
-            Entrada Manual
-          </Button>
           <Button onClick={() => setIsExitMovementOpen(true)} variant="outline" size="sm">
             <Minus className="h-4 w-4 mr-1" />
             Registrar Saída
