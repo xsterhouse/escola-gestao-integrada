@@ -12,8 +12,8 @@ import { ATAFormData } from "./types";
 import { ATAFullItemsList } from "./ATAFullItemsList";
 
 const ataFormSchema = z.object({
-  numeroProcesso: z.string().min(1, "Número do processo é obrigatório"),
-  fornecedor: z.string().min(1, "Fornecedor é obrigatório"),
+  escola: z.string().min(1, "Escola é obrigatória"),
+  centralCompras: z.string().min(1, "Central de compras é obrigatória"),
   dataATA: z.string().min(1, "Data da ATA é obrigatória"),
   dataInicioVigencia: z.string().min(1, "Data de início da vigência é obrigatória"),
   dataFimVigencia: z.string().min(1, "Data de fim da vigência é obrigatória"),
@@ -28,16 +28,18 @@ const ataFormSchema = z.object({
 
 interface ATAFormProps {
   onSubmit: (data: Omit<ATAContract, "id" | "schoolId" | "createdBy" | "createdAt" | "updatedAt">) => void;
+  schools?: any[];
+  purchasingCenters?: any[];
 }
 
-export function ATAForm({ onSubmit }: ATAFormProps) {
+export function ATAForm({ onSubmit, schools = [], purchasingCenters = [] }: ATAFormProps) {
   console.log("🏗️ ATAForm renderizado");
   
   const form = useForm<ATAFormData>({
     resolver: zodResolver(ataFormSchema),
     defaultValues: {
-      numeroProcesso: "",
-      fornecedor: "",
+      escola: "",
+      centralCompras: "",
       dataATA: "",
       dataInicioVigencia: "",
       dataFimVigencia: "",
@@ -48,8 +50,10 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
 
   const handleSubmit = (data: ATAFormData) => {
     const processedData = {
-      numeroProcesso: data.numeroProcesso,
-      fornecedor: data.fornecedor,
+      numeroProcesso: "", // Campo removido, mantendo vazio para compatibilidade
+      fornecedor: "", // Campo removido, mantendo vazio para compatibilidade
+      escola: data.escola,
+      centralCompras: data.centralCompras,
       dataATA: new Date(data.dataATA),
       dataInicioVigencia: new Date(data.dataInicioVigencia),
       dataFimVigencia: new Date(data.dataFimVigencia),
@@ -74,7 +78,11 @@ export function ATAForm({ onSubmit }: ATAFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <ATAFormFields control={form.control} />
+        <ATAFormFields 
+          control={form.control} 
+          schools={schools}
+          purchasingCenters={purchasingCenters}
+        />
         
         <ATAFullItemsList 
           control={form.control} 

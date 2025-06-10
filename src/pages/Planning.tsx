@@ -423,7 +423,8 @@ const Planning = () => {
         valorTotal: item.valorTotal
       })),
       createdAt: new Date().toISOString(),
-      schoolId: currentSchool?.id,
+      schoolId: data.escola || currentSchool?.id,
+      centralComprasId: data.centralCompras,
       valorTotal: data.items.reduce((sum, item) => sum + item.valorTotal, 0)
     };
 
@@ -459,7 +460,11 @@ const Planning = () => {
                     <p className="text-sm text-gray-600">ID será gerado automaticamente: {generateATAId()}</p>
                   </DialogHeader>
                   
-                  <ATAForm onSubmit={handleATASubmit} />
+                  <ATAForm 
+                    onSubmit={handleATASubmit}
+                    schools={getSchoolsFromSettings()}
+                    purchasingCenters={getAvailablePurchasingCenters()}
+                  />
                 </DialogContent>
               </Dialog>
             </div>
@@ -1113,3 +1118,5 @@ const Planning = () => {
 };
 
 export default Planning;
+
+}

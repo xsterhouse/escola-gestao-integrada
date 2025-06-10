@@ -2,26 +2,40 @@
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Control } from "react-hook-form";
 import { ATAFormData } from "./types";
 
 interface ATAFormFieldsProps {
   control: Control<ATAFormData>;
+  schools?: any[];
+  purchasingCenters?: any[];
 }
 
-export function ATAFormFields({ control }: ATAFormFieldsProps) {
+export function ATAFormFields({ control, schools = [], purchasingCenters = [] }: ATAFormFieldsProps) {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
           control={control}
-          name="numeroProcesso"
+          name="escola"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Número do Processo *</FormLabel>
-              <FormControl>
-                <Input placeholder="Ex: 2025.0037" {...field} />
-              </FormControl>
+              <FormLabel>Escola *</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma escola" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {schools.map((school) => (
+                    <SelectItem key={school.id} value={school.id}>
+                      {school.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -29,13 +43,24 @@ export function ATAFormFields({ control }: ATAFormFieldsProps) {
 
         <FormField
           control={control}
-          name="fornecedor"
+          name="centralCompras"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Fornecedor *</FormLabel>
-              <FormControl>
-                <Input placeholder="Ex: NutriAlimentos LTDA" {...field} />
-              </FormControl>
+              <FormLabel>Central de Compras *</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma central de compras" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {purchasingCenters.map((center) => (
+                    <SelectItem key={center.id} value={center.id}>
+                      {center.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
