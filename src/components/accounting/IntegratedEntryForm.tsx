@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -724,65 +723,6 @@ export function IntegratedEntryForm() {
                 )}
               </CardContent>
             </Card>
-
-            {autoGenerateEnabled && (
-              <Card className="shadow-lg border-0">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
-                  <CardTitle className="text-xl text-gray-800">Processar Pendências dos Módulos</CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <Button
-                      onClick={() => generateAutomaticEntries('all')}
-                      className="h-12 bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Zap className="mr-2 h-4 w-4" />
-                      Gerar Todos
-                    </Button>
-
-                    <Button
-                      onClick={() => generateAutomaticEntries('invoices')}
-                      variant="outline"
-                      className="h-12"
-                      disabled={automaticEntries.pendingInvoices.length === 0}
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      Notas Fiscais
-                    </Button>
-
-                    <Button
-                      onClick={() => generateAutomaticEntries('payments')}
-                      variant="outline"
-                      className="h-12"
-                      disabled={automaticEntries.pendingPayments.length === 0}
-                    >
-                      <DollarSign className="mr-2 h-4 w-4" />
-                      Pagamentos
-                    </Button>
-
-                    <Button
-                      onClick={() => generateAutomaticEntries('receivables')}
-                      variant="outline"
-                      className="h-12"
-                      disabled={automaticEntries.pendingReceivables.length === 0}
-                    >
-                      <DollarSign className="mr-2 h-4 w-4" />
-                      Recebimentos
-                    </Button>
-
-                    <Button
-                      onClick={() => generateAutomaticEntries('transactions')}
-                      variant="outline"
-                      className="h-12"
-                      disabled={automaticEntries.pendingTransactions.length === 0}
-                    >
-                      <Building className="mr-2 h-4 w-4" />
-                      Transações
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {!autoGenerateEnabled && (
               <Card className="shadow-lg border-0">
