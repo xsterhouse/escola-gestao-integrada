@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Check, X, Upload } from "lucide-react";
@@ -88,8 +87,9 @@ export function NewPaymentModal({
         supplier,
         value: parseFloat(value),
         dueDate,
+        category: resourceType, // Using resourceType as category
         expenseType: resourceType,
-        resourceCategory: resourceType, // Added this field as it's required
+        resourceCategory: resourceType,
         status: "a_pagar",
         documentUrl: file ? URL.createObjectURL(file) : undefined,
         createdAt: new Date(),
@@ -105,8 +105,11 @@ export function NewPaymentModal({
         schoolId: "current-school-id", // This would come from context in a real app
         description,
         origin: supplier,
+        source: supplier, // Adding required source field
+        category: resourceType, // Adding required category field
         resourceType,
         value: parseFloat(value),
+        dueDate, // Adding required dueDate field
         expectedDate: dueDate,
         status: "pendente",
         documentUrl: file ? URL.createObjectURL(file) : undefined,

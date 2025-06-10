@@ -34,23 +34,29 @@ export function LicitationImportSection({ onImport }: LicitationImportSectionPro
       const mockContracts: Contract[] = [
         {
           id: "1",
-          fornecedor: "Papelaria ABC Ltda",
+          number: "001/2024",
+          supplier: "Papelaria ABC Ltda",
+          startDate: new Date('2024-01-01'),
+          endDate: new Date('2024-12-31'),
+          value: 25000.00,
+          status: 'ativo',
+          items: [],
           itensContratados: ["Caderno", "Caneta", "Lápis"],
           quantidade: 1500,
-          valorContratado: 25000.00,
-          dataInicio: new Date('2024-01-01'),
-          dataFim: new Date('2024-12-31'),
-          status: 'ativo'
+          valorContratado: 25000.00
         },
         {
-          id: "2", 
-          fornecedor: "Material Escolar XYZ",
+          id: "2",
+          number: "002/2024", 
+          supplier: "Material Escolar XYZ",
+          startDate: new Date('2024-02-01'),
+          endDate: new Date('2024-11-30'),
+          value: 15000.00,
+          status: 'ativo',
+          items: [],
           itensContratados: ["Borracha", "Régua", "Apontador"],
           quantidade: 800,
-          valorContratado: 15000.00,
-          dataInicio: new Date('2024-02-01'),
-          dataFim: new Date('2024-11-30'),
-          status: 'ativo'
+          valorContratado: 15000.00
         }
       ];
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,6 +71,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
           ? {
               ...account,
               bankName: formData.bankName,
+              agency: formData.agencyNumber, // Map agencyNumber to agency
               agencyNumber: formData.agencyNumber,
               accountNumber: formData.accountNumber,
               accountType: formData.accountType,
@@ -79,6 +79,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
               managementType: formData.managementType,
               initialBalance,
               currentBalance: initialBalance,
+              isActive: true, // Add required isActive field
               updatedAt: new Date()
             }
           : account
@@ -91,6 +92,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
         id: uuidv4(),
         schoolId: "current-school-id",
         bankName: formData.bankName,
+        agency: formData.agencyNumber, // Map agencyNumber to agency
         agencyNumber: formData.agencyNumber,
         accountNumber: formData.accountNumber,
         accountType: formData.accountType,
@@ -98,6 +100,7 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
         managementType: formData.managementType,
         initialBalance,
         currentBalance: initialBalance,
+        isActive: true, // Add required isActive field
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -110,16 +113,16 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
           id: uuidv4(),
           schoolId: "current-school-id",
           bankAccountId: newAccount.id,
-          date: new Date(),
+          date: new Date().toISOString(),
           description: "Saldo inicial da conta",
           value: Math.abs(initialBalance),
           transactionType: initialBalance > 0 ? 'credito' : 'debito' as 'credito' | 'debito',
-          reconciliationStatus: 'conciliado' as 'conciliado' | 'nao_conciliado',
+          reconciliationStatus: 'conciliado' as 'conciliado' | 'pendente',
           category: "Saldo Inicial",
           resourceType: formData.managementType,
           source: 'manual' as 'manual' | 'payment' | 'receivable',
-          createdAt: new Date(),
-          updatedAt: new Date()
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         };
 
         // Save to bank transactions
@@ -140,9 +143,9 @@ export function BankAccounts({ bankAccounts, setBankAccounts }: BankAccountsProp
       agencyNumber: account.agencyNumber || "",
       accountNumber: account.accountNumber,
       accountType: account.accountType,
-      description: account.description,
+      description: account.description || "",
       managementType: account.managementType || "",
-      initialBalance: account.initialBalance.toString()
+      initialBalance: (account.initialBalance || 0).toString()
     });
     setEditingAccount(account);
     setIsDialogOpen(true);

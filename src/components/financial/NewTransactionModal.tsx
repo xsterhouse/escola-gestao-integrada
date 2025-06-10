@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Check, X } from "lucide-react";
@@ -51,45 +52,57 @@ export function NewTransactionModal({
     // Create the new transaction
     const newTransaction: BankTransaction = {
       id: uuidv4(),
-      schoolId: "current-school-id", // This should come from context in a real app
       bankAccountId,
-      date,
+      date: date.toISOString(), // Convert Date to string
       description,
       value: parseFloat(value),
       transactionType,
       reconciliationStatus: "pendente",
       source: "manual",
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: new Date().toISOString(), // Convert Date to string
+      updatedAt: new Date().toISOString() // Convert Date to string
     };
     
     onSave(newTransaction);
-    toast.success("Lançamento criado com sucesso!");
-    resetForm();
-    onClose();
-  };
-  
-  const resetForm = () => {
+    toast.success("Transação criada com sucesso!");
+    
+    // Reset form
     setDate(new Date());
     setBankAccountId("");
     setDescription("");
     setValue("");
     setTransactionType("credito");
+    
+    onClose();
   };
   
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) onClose();
-    }}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-xl">Novo Lançamento Bancário</DialogTitle>
+          <DialogTitle>Nova Transação Bancária</DialogTitle>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="bankAccount">Conta Bancária *</Label>
+            <Select value={bankAccountId} onValueChange={setBankAccountId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma conta bancária" />
+              </SelectTrigger>
+              <SelectContent>
+                {bankAccounts.map(account => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.bankName} - {account.accountNumber}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date">Data</Label>
+              <Label htmlFor="date">Data *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -109,58 +122,16 @@ export function NewTransactionModal({
                     selected={date}
                     onSelect={(date) => date && setDate(date)}
                     initialFocus
-                    className="p-3 pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="bankAccount">Conta Bancária</Label>
-              <Select value={bankAccountId} onValueChange={setBankAccountId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma conta" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bankAccounts.map(account => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.bankName} - {account.accountNumber}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Input
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Informe uma descrição para o lançamento"
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="value">Valor</Label>
-              <Input
-                id="value"
-                type="number"
-                step="0.01"
-                min="0"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder="0,00"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="type">Tipo</Label>
+              <Label htmlFor="type">Tipo *</Label>
               <Select value={transactionType} onValueChange={(value: "credito" | "debito") => setTransactionType(value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="credito">Crédito</SelectItem>
@@ -168,6 +139,29 @@ export function NewTransactionModal({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição *</Label>
+            <Input
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Descrição da transação"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="value">Valor *</Label>
+            <Input
+              id="value"
+              type="number"
+              step="0.01"
+              min="0"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="0,00"
+            />
           </div>
         </div>
         

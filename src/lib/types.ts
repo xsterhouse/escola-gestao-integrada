@@ -33,6 +33,7 @@ export interface Supplier {
   cnpj: string;
   address: string;
   phone: string;
+  telefone?: string; // Added for compatibility
   email: string;
   contactPerson: string;
   city: string;
@@ -122,13 +123,14 @@ export interface InventoryMovement {
   unitOfMeasure: string;
   type: 'entrada' | 'saida';
   reason: string;
+  unitPrice?: number; // Added for compatibility
 }
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'manager' | 'employee';
+  role: 'admin' | 'manager' | 'employee' | 'master'; // Added 'master' for compatibility
   schoolId?: string;
   permissions: string[];
 }
@@ -197,7 +199,7 @@ export interface BankTransaction {
   description: string;
   value: number;
   transactionType: 'credito' | 'debito';
-  reconciliationStatus: 'conciliado' | 'pendente';
+  reconciliationStatus: 'conciliado' | 'pendente' | 'pgt_parcial';
   bankAccountId?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -205,6 +207,10 @@ export interface BankTransaction {
   partialAmount?: number;
   isDuplicate?: boolean;
   remainingAmount?: number;
+  source?: 'manual' | 'payment' | 'receivable';
+  category?: string;
+  resourceType?: string;
+  duplicateJustification?: string;
 }
 
 export interface BankAccount {
@@ -241,6 +247,7 @@ export interface PaymentAccount {
   resourceCategory?: string;
   documentUrl?: string;
   invoiceId?: string;
+  isDuplicate?: boolean;
 }
 
 export interface ReceivableAccount {
@@ -264,6 +271,7 @@ export interface ReceivableAccount {
   resourceType?: string;
   notes?: string;
   documentUrl?: string;
+  parentReceivableId?: string;
 }
 
 // Fornecedor type for Brazilian system
@@ -423,6 +431,9 @@ export interface FinancialSummary {
   monthlyIncome: number;
   monthlyExpenses: number;
   netCashFlow: number;
+  paymentsToday?: number;
+  receivablesToday?: number;
+  monthlyRevenues?: number;
 }
 
 export interface FinancialReportFilter {
