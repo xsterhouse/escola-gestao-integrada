@@ -163,21 +163,20 @@ const Planning = () => {
   const getAvailablePurchasingCenters = () => {
     const allCenters = getPurchasingCentersFromSettings();
     console.log("🔍 Todas as centrais disponíveis:", allCenters);
-    console.log("🎯 Escola selecionada:", formData.schoolId);
     
-    if (!formData.schoolId) {
+    if (!currentSchool?.id) {
       console.log("⚠️ Nenhuma escola selecionada, retornando array vazio");
       return [];
     }
     
     // Filtrar centrais usando verificação bidirecional
     const filteredCenters = allCenters.filter(center => {
-      const isLinked = isSchoolLinkedToPurchasingCenter(formData.schoolId, center.id);
+      const isLinked = isSchoolLinkedToPurchasingCenter(currentSchool.id, center.id);
       
       console.log(`🔗 Verificando central ${center.name}:`, {
         centerId: center.id,
         centerSchoolIds: center.schoolIds,
-        selectedSchoolId: formData.schoolId,
+        selectedSchoolId: currentSchool.id,
         isLinked
       });
       
@@ -422,8 +421,7 @@ const Planning = () => {
         unidade: item.unidade,
         quantidade: item.quantidade,
         valorUnitario: item.valorUnitario,
-        valorTotal: item.valorTotal,
-        item: item.item
+        valorTotal: item.valorTotal
       })),
       createdAt: new Date().toISOString(),
       schoolId: currentSchool?.id,
