@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,6 +54,14 @@ export function AdvancedBankReconciliationTab() {
     setBankTransactions(transactions);
     setBankAccounts(accounts);
   };
+
+  // Filter bank accounts to only include those with valid IDs
+  const validBankAccounts = bankAccounts.filter(account => 
+    account.id && 
+    typeof account.id === 'string' && 
+    account.id.trim() !== '' &&
+    account.id.length > 0
+  );
 
   const getUnreconciledEntries = () => {
     return accountingEntries.filter(entry => 
@@ -272,10 +279,12 @@ export function AdvancedBankReconciliationTab() {
                   <SelectValue placeholder="Selecione a conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  {bankAccounts.length === 0 ? (
-                    <SelectItem value="" disabled>Nenhuma conta bancária cadastrada</SelectItem>
+                  {validBankAccounts.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-gray-500">
+                      Nenhuma conta bancária cadastrada
+                    </div>
                   ) : (
-                    bankAccounts.map(account => (
+                    validBankAccounts.map(account => (
                       <SelectItem key={account.id} value={account.id}>
                         {account.bankName} - {account.accountType === 'movimento' ? 'Movimento' : 'Aplicação'}
                         {account.managementType && ` (${account.managementType})`}
