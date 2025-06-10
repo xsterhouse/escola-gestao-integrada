@@ -38,7 +38,12 @@ export function AccountFormFields({
   onCodeChange 
 }: AccountFormFieldsProps) {
   // Filter accounts to only include those with valid, non-empty codes
-  const validAccounts = accounts.filter(account => account.code && account.code.trim() !== '');
+  const validAccounts = accounts.filter(account => 
+    account.code && 
+    typeof account.code === 'string' && 
+    account.code.trim() !== '' &&
+    account.code.length > 0
+  );
 
   return (
     <>
