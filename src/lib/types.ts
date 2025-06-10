@@ -1,5 +1,4 @@
 
-
 export interface School {
   id: string;
   name: string;
@@ -169,6 +168,7 @@ export interface AccountingEntry {
   reconciledAt?: Date;
   reconciledBy?: string;
   debitHistory?: string;
+  creditHistory?: string;
   auditTrail?: any;
   createdAt: string;
   updatedAt?: string;
@@ -242,20 +242,35 @@ export interface ReceivableAccount {
   updatedAt?: Date;
 }
 
+// Fornecedor type for Brazilian system
+export interface Fornecedor {
+  id: string;
+  cnpj: string;
+  razaoSocial: string;
+  endereco: string;
+  telefone: string;
+  email: string;
+  name?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 // Contracts Types
 export interface ContractData {
   id: string;
   numeroContrato: string;
-  fornecedor: string;
+  fornecedor: Fornecedor;
   dataInicio: Date;
   dataFim: Date;
   valor: number;
-  status: 'ativo' | 'inativo' | 'suspenso' | 'divergencia_dados' | 'liquidado';
+  status: 'ativo' | 'inativo' | 'suspenso' | 'divergencia_dados' | 'liquidado' | 'vencido' | 'encerrado';
   items: ContractItem[];
   contracts?: Contract[];
   totalItems?: number;
   hasDivergences?: boolean;
-  divergencias?: any[];
+  divergencias?: ContractDivergence[];
+  ataId?: string;
+  ataValidated?: boolean;
   createdAt: Date;
   updatedAt?: Date;
 }
@@ -270,9 +285,11 @@ export interface Contract {
   dataInicio?: Date;
   dataFim?: Date;
   value: number;
-  status: 'active' | 'inactive' | 'suspended';
+  quantidade?: number;
+  valorContratado?: number;
+  status: 'active' | 'inactive' | 'suspended' | 'ativo' | 'vencido' | 'liquidado';
   items: ContractItem[];
-  itensContratados?: number;
+  itensContratados?: string[];
 }
 
 export interface ContractItem {
@@ -290,7 +307,10 @@ export interface ContractItem {
   valorPago?: number;
   quantidadePaga?: number;
   saldoQuantidade?: number;
-  notasFiscais?: any[];
+  notasFiscais?: Record<string, number>;
+  contractId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface ContractFilter {
@@ -307,11 +327,15 @@ export interface ContractFilter {
 export interface ContractDivergence {
   id: string;
   contractId: string;
+  contractItemId?: string;
   itemId: string;
+  field: string;
   type: 'price' | 'quantity' | 'specification';
   description: string;
   expectedValue: string;
   actualValue: string;
+  valorContrato: string | number;
+  valorATA: string | number;
   status: 'pending' | 'resolved' | 'dismissed';
   createdAt: Date;
   resolvedAt?: Date;
@@ -358,8 +382,8 @@ export interface PlanningItem {
   unit: string;
   quantity: number;
   estimatedPrice: number;
+  unitPrice?: number;
   category: string;
   priority: 'high' | 'medium' | 'low';
   status: 'planned' | 'approved' | 'purchased';
 }
-

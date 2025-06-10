@@ -1,910 +1,580 @@
-
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Zap, FileText, DollarSign, Building, Search, Trash2, CheckCircle, ArrowRight, Lightbulb } from "lucide-react";
-import { AccountingEntry, Invoice, PaymentAccount, ReceivableAccount, BankTransaction } from "@/lib/types";
-import { accountingAutomationService } from "@/services/accountingAutomationService";
-import { useAuth } from "@/contexts/AuthContext";
-import { useAccountValidation } from "@/hooks/useAccountValidation";
-import { useAccountingNavigation } from "@/hooks/useAccountingNavigation";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Separator } from "@/components/ui/separator";
+import { 
+  BookOpen, 
+  Plus, 
+  Calculator,
+  FileText,
+  DollarSign,
+  Calendar,
+  Building2,
+  CreditCard
+} from "lucide-react";
+import { AccountingEntry, PaymentAccount, ReceivableAccount, BankTransaction } from "@/lib/types";
 
-interface ValidationResult {
-  isValid: boolean;
-  message: string;
-  suggestion?: string;
+interface IntegratedEntryFormProps {
+  onSubmit: (entry: AccountingEntry) => void;
+  existingEntry?: AccountingEntry;
+  onCancel?: () => void;
 }
 
-export function IntegratedEntryForm() {
-  const { navigateToTab, guidedFlow, startGuidedFlow, completeStep, getCurrentStepInfo } = useAccountingNavigation();
-  const { formatAndValidate, suggestAccounts } = useAccountValidation();
-  const [activeTab, setActiveTab] = useState("manual");
-  
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    debitAccount: "",
-    debitValue: "",
-    debitDescription: "",
-    debitHistory: "",
-    creditAccount: "",
-    creditValue: "",
-    creditDescription: "",
-    creditHistory: "",
-    totalValue: "",
-    entryType: "manual" as const
-  });
-  
-  const [validationState, setValidationState] = useState<{
-    debitAccount: ValidationResult;
-    creditAccount: ValidationResult;
-  }>({
-    debitAccount: { isValid: false, message: '', suggestion: '' },
-    creditAccount: { isValid: false, message: '', suggestion: '' }
-  });
-
-  const [automaticEntries, setAutomaticEntries] = useState({
-    pendingInvoices: [] as Invoice[],
-    pendingPayments: [] as PaymentAccount[],
-    pendingReceivables: [] as ReceivableAccount[],
-    pendingTransactions: [] as BankTransaction[]
-  });
-
-  const [reconciledTransactions, setReconciledTransactions] = useState<BankTransaction[]>([]);
-  const [savedAutomaticEntries, setSavedAutomaticEntries] = useState<AccountingEntry[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filteredTransactions, setFilteredTransactions] = useState<BankTransaction[]>([]);
-  const [autoGenerateEnabled, setAutoGenerateEnabled] = useState(true);
-  const [showAccountSuggestions, setShowAccountSuggestions] = useState({ debit: false, credit: false });
+export function IntegratedEntryForm({ onSubmit, existingEntry, onCancel }: IntegratedEntryFormProps) {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const [formData, setFormData] = useState({
+    date: existingEntry?.date || new Date().toISOString().split('T')[0],
+    debitAccount: existingEntry?.debitAccount || "",
+    debitValue: existingEntry?.debitValue || 0,
+    debitDescription: existingEntry?.debitDescription || "",
+    creditAccount: existingEntry?.creditAccount || "",
+    creditValue: existingEntry?.creditValue || 0,
+    creditDescription: existingEntry?.creditDescription || "",
+    history: existingEntry?.history || "",
+    debitHistory: existingEntry?.debitHistory || "",
+    creditHistory: existingEntry?.creditHistory || "",
+    entryType: existingEntry?.entryType || 'manual' as const
+  });
 
-  useEffect(() => {
-    loadPendingItems();
-    loadReconciledTransactions();
-    loadSavedAutomaticEntries();
-  }, []);
+  const [accountingSuggestions] = useState([
+    { code: "1.1.1.01", name: "Caixa" },
+    { code: "1.1.1.02", name: "Bancos Conta Movimento" },
+    { code: "1.1.1.03", name: "Bancos Conta Aplicação" },
+    { code: "1.1.2.01", name: "Clientes" },
+    { code: "1.1.3.01", name: "Estoques" },
+    { code: "2.1.1.01", name: "Fornecedores" },
+    { code: "2.1.2.01", name: "Obrigações Trabalhistas" },
+    { code: "2.1.3.01", name: "Obrigações Tributárias" },
+    { code: "3.1.1.01", name: "Capital Social" },
+    { code: "4.1.1.01", name: "Receitas de Vendas" },
+    { code: "5.1.1.01", name: "Custos dos Produtos Vendidos" },
+    { code: "6.1.1.01", name: "Despesas Administrativas" },
+    { code: "6.1.2.01", name: "Despesas Comerciais" },
+    { code: "7.1.1.01", name: "Receitas Financeiras" },
+    { code: "8.1.1.01", name: "Despesas Financeiras" }
+  ]);
 
-  // Validação em tempo real das contas
-  useEffect(() => {
-    if (formData.debitAccount) {
-      const result = formatAndValidate(formData.debitAccount);
-      setValidationState(prev => ({ 
-        ...prev, 
-        debitAccount: {
-          isValid: result.validation.isValid,
-          message: result.validation.message,
-          suggestion: result.validation.suggestion || ''
-        }
-      }));
-      if (result.description && result.description !== formData.debitDescription) {
-        setFormData(prev => ({ ...prev, debitDescription: result.description }));
-      }
-      if (result.validation.isValid) {
-        completeStep('debit');
-      }
+  const [bankAccounts] = useState([
+    { id: "1", name: "Banco do Brasil - CC 12345-6", account: "1.1.1.02.001" },
+    { id: "2", name: "Caixa Econômica - CC 67890-1", account: "1.1.1.02.002" },
+    { id: "3", name: "Santander - Poupança 11111-1", account: "1.1.1.03.001" }
+  ]);
+
+  const [entryTemplates] = useState([
+    {
+      name: "Pagamento a Fornecedor",
+      debitAccount: "2.1.1.01",
+      creditAccount: "1.1.1.02",
+      description: "Pagamento de fornecedor"
+    },
+    {
+      name: "Recebimento de Cliente",
+      debitAccount: "1.1.1.02",
+      creditAccount: "1.1.2.01",
+      description: "Recebimento de cliente"
+    },
+    {
+      name: "Despesa Administrativa",
+      debitAccount: "6.1.1.01",
+      creditAccount: "1.1.1.02",
+      description: "Despesa administrativa"
     }
-  }, [formData.debitAccount, formatAndValidate, completeStep]);
+  ]);
 
-  useEffect(() => {
-    if (formData.creditAccount) {
-      const result = formatAndValidate(formData.creditAccount);
-      setValidationState(prev => ({ 
-        ...prev, 
-        creditAccount: {
-          isValid: result.validation.isValid,
-          message: result.validation.message,
-          suggestion: result.validation.suggestion || ''
-        }
-      }));
-      if (result.description && result.description !== formData.creditDescription) {
-        setFormData(prev => ({ ...prev, creditDescription: result.description }));
-      }
-      if (result.validation.isValid) {
-        completeStep('credit');
-      }
-    }
-  }, [formData.creditAccount, formatAndValidate, completeStep]);
-
-  // Controle do fluxo guiado
-  useEffect(() => {
-    if (formData.date) completeStep('date');
-    if (formData.totalValue) completeStep('value');
-    if (formData.debitHistory && formData.creditHistory) completeStep('history');
-  }, [formData.date, formData.totalValue, formData.debitHistory, formData.creditHistory, completeStep]);
-
-  const loadPendingItems = () => {
-    const invoices = JSON.parse(localStorage.getItem('invoices') || '[]')
-      .filter((invoice: Invoice) => 
-        invoice.status === 'aprovada' && 
-        !accountingAutomationService.entryExistsForDocument('invoices', invoice.id)
-      );
-
-    const payments = JSON.parse(localStorage.getItem('paymentAccounts') || '[]')
-      .filter((payment: PaymentAccount) => 
-        payment.status === 'pago' && 
-        !accountingAutomationService.entryExistsForDocument('financial', payment.id)
-      );
-
-    const receivables = JSON.parse(localStorage.getItem('receivableAccounts') || '[]')
-      .filter((receivable: ReceivableAccount) => 
-        receivable.status === 'recebido' && 
-        !accountingAutomationService.entryExistsForDocument('financial', receivable.id)
-      );
-
-    const transactions = JSON.parse(localStorage.getItem('bankTransactions') || '[]')
-      .filter((transaction: BankTransaction) => 
-        transaction.reconciliationStatus === 'pendente' && 
-        !accountingAutomationService.entryExistsForDocument('financial', transaction.id)
-      );
-
-    setAutomaticEntries({
-      pendingInvoices: invoices,
-      pendingPayments: payments,
-      pendingReceivables: receivables,
-      pendingTransactions: transactions
-    });
-  };
-
-  const loadReconciledTransactions = () => {
-    const transactions = JSON.parse(localStorage.getItem('bankTransactions') || '[]')
-      .filter((transaction: BankTransaction) => 
-        transaction.reconciliationStatus === 'conciliado'
-      );
-    setReconciledTransactions(transactions);
-    setFilteredTransactions(transactions);
-  };
-
-  const loadSavedAutomaticEntries = () => {
-    const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]')
-      .filter((entry: AccountingEntry) => entry.entryType === 'automatic');
-    setSavedAutomaticEntries(entries);
-  };
-
-  // Filter reconciled transactions based on search term
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredTransactions(reconciledTransactions);
-    } else {
-      const filtered = reconciledTransactions.filter(transaction =>
-        transaction.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredTransactions(filtered);
-    }
-  }, [searchTerm, reconciledTransactions]);
-
-  const createEntryBase = (entryType: 'debit' | 'credit' | 'complete') => {
-    const baseEntry = {
-      id: `${entryType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      schoolId: user?.schoolId || '',
-      date: new Date(formData.date),
-      entryType: 'manual' as const,
-      auditTrail: [{
-        id: Date.now().toString(),
-        entryId: '',
-        action: 'created' as const,
-        userId: user?.id || '',
-        userName: user?.name || '',
-        timestamp: new Date(),
-        reason: `Lançamento ${entryType === 'complete' ? 'completo' : entryType} criado manualmente`
-      }],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: user?.id || ''
-    };
-
-    baseEntry.auditTrail[0].entryId = baseEntry.id;
-    return baseEntry;
-  };
-
-  const handleSaveManualEntry = () => {
-    if (!formData.date || !formData.totalValue || (!formData.debitHistory || !formData.creditHistory) || !formData.debitAccount || !formData.creditAccount) {
+  const validateForm = () => {
+    if (!formData.date || !formData.debitAccount || !formData.creditAccount || !formData.history) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios incluindo os históricos de débito e crédito.",
-        variant: "destructive",
+        title: "Erro de validação",
+        description: "Todos os campos obrigatórios devem ser preenchidos.",
+        variant: "destructive"
       });
-      return;
+      return false;
     }
 
-    if (!validationState.debitAccount.isValid) {
+    if (formData.debitValue !== formData.creditValue) {
       toast({
-        title: "Conta de débito inválida",
-        description: validationState.debitAccount.message,
-        variant: "destructive",
+        title: "Erro de validação",
+        description: "O valor do débito deve ser igual ao valor do crédito.",
+        variant: "destructive"
       });
-      return;
+      return false;
     }
 
-    if (!validationState.creditAccount.isValid) {
+    if (formData.debitValue <= 0) {
       toast({
-        title: "Conta de crédito inválida", 
-        description: validationState.creditAccount.message,
-        variant: "destructive",
+        title: "Erro de validação",
+        description: "O valor deve ser maior que zero.",
+        variant: "destructive"
       });
-      return;
+      return false;
     }
 
-    const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
-    const newEntry: AccountingEntry = {
-      ...createEntryBase('complete'),
+    return true;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    const entry: AccountingEntry = {
+      id: existingEntry?.id || `entry-${Date.now()}`,
+      date: formData.date,
       debitAccount: formData.debitAccount,
-      debitValue: parseFloat(formData.debitValue.replace(/\D/g, '')) / 100 || 0,
+      debitValue: formData.debitValue,
       debitDescription: formData.debitDescription,
-      debitHistory: formData.debitHistory,
       creditAccount: formData.creditAccount,
-      creditValue: parseFloat(formData.creditValue.replace(/\D/g, '')) / 100 || 0,
+      creditValue: formData.creditValue,
       creditDescription: formData.creditDescription,
+      history: formData.history,
+      totalValue: formData.debitValue,
+      entryType: formData.entryType,
+      debitHistory: formData.debitHistory,
       creditHistory: formData.creditHistory,
-      history: `D: ${formData.debitHistory} | C: ${formData.creditHistory}`,
-      totalValue: parseFloat(formData.totalValue.replace(/\D/g, '')) / 100,
+      createdAt: existingEntry?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
-    entries.push(newEntry);
-    localStorage.setItem('accountingEntries', JSON.stringify(entries));
-
-    completeStep('save');
+    onSubmit(entry);
+    
+    if (!existingEntry) {
+      // Reset form for new entries
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        debitAccount: "",
+        debitValue: 0,
+        debitDescription: "",
+        creditAccount: "",
+        creditValue: 0,
+        creditDescription: "",
+        history: "",
+        debitHistory: "",
+        creditHistory: "",
+        entryType: 'manual'
+      });
+    }
 
     toast({
-      title: "Lançamento salvo com sucesso!",
-      description: "O lançamento foi registrado e está disponível para consulta.",
-    });
-
-    // Reset form
-    setFormData({
-      date: new Date().toISOString().split('T')[0],
-      debitAccount: "",
-      debitValue: "",
-      debitDescription: "",
-      debitHistory: "",
-      creditAccount: "",
-      creditValue: "",
-      creditDescription: "",
-      creditHistory: "",
-      totalValue: "",
-      entryType: "manual"
+      title: existingEntry ? "Lançamento atualizado" : "Lançamento criado",
+      description: existingEntry ? "O lançamento foi atualizado com sucesso." : "O lançamento foi criado com sucesso.",
     });
   };
 
-  const saveTransactionAsEntry = (transaction: BankTransaction) => {
-    const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
-    
-    const newEntry: AccountingEntry = {
-      id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      schoolId: user?.schoolId || '',
-      date: new Date(transaction.date),
-      entryType: 'automatic' as const,
-      debitAccount: transaction.transactionType === 'debito' ? '1.1.01.01.0001' : '1.1.01.01.0001',
-      debitValue: transaction.transactionType === 'debito' ? 0 : transaction.value,
-      debitDescription: 'Banco',
-      debitHistory: `Transação bancária: ${transaction.description}`,
-      creditAccount: transaction.transactionType === 'credito' ? '4.1.01.01.0001' : '3.1.01.01.0001',
-      creditValue: transaction.transactionType === 'credito' ? 0 : transaction.value,
-      creditDescription: transaction.transactionType === 'credito' ? 'Receita' : 'Despesa',
-      creditHistory: `Transação bancária: ${transaction.description}`,
-      history: `Lançamento automático da transação: ${transaction.description}`,
-      totalValue: transaction.value,
-      auditTrail: [{
-        id: Date.now().toString(),
-        entryId: '',
-        action: 'created' as const,
-        userId: user?.id || '',
-        userName: user?.name || '',
-        timestamp: new Date(),
-        reason: 'Lançamento automático gerado a partir de transação bancária conciliada'
-      }],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: user?.id || ''
-    };
-
-    newEntry.auditTrail[0].entryId = newEntry.id;
-    entries.push(newEntry);
-    localStorage.setItem('accountingEntries', JSON.stringify(entries));
-    
-    loadSavedAutomaticEntries();
-
-    toast({
-      title: "Transação salva",
-      description: "A transação foi salva como lançamento automático.",
-    });
+  const handleValueChange = (field: 'debitValue' | 'creditValue', value: number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value,
+      [field === 'debitValue' ? 'creditValue' : 'debitValue']: value
+    }));
   };
 
-  const deleteAutomaticEntry = (entryId: string) => {
-    const entries = JSON.parse(localStorage.getItem('accountingEntries') || '[]');
-    const updatedEntries = entries.filter((entry: AccountingEntry) => entry.id !== entryId);
-    localStorage.setItem('accountingEntries', JSON.stringify(updatedEntries));
-    
-    loadSavedAutomaticEntries();
-
-    toast({
-      title: "Lançamento excluído",
-      description: "O lançamento automático foi removido com sucesso.",
-    });
+  const applyTemplate = (template: typeof entryTemplates[0]) => {
+    setFormData(prev => ({
+      ...prev,
+      debitAccount: template.debitAccount,
+      creditAccount: template.creditAccount,
+      debitDescription: template.description,
+      creditDescription: template.description,
+      history: template.description
+    }));
   };
 
-  const generateAutomaticEntries = (type: 'all' | 'invoices' | 'payments' | 'receivables' | 'transactions') => {
-    const entriesToGenerate: AccountingEntry[] = [];
+  const getAccountName = (code: string) => {
+    const account = accountingSuggestions.find(acc => acc.code === code);
+    return account ? `${account.code} - ${account.name}` : code;
+  };
 
-    if (type === 'all' || type === 'invoices') {
-      automaticEntries.pendingInvoices.forEach(invoice => {
-        const entry = accountingAutomationService.generateInvoiceEntry(invoice, user?.id || '');
-        entriesToGenerate.push(entry);
-      });
-    }
-
-    if (type === 'all' || type === 'payments') {
-      automaticEntries.pendingPayments.forEach(payment => {
-        const entry = accountingAutomationService.generatePaymentEntry(payment, user?.id || '');
-        entriesToGenerate.push(entry);
-      });
-    }
-
-    if (type === 'all' || type === 'receivables') {
-      automaticEntries.pendingReceivables.forEach(receivable => {
-        const entry = accountingAutomationService.generateReceivableEntry(receivable, user?.id || '');
-        entriesToGenerate.push(entry);
-      });
-    }
-
-    if (type === 'all' || type === 'transactions') {
-      automaticEntries.pendingTransactions.forEach(transaction => {
-        const entry = accountingAutomationService.generateBankTransactionEntry(transaction, user?.id || '');
-        entriesToGenerate.push(entry);
-      });
-    }
-
-    if (entriesToGenerate.length > 0) {
-      accountingAutomationService.processAutomaticEntries(entriesToGenerate);
-      
+  const generatePaymentEntry = () => {
+    const paymentAccounts: PaymentAccount[] = JSON.parse(localStorage.getItem('paymentAccounts') || '[]');
+    const pendingPayments = paymentAccounts.filter(p => p.status === 'pendente');
+    
+    if (pendingPayments.length === 0) {
       toast({
-        title: "Lançamentos automáticos gerados",
-        description: `${entriesToGenerate.length} lançamentos foram criados automaticamente.`,
+        title: "Nenhuma conta a pagar pendente",
+        description: "Não há contas a pagar pendentes para gerar lançamento.",
+        variant: "destructive"
       });
-
-      loadPendingItems();
-      loadSavedAutomaticEntries();
-    } else {
-      toast({
-        title: "Nenhum lançamento pendente",
-        description: "Não há itens pendentes para gerar lançamentos automáticos.",
-      });
+      return;
     }
-  };
 
-  const formatCurrency = (value: string) => {
-    const numericValue = value.replace(/\D/g, "");
-    const formatted = (Number(numericValue) / 100).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
+    // Take the first pending payment as example
+    const payment = pendingPayments[0];
+    
+    setFormData(prev => ({
+      ...prev,
+      debitAccount: "2.1.1.01", // Fornecedores
+      creditAccount: "1.1.1.02", // Bancos
+      debitValue: payment.value,
+      creditValue: payment.value,
+      debitDescription: `Pagamento - ${payment.description}`,
+      creditDescription: `Pagamento - ${payment.description}`,
+      history: `Pagamento a ${payment.supplier} - ${payment.description}`,
+      entryType: 'automatic'
+    }));
+
+    toast({
+      title: "Lançamento gerado",
+      description: "Lançamento automático gerado a partir da conta a pagar.",
     });
-    return formatted;
   };
 
-  const handleCurrencyChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value.replace(/\D/g, "");
-    setFormData(prev => ({ ...prev, [field]: inputValue }));
+  const generateReceivableEntry = () => {
+    const receivableAccounts: ReceivableAccount[] = JSON.parse(localStorage.getItem('receivableAccounts') || '[]');
+    const pendingReceivables = receivableAccounts.filter(r => r.status === 'pendente');
+    
+    if (pendingReceivables.length === 0) {
+      toast({
+        title: "Nenhuma conta a receber pendente",
+        description: "Não há contas a receber pendentes para gerar lançamento.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Take the first pending receivable as example
+    const receivable = pendingReceivables[0];
+    
+    setFormData(prev => ({
+      ...prev,
+      debitAccount: "1.1.1.02", // Bancos
+      creditAccount: "1.1.2.01", // Clientes
+      debitValue: receivable.value,
+      creditValue: receivable.value,
+      debitDescription: `Recebimento - ${receivable.description}`,
+      creditDescription: `Recebimento - ${receivable.description}`,
+      history: `Recebimento de ${receivable.source} - ${receivable.description}`,
+      entryType: 'automatic'
+    }));
+
+    toast({
+      title: "Lançamento gerado",
+      description: "Lançamento automático gerado a partir da conta a receber.",
+    });
   };
 
-  const handleAccountChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const result = formatAndValidate(e.target.value);
-    setFormData(prev => ({ ...prev, [field]: result.formatted }));
-  };
+  const generateBankTransactionEntry = () => {
+    const bankTransactions: BankTransaction[] = JSON.parse(localStorage.getItem('bankTransactions') || '[]');
+    const pendingTransactions = bankTransactions.filter(t => t.reconciliationStatus === 'pendente');
+    
+    if (pendingTransactions.length === 0) {
+      toast({
+        title: "Nenhuma transação bancária pendente",
+        description: "Não há transações bancárias pendentes para gerar lançamento.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  const stepInfo = getCurrentStepInfo();
+    // Take the first pending transaction as example
+    const transaction = pendingTransactions[0];
+    
+    const isCredit = transaction.transactionType === 'credito';
+    
+    setFormData(prev => ({
+      ...prev,
+      debitAccount: isCredit ? "1.1.1.02" : "6.1.1.01", // Bancos ou Despesas
+      creditAccount: isCredit ? "4.1.1.01" : "1.1.1.02", // Receitas ou Bancos
+      debitValue: transaction.value,
+      creditValue: transaction.value,
+      debitDescription: transaction.description,
+      creditDescription: transaction.description,
+      history: `Transação bancária - ${transaction.description}`,
+      entryType: 'automatic'
+    }));
+
+    toast({
+      title: "Lançamento gerado",
+      description: "Lançamento automático gerado a partir da transação bancária.",
+    });
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Configurações de Automação */}
-      <Card className="shadow-lg border-0">
-        <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50 border-b">
-          <CardTitle className="text-xl text-gray-800 flex items-center gap-2">
-            <Zap className="h-5 w-5" />
-            Sistema Integrado de Lançamentos
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800">Geração Automática de Lançamentos</h3>
-              <p className="text-sm text-gray-600">
-                Ativar a geração automática de lançamentos contábeis a partir de outros módulos
-              </p>
-            </div>
-            <Switch
-              checked={autoGenerateEnabled}
-              onCheckedChange={setAutoGenerateEnabled}
-            />
-          </div>
-        </CardContent>
-      </Card>
+    <Card className="max-w-6xl mx-auto">
+      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <BookOpen className="h-6 w-6" />
+          {existingEntry ? "Editar Lançamento Contábil" : "Novo Lançamento Contábil Integrado"}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
+        <Tabs defaultValue="manual" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="manual">Lançamento Manual</TabsTrigger>
+            <TabsTrigger value="automatic">Geração Automática</TabsTrigger>
+            <TabsTrigger value="templates">Modelos</TabsTrigger>
+          </TabsList>
 
-      {/* Resumo de Itens Pendentes */}
-      {autoGenerateEnabled && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Notas Fiscais</p>
-                  <p className="text-2xl font-bold text-blue-600">{automaticEntries.pendingInvoices.length}</p>
-                </div>
-                <FileText className="h-8 w-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Pagamentos</p>
-                  <p className="text-2xl font-bold text-red-600">{automaticEntries.pendingPayments.length}</p>
-                </div>
-                <DollarSign className="h-8 w-8 text-red-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Recebimentos</p>
-                  <p className="text-2xl font-bold text-green-600">{automaticEntries.pendingReceivables.length}</p>
-                </div>
-                <DollarSign className="h-8 w-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Transações</p>
-                  <p className="text-2xl font-bold text-purple-600">{automaticEntries.pendingTransactions.length}</p>
-                </div>
-                <Building className="h-8 w-8 text-purple-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Abas de Lançamentos */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="manual" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Lançamento Manual
-          </TabsTrigger>
-          <TabsTrigger value="automatic" className="flex items-center gap-2">
-            <Zap className="h-4 w-4" />
-            Lançamentos Automáticos
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="manual" className="mt-6">
-          <Card className="shadow-lg border-0">
-            <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl text-gray-800">Novo Lançamento Manual</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={startGuidedFlow}
-                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                  >
-                    <Lightbulb className="h-4 w-4 mr-2" />
-                    Guia Passo a Passo
-                  </Button>
-                </div>
-              </div>
-              
-              {guidedFlow.showGuide && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-blue-800">
-                      Progresso: {Math.round(stepInfo.progress)}%
-                    </span>
-                    <span className="text-xs text-blue-600">
-                      Passo {guidedFlow.currentStep + 1} de {guidedFlow.steps.length}
-                    </span>
-                  </div>
-                  <Progress value={stepInfo.progress} className="h-2 mb-3" />
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className={`h-4 w-4 ${stepInfo.current?.completed ? 'text-green-600' : 'text-blue-600'}`} />
-                    <span className="text-sm text-blue-800">{stepInfo.current?.label}</span>
-                  </div>
-                </div>
-              )}
-            </CardHeader>
-            <CardContent className="p-8 space-y-6">
+          <TabsContent value="manual">
+            <form onSubmit={handleSubmit} className="space-y-6">
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="date" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                    Data do Lançamento *
-                    {formData.date && <CheckCircle className="h-4 w-4 text-green-600" />}
-                  </Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                    className="h-12 rounded-lg border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                  />
+                  <Label htmlFor="date" className="text-sm font-medium">Data do Lançamento *</Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="date"
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="totalValue" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                    Valor Total *
-                    {formData.totalValue && <CheckCircle className="h-4 w-4 text-green-600" />}
-                  </Label>
-                  <Input
-                    id="totalValue"
-                    placeholder="R$ 0,00"
-                    value={formData.totalValue ? formatCurrency(formData.totalValue) : ""}
-                    onChange={handleCurrencyChange('totalValue')}
-                    className="h-12 rounded-lg border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4 p-6 bg-red-50 rounded-xl border border-red-200">
-                  <h3 className="font-semibold text-red-800 text-lg flex items-center gap-2">
-                    Débito
-                    {validationState.debitAccount.isValid && <CheckCircle className="h-5 w-5 text-green-600" />}
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Conta Contábil *</Label>
-                      <div className="relative">
-                        <Input
-                          placeholder="0.0.00.00.0000"
-                          value={formData.debitAccount}
-                          onChange={handleAccountChange('debitAccount')}
-                          className={`h-10 mt-1 rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500 ${
-                            formData.debitAccount && !validationState.debitAccount.isValid ? 'border-red-500' : ''
-                          } ${validationState.debitAccount.isValid ? 'border-green-500' : ''}`}
-                          maxLength={12}
-                          onFocus={() => setShowAccountSuggestions(prev => ({ ...prev, debit: true }))}
-                          onBlur={() => setTimeout(() => setShowAccountSuggestions(prev => ({ ...prev, debit: false })), 200)}
-                        />
-                        {validationState.debitAccount.isValid && (
-                          <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-600" />
-                        )}
-                      </div>
-                      {formData.debitAccount && !validationState.debitAccount.isValid && (
-                        <div className="mt-1 text-xs text-red-600">
-                          {validationState.debitAccount.message}
-                          {validationState.debitAccount.suggestion && (
-                            <div className="text-gray-500 mt-1">
-                              Dica: {validationState.debitAccount.suggestion}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {showAccountSuggestions.debit && formData.debitAccount && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                          {suggestAccounts(formData.debitAccount).map((account, index) => (
-                            <div
-                              key={index}
-                              className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
-                              onClick={() => {
-                                setFormData(prev => ({ ...prev, debitAccount: account.code }));
-                                setShowAccountSuggestions(prev => ({ ...prev, debit: false }));
-                              }}
-                            >
-                              <div className="font-medium">{account.code}</div>
-                              <div className="text-gray-600">{account.description}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <p className="text-xs text-gray-500 mt-1">
-                        Formato: 0.0.00.00.0000 (1-9.1-9.01-99.01-99.0001-9999)
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Descrição da Conta</Label>
-                      <Input
-                        placeholder="Descrição será preenchida automaticamente"
-                        value={formData.debitDescription}
-                        onChange={(e) => setFormData(prev => ({ ...prev, debitDescription: e.target.value }))}
-                        className="h-10 mt-1 rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
-                        readOnly={!!validationState.debitAccount.isValid}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        Histórico do Débito *
-                        {formData.debitHistory && <CheckCircle className="h-4 w-4 text-green-600" />}
-                      </Label>
-                      <Textarea
-                        placeholder="Descreva o histórico específico para o lançamento a débito..."
-                        value={formData.debitHistory}
-                        onChange={(e) => setFormData(prev => ({ ...prev, debitHistory: e.target.value }))}
-                        className="min-h-[80px] resize-none rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4 p-6 bg-green-50 rounded-xl border border-green-200">
-                  <h3 className="font-semibold text-green-800 text-lg flex items-center gap-2">
-                    Crédito
-                    {validationState.creditAccount.isValid && <CheckCircle className="h-5 w-5 text-green-600" />}
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Conta Contábil *</Label>
-                      <div className="relative">
-                        <Input
-                          placeholder="0.0.00.00.0000"
-                          value={formData.creditAccount}
-                          onChange={handleAccountChange('creditAccount')}
-                          className={`h-10 mt-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500 ${
-                            formData.creditAccount && !validationState.creditAccount.isValid ? 'border-red-500' : ''
-                          } ${validationState.creditAccount.isValid ? 'border-green-500' : ''}`}
-                          maxLength={12}
-                          onFocus={() => setShowAccountSuggestions(prev => ({ ...prev, credit: true }))}
-                          onBlur={() => setTimeout(() => setShowAccountSuggestions(prev => ({ ...prev, credit: false })), 200)}
-                        />
-                        {validationState.creditAccount.isValid && (
-                          <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-600" />
-                        )}
-                      </div>
-                      {formData.creditAccount && !validationState.creditAccount.isValid && (
-                        <div className="mt-1 text-xs text-red-600">
-                          {validationState.creditAccount.message}
-                          {validationState.creditAccount.suggestion && (
-                            <div className="text-gray-500 mt-1">
-                              Dica: {validationState.creditAccount.suggestion}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {showAccountSuggestions.credit && formData.creditAccount && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                          {suggestAccounts(formData.creditAccount).map((account, index) => (
-                            <div
-                              key={index}
-                              className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
-                              onClick={() => {
-                                setFormData(prev => ({ ...prev, creditAccount: account.code }));
-                                setShowAccountSuggestions(prev => ({ ...prev, credit: false }));
-                              }}
-                            >
-                              <div className="font-medium">{account.code}</div>
-                              <div className="text-gray-600">{account.description}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <p className="text-xs text-gray-500 mt-1">
-                        Formato: 0.0.00.00.0000 (1-9.1-9.01-99.01-99.0001-9999)
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Descrição da Conta</Label>
-                      <Input
-                        placeholder="Descrição será preenchida automaticamente"
-                        value={formData.creditDescription}
-                        onChange={(e) => setFormData(prev => ({ ...prev, creditDescription: e.target.value }))}
-                        className="h-10 mt-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
-                        readOnly={!!validationState.creditAccount.isValid}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        Histórico do Crédito *
-                        {formData.creditHistory && <CheckCircle className="h-4 w-4 text-green-600" />}
-                      </Label>
-                      <Textarea
-                        placeholder="Descreva o histórico específico para o lançamento a crédito..."
-                        value={formData.creditHistory}
-                        onChange={(e) => setFormData(prev => ({ ...prev, creditHistory: e.target.value }))}
-                        className="min-h-[80px] resize-none rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Botão de Salvamento */}
-              <div className="pt-6 border-t border-gray-200">
-                <div className="flex justify-center">
-                  <Button
-                    onClick={handleSaveManualEntry}
-                    className="h-12 px-8 text-white text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg"
-                    style={{ backgroundColor: '#041c43' }}
-                    disabled={!validationState.debitAccount.isValid || !validationState.creditAccount.isValid || !formData.debitHistory || !formData.creditHistory || !formData.date || !formData.totalValue}
+                  <Label htmlFor="entryType" className="text-sm font-medium">Tipo de Lançamento</Label>
+                  <Select 
+                    value={formData.entryType} 
+                    onValueChange={(value: 'manual' | 'automatic') => 
+                      setFormData({ ...formData, entryType: value })
+                    }
                   >
-                    <Save className="mr-2 h-5 w-5" />
-                    Salvar Lançamento
-                  </Button>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manual">Manual</SelectItem>
+                      <SelectItem value="automatic">Automático</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="automatic" className="mt-6">
-          <div className="space-y-6">
-            {/* Busca de Transações Conciliadas */}
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
-                <CardTitle className="text-xl text-gray-800">Transações Conciliadas do Financeiro</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <Label className="text-sm font-medium text-gray-700">Buscar Transações</Label>
-                      <div className="relative mt-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                        <Input
-                          placeholder="Digite para buscar transações conciliadas..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {filteredTransactions.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Descrição</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead className="text-right">Valor</TableHead>
-                          <TableHead className="text-center">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredTransactions.map((transaction) => (
-                          <TableRow key={transaction.id}>
-                            <TableCell className="font-medium">
-                              {format(new Date(transaction.date), 'dd/MM/yyyy', { locale: ptBR })}
-                            </TableCell>
-                            <TableCell className="max-w-xs">
-                              <div className="truncate" title={transaction.description}>
-                                {transaction.description}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={transaction.transactionType === 'credito' ? 'default' : 'secondary'}>
-                                {transaction.transactionType === 'credito' ? 'Crédito' : 'Débito'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-semibold">
-                              <span className={transaction.transactionType === 'credito' ? 'text-green-600' : 'text-red-600'}>
-                                {transaction.transactionType === 'debito' ? '-' : '+'}
-                                {transaction.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => saveTransactionAsEntry(transaction)}
-                                className="hover:bg-blue-50 hover:border-blue-500"
-                              >
-                                <Save className="h-4 w-4 mr-2" />
-                                Salvar
-                              </Button>
-                            </TableCell>
-                          </TableRow>
+              
+              <div className="space-y-4 p-4 border rounded-lg bg-red-50">
+                <h3 className="font-semibold text-red-800 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Débito
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="debitAccount" className="text-sm font-medium">Conta de Débito *</Label>
+                    <Select 
+                      value={formData.debitAccount} 
+                      onValueChange={(value) => setFormData({ ...formData, debitAccount: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a conta de débito" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accountingSuggestions.map((account) => (
+                          <SelectItem key={account.code} value={account.code}>
+                            {account.code} - {account.name}
+                          </SelectItem>
                         ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      {searchTerm ? 'Nenhuma transação encontrada com os filtros aplicados.' : 'Nenhuma transação conciliada encontrada.'}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Tabela de Lançamentos Automáticos Salvos */}
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
-                <CardTitle className="text-xl text-gray-800">Lançamentos Automáticos Salvos</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                {savedAutomaticEntries.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Histórico</TableHead>
-                        <TableHead>Conta Débito</TableHead>
-                        <TableHead>Conta Crédito</TableHead>
-                        <TableHead className="text-right">Valor</TableHead>
-                        <TableHead className="text-center">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {savedAutomaticEntries.map((entry) => (
-                        <TableRow key={entry.id}>
-                          <TableCell className="font-medium">
-                            {format(new Date(entry.date), 'dd/MM/yyyy', { locale: ptBR })}
-                          </TableCell>
-                          <TableCell className="max-w-xs">
-                            <div className="truncate" title={entry.history}>
-                              {entry.history}
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">{entry.debitAccount}</TableCell>
-                          <TableCell className="font-mono text-sm">{entry.creditAccount}</TableCell>
-                          <TableCell className="text-right font-semibold">
-                            <Badge variant="outline" className="bg-green-50 text-green-800">
-                              {entry.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => deleteAutomaticEntry(entry.id)}
-                              className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Zap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                      Nenhum lançamento automático salvo
-                    </h3>
-                    <p className="text-gray-600">
-                      Use a busca acima para encontrar transações conciliadas e salvá-las como lançamentos automáticos.
-                    </p>
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
-              </CardContent>
-            </Card>
 
-            {!autoGenerateEnabled && (
-              <Card className="shadow-lg border-0">
-                <CardContent className="p-12 text-center">
-                  <Zap className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                    Geração Automática Desabilitada
-                  </h3>
-                  <p className="text-gray-600">
-                    Ative a geração automática de lançamentos para utilizar esta funcionalidade.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="debitValue" className="text-sm font-medium">Valor do Débito *</Label>
+                    <Input
+                      id="debitValue"
+                      type="number"
+                      step="0.01"
+                      value={formData.debitValue}
+                      onChange={(e) => handleValueChange('debitValue', parseFloat(e.target.value) || 0)}
+                      placeholder="0,00"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="debitDescription" className="text-sm font-medium">Descrição do Débito</Label>
+                  <Input
+                    id="debitDescription"
+                    value={formData.debitDescription}
+                    onChange={(e) => setFormData({ ...formData, debitDescription: e.target.value })}
+                    placeholder="Descrição específica do débito"
+                  />
+                </div>
+              </div>
+
+              
+              <div className="space-y-4 p-4 border rounded-lg bg-green-50">
+                <h3 className="font-semibold text-green-800 flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Crédito
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="creditAccount" className="text-sm font-medium">Conta de Crédito *</Label>
+                    <Select 
+                      value={formData.creditAccount} 
+                      onValueChange={(value) => setFormData({ ...formData, creditAccount: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a conta de crédito" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accountingSuggestions.map((account) => (
+                          <SelectItem key={account.code} value={account.code}>
+                            {account.code} - {account.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="creditValue" className="text-sm font-medium">Valor do Crédito *</Label>
+                    <Input
+                      id="creditValue"
+                      type="number"
+                      step="0.01"
+                      value={formData.creditValue}
+                      onChange={(e) => handleValueChange('creditValue', parseFloat(e.target.value) || 0)}
+                      placeholder="0,00"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="creditDescription" className="text-sm font-medium">Descrição do Crédito</Label>
+                  <Input
+                    id="creditDescription"
+                    value={formData.creditDescription}
+                    onChange={(e) => setFormData({ ...formData, creditDescription: e.target.value })}
+                    placeholder="Descrição específica do crédito"
+                  />
+                </div>
+              </div>
+
+              
+              <div className="space-y-2">
+                <Label htmlFor="history" className="text-sm font-medium">Histórico do Lançamento *</Label>
+                <Textarea
+                  id="history"
+                  value={formData.history}
+                  onChange={(e) => setFormData({ ...formData, history: e.target.value })}
+                  placeholder="Descreva o histórico do lançamento contábil"
+                  className="min-h-[80px]"
+                  required
+                />
+              </div>
+
+              
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Verificação de Balanceamento:</span>
+                  <Badge variant={formData.debitValue === formData.creditValue ? "default" : "destructive"}>
+                    {formData.debitValue === formData.creditValue ? "Balanceado" : "Desbalanceado"}
+                  </Badge>
+                </div>
+                <div className="mt-2 text-sm text-gray-600">
+                  <div>Débito: R$ {formData.debitValue.toFixed(2)}</div>
+                  <div>Crédito: R$ {formData.creditValue.toFixed(2)}</div>
+                  <div>Diferença: R$ {Math.abs(formData.debitValue - formData.creditValue).toFixed(2)}</div>
+                </div>
+              </div>
+
+              
+              <div className="flex gap-4 pt-4">
+                <Button type="submit" className="flex-1">
+                  <Calculator className="mr-2 h-4 w-4" />
+                  {existingEntry ? "Atualizar Lançamento" : "Criar Lançamento"}
+                </Button>
+                {onCancel && (
+                  <Button type="button" variant="outline" onClick={onCancel}>
+                    Cancelar
+                  </Button>
+                )}
+              </div>
+            </form>
+          </TabsContent>
+
+          <TabsContent value="automatic">
+            <div className="space-y-6">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">Geração Automática de Lançamentos</h3>
+                <p className="text-gray-600 mb-6">
+                  Gere lançamentos contábeis automaticamente a partir de outras operações do sistema.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={generatePaymentEntry}>
+                  <CardContent className="p-6 text-center">
+                    <CreditCard className="h-12 w-12 mx-auto mb-4 text-red-600" />
+                    <h4 className="font-semibold mb-2">Contas a Pagar</h4>
+                    <p className="text-sm text-gray-600">
+                      Gerar lançamento a partir de uma conta a pagar pendente
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={generateReceivableEntry}>
+                  <CardContent className="p-6 text-center">
+                    <DollarSign className="h-12 w-12 mx-auto mb-4 text-green-600" />
+                    <h4 className="font-semibold mb-2">Contas a Receber</h4>
+                    <p className="text-sm text-gray-600">
+                      Gerar lançamento a partir de uma conta a receber pendente
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={generateBankTransactionEntry}>
+                  <CardContent className="p-6 text-center">
+                    <Building2 className="h-12 w-12 mx-auto mb-4 text-blue-600" />
+                    <h4 className="font-semibold mb-2">Transações Bancárias</h4>
+                    <p className="text-sm text-gray-600">
+                      Gerar lançamento a partir de transações bancárias
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="templates">
+            <div className="space-y-6">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">Modelos de Lançamento</h3>
+                <p className="text-gray-600 mb-6">
+                  Use modelos pré-configurados para acelerar a criação de lançamentos comuns.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {entryTemplates.map((template, index) => (
+                  <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold">{template.name}</h4>
+                        <FileText className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <div className="space-y-2 text-sm text-gray-600 mb-4">
+                        <div>Débito: {getAccountName(template.debitAccount)}</div>
+                        <div>Crédito: {getAccountName(template.creditAccount)}</div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => applyTemplate(template)}
+                      >
+                        Aplicar Modelo
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }
