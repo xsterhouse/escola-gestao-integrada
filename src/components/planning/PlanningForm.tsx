@@ -1,228 +1,127 @@
 
-import { useState, useEffect } from "react";
-import { z } from "zod";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { z } from "zod";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useAutoSave, useDraftRecovery } from "@/hooks/useLocalStorage";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form } from "@/components/ui/form";
+import { ATAItemsList } from "./ATAItemsList";
+import { PlanningItem } from "@/lib/types";
+
+const ataFormSchema = z.object({
+  items: z.array(
+    z.object({
+      nome: z.string().min(1, "Nome é obrigatório"),
+      unidade: z.string().min(1, "Unidade é obrigatória"),
+      quantidade: z.coerce.number().min(1, "Quantidade deve ser maior que 0"),
+      descricao: z.string().optional(),
+    })
+  ).min(1, "Adicione pelo menos um item"),
+});
+
+type ATAFormData = z.infer<typeof ataFormSchema>;
+
+interface ProductSuggestion {
+  id: string;
+  description: string;
+  unit: string;
+  item?: number;
+}
 
 interface PlanningFormProps {
-  addItem: (item: { name: string; quantity: number; unit: string; description: string }) => void;
+  addItem: (item: Omit<PlanningItem, "id" | "planningId" | "createdAt" | "updatedAt" | "availableQuantity">) => void;
   disabled?: boolean;
 }
 
-const formSchema = z.object({
-  name: z.string().min(3, { message: "Nome do item deve ter pelo menos 3 caracteres" }),
-  quantity: z.coerce.number().positive({ message: "Quantidade deve ser maior que zero" }),
-  unit: z.string().min(1, { message: "Unidade é obrigatória" }),
-  description: z.string().optional(),
-});
-
-type FormData = z.infer<typeof formSchema>;
-
 export function PlanningForm({ addItem, disabled = false }: PlanningFormProps) {
-  const { toast } = useToast();
-  const [formData, setFormData] = useState<FormData>({
-    name: "",
-    quantity: 0,
-    unit: "",
-    description: "",
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const form = useForm<ATAFormData>({
+    resolver: zodResolver(ataFormSchema),
+    defaultValues: {
+      items: [{ nome: "", unidade: "", quantidade: 0, descricao: "" }],
+    },
   });
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: formData,
-  });
-
-  // Auto-save para o formulário
-  useAutoSave('planning_form', formData, { interval: 3000 });
-
-  // Recuperação de draft
-  const { draft, clearDraft, hasDraft } = useDraftRecovery<FormData>('planning_form');
-
-  // Monitorar mudanças no formulário para auto-save
-  useEffect(() => {
-    const subscription = form.watch((value) => {
-      setFormData(value as FormData);
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
-
-  // Carregar draft se disponível
-  useEffect(() => {
-    if (hasDraft && draft?.data) {
-      const draftData = draft.data;
-      form.reset(draftData);
-      setFormData(draftData);
-      
-      toast({
-        title: "Rascunho recuperado",
-        description: "Dados de um formulário anterior foram recuperados.",
+  const onSubmit = (data: ATAFormData) => {
+    console.log("📝 Dados do formulário ATA:", data);
+    
+    // Adicionar cada item do formulário
+    data.items.forEach(item => {
+      addItem({
+        name: item.nome,
+        unit: item.unidade,
+        quantity: item.quantidade,
+        description: item.descricao || "",
       });
-      
-      console.log("📄 Draft do formulário recuperado");
-    }
-  }, [hasDraft, draft, form, toast]);
+    });
 
-  const onSubmit = (data: FormData) => {
-    addItem({
-      name: data.name,
-      quantity: data.quantity,
-      unit: data.unit,
-      description: data.description || "",
+    // Resetar formulário e fechar modal
+    form.reset({
+      items: [{ nome: "", unidade: "", quantidade: 0, descricao: "" }],
     });
-    
-    // Reset form e limpar draft
-    form.reset();
-    setFormData({
-      name: "",
-      quantity: 0,
-      unit: "",
-      description: "",
-    });
-    clearDraft();
-    
-    console.log("📝 Item adicionado e draft limpo");
+    setIsModalOpen(false);
   };
 
-  const handleClearDraft = () => {
-    clearDraft();
-    form.reset();
-    setFormData({
-      name: "",
-      quantity: 0,
-      unit: "",
-      description: "",
-    });
-    
-    toast({
-      title: "Rascunho limpo",
-      description: "O rascunho do formulário foi removido.",
-    });
+  const handleProductSelect = (index: number, product: ProductSuggestion) => {
+    console.log(`🎯 Produto selecionado para item ${index}:`, product);
+    form.setValue(`items.${index}.nome`, product.description);
+    form.setValue(`items.${index}.unidade`, product.unit);
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          Adicionar Item ao Planejamento
-          {hasDraft && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearDraft}
-              className="text-xs text-muted-foreground"
-            >
-              Limpar rascunho
-            </Button>
-          )}
-        </CardTitle>
-        <CardDescription>
-          Preencha os dados do item a ser adicionado
-          {hasDraft && (
-            <span className="block text-xs text-amber-600 mt-1">
-              💾 Rascunho salvo automaticamente
-            </span>
-          )}
-        </CardDescription>
+        <CardTitle>Nova ATA</CardTitle>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Item</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Arroz Branco" {...field} disabled={disabled} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantidade</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="0" 
-                        {...field}
-                        disabled={disabled} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unidade</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Ex: Kg, Pacote, Und" 
-                        {...field}
-                        disabled={disabled} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <Button 
+          onClick={() => setIsModalOpen(true)}
+          disabled={disabled}
+          className="w-full"
+        >
+          Incluir nova ATA
+        </Button>
+
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Nova ATA - Adicionar Itens</h3>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </Button>
+              </div>
+
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <ATAItemsList 
+                    control={form.control} 
+                    setValue={form.setValue}
+                  />
+                  
+                  <div className="flex justify-end gap-4 pt-4 border-t">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsModalOpen(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit">
+                      Adicionar ao Planejamento
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             </div>
-            
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Descreva as especificações do item..." 
-                      className="resize-none" 
-                      {...field}
-                      disabled={disabled} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={disabled}
-            >
-              Adicionar Item
-            </Button>
-          </form>
-        </Form>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

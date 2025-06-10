@@ -6,13 +6,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Trash2 } from "lucide-react";
 import { ATAProductAutocomplete } from "./ATAProductAutocomplete";
-import { ATAFormData } from "./types";
 
 interface ProductSuggestion {
   id: string;
   description: string;
   unit: string;
   item?: number;
+}
+
+interface ATAFormData {
+  items: Array<{
+    nome: string;
+    unidade: string;
+    quantidade: number;
+    descricao?: string;
+  }>;
 }
 
 interface ATAItemFormProps {

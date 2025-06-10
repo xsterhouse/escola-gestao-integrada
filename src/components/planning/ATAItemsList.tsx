@@ -4,7 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import { ATAItemForm } from "./ATAItemForm";
-import { ATAFormData, ProductSuggestion } from "./types";
+
+interface ProductSuggestion {
+  id: string;
+  description: string;
+  unit: string;
+  item?: number;
+}
+
+interface ATAFormData {
+  items: Array<{
+    nome: string;
+    unidade: string;
+    quantidade: number;
+    descricao?: string;
+  }>;
+}
 
 interface ATAItemsListProps {
   control: Control<ATAFormData>;
