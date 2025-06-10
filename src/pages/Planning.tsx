@@ -1179,5 +1179,3 @@ const Planning = () => {
 };
 
 export default Planning;
-
-</initial_code>
