@@ -17,6 +17,8 @@ import { TransferFormComponent } from "@/components/planning/TransferFormCompone
 import { TransferTable } from "@/components/planning/TransferTable";
 import { PendingTransfersTab } from "@/components/planning/PendingTransfersTab";
 import { getPendingTransfersForSchool } from "@/services/transferService";
+import { ATAForm } from "@/components/planning/ATAForm";
+import { ATAContract } from "@/lib/types";
 
 interface ATAItem {
   id: string;
@@ -62,23 +64,9 @@ const Planning = () => {
   const [approvalPassword, setApprovalPassword] = useState("");
   const [approvalJustification, setApprovalJustification] = useState("");
   const [atas, setAtas] = useState<ATA[]>([]);
-  const [ataItems, setAtaItems] = useState<ATAItem[]>([]);
   const [transfers, setTransfers] = useState<any[]>([]);
   const [transferHistory, setTransferHistory] = useState<any[]>([]);
   const [approvalHistory, setApprovalHistory] = useState<any[]>([]);
-  const [formData, setFormData] = useState({
-    dataATA: "",
-    dataInicioVigencia: "",
-    dataFimVigencia: "",
-    schoolId: "",
-    centralComprasId: ""
-  });
-  const [newItem, setNewItem] = useState({
-    numeroItem: "",
-    descricaoProduto: "",
-    unidade: "",
-    quantidade: ""
-  });
   const [pendingTransfersCount, setPendingTransfersCount] = useState(0);
 
   // Load data from localStorage
@@ -339,137 +327,9 @@ const Planning = () => {
     });
   };
 
-  const handleFinalizeATA = (ataId: string) => {
-    const updatedATAs = atas.map(ata => 
-      ata.id === ataId ? { ...ata, status: "finalizada" as const } : ata
-    );
-    saveATAs(updatedATAs);
-    toast({
-      title: "ATA finalizada",
-      description: "ATA foi finalizada com sucesso"
-    });
-  };
-
-  const handleApproveATA = (ataId: string) => {
-    const updatedATAs = atas.map(ata => 
-      ata.id === ataId ? { ...ata, status: "aprovada" as const } : ata
-    );
-    saveATAs(updatedATAs);
-    toast({
-      title: "ATA aprovada",
-      description: "ATA foi aprovada e está disponível para transferências"
-    });
-  };
-
-  const handleSchoolChange = (schoolId: string) => {
-    console.log("🎯 Escola selecionada:", schoolId);
-    setFormData(prev => ({
-      ...prev,
-      schoolId,
-      centralComprasId: ""
-    }));
-  };
-
   const handleVigencyCardClick = (ata: ATA) => {
     setSelectedVigencyATA(ata);
     setIsVigencyItemsModalOpen(true);
-  };
-
-  const handleAddItem = () => {
-    if (!newItem.numeroItem || !newItem.descricaoProduto || !newItem.quantidade) {
-      toast({
-        title: "Erro",
-        description: "Preencha todos os campos obrigatórios",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const item: ATAItem = {
-      id: Date.now().toString(),
-      numeroItem: newItem.numeroItem,
-      descricaoProduto: newItem.descricaoProduto,
-      unidade: newItem.unidade,
-      quantidade: parseFloat(newItem.quantidade),
-      valorUnitario: 0, // Valor padrão
-      valorTotal: 0 // Será calculado quando valor unitário for definido
-    };
-
-    setAtaItems([...ataItems, item]);
-    setNewItem({
-      numeroItem: "",
-      descricaoProduto: "",
-      unidade: "",
-      quantidade: ""
-    });
-
-    toast({
-      title: "Item adicionado",
-      description: "Item foi adicionado à ATA com sucesso"
-    });
-  };
-
-  const handleRemoveItem = (itemId: string) => {
-    setAtaItems(ataItems.filter(item => item.id !== itemId));
-  };
-
-  const handleSaveATA = () => {
-    if (!formData.dataATA || !formData.dataInicioVigencia || !formData.dataFimVigencia || ataItems.length === 0) {
-      toast({
-        title: "Erro",
-        description: "Preencha todos os campos obrigatórios e adicione pelo menos um item",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!formData.schoolId) {
-      toast({
-        title: "Erro",
-        description: "Selecione uma escola",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!formData.centralComprasId) {
-      toast({
-        title: "Erro",
-        description: "Selecione uma central de compras",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const valorTotal = ataItems.reduce((sum, item) => sum + item.valorTotal, 0);
-    const newATA: ATA = {
-      id: Date.now().toString(),
-      numeroATA: generateATAId(),
-      ...formData,
-      items: ataItems,
-      createdAt: new Date().toISOString(),
-      status: "rascunho",
-      valorTotal: valorTotal
-    };
-
-    const updatedATAs = [...atas, newATA];
-    saveATAs(updatedATAs);
-    
-    setFormData({
-      dataATA: "",
-      dataInicioVigencia: "",
-      dataFimVigencia: "",
-      schoolId: "",
-      centralComprasId: ""
-    });
-    setAtaItems([]);
-    setIsNewATAModalOpen(false);
-    setActiveTab("gestao-atas");
-
-    toast({
-      title: "ATA salva",
-      description: `ATA ${newATA.numeroATA} foi salva com sucesso e está pendente de aprovação`
-    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -542,6 +402,44 @@ const Planning = () => {
     setApprovalHistory(storedApprovalHistory);
   }, []);
 
+  // Handle ATA form submission
+  const handleATASubmit = (data: Omit<ATAContract, "id" | "schoolId" | "createdBy" | "createdAt" | "updatedAt">) => {
+    console.log("🚀 Dados recebidos do ATAForm:", data);
+    
+    // Transform the data to match the existing ATA structure
+    const newATA: ATA = {
+      id: Date.now().toString(),
+      numeroATA: generateATAId(),
+      dataATA: data.dataATA.toISOString().split('T')[0],
+      dataInicioVigencia: data.dataInicioVigencia.toISOString().split('T')[0],
+      dataFimVigencia: data.dataFimVigencia.toISOString().split('T')[0],
+      status: "rascunho",
+      items: data.items.map(item => ({
+        id: item.id,
+        numeroItem: item.item?.toString() || "",
+        descricaoProduto: item.nome,
+        unidade: item.unidade,
+        quantidade: item.quantidade,
+        valorUnitario: item.valorUnitario,
+        valorTotal: item.valorTotal
+      })),
+      createdAt: new Date().toISOString(),
+      schoolId: currentSchool?.id,
+      valorTotal: data.items.reduce((sum, item) => sum + item.valorTotal, 0)
+    };
+
+    const updatedATAs = [...atas, newATA];
+    saveATAs(updatedATAs);
+    
+    setIsNewATAModalOpen(false);
+    setActiveTab("gestao-atas");
+
+    toast({
+      title: "ATA salva",
+      description: `ATA ${newATA.numeroATA} foi salva com sucesso e está pendente de aprovação`
+    });
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case "nova-ata":
@@ -556,162 +454,13 @@ const Planning = () => {
                     Incluir Nova ATA
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Nova ATA de Registro de Preços</DialogTitle>
                     <p className="text-sm text-gray-600">ID será gerado automaticamente: {generateATAId()}</p>
                   </DialogHeader>
                   
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Data da ATA</label>
-                        <Input
-                          type="date"
-                          value={formData.dataATA}
-                          onChange={(e) => setFormData({...formData, dataATA: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Início da Vigência</label>
-                        <Input
-                          type="date"
-                          value={formData.dataInicioVigencia}
-                          onChange={(e) => setFormData({...formData, dataInicioVigencia: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Fim da Vigência</label>
-                        <Input
-                          type="date"
-                          value={formData.dataFimVigencia}
-                          onChange={(e) => setFormData({...formData, dataFimVigencia: e.target.value})}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Escola *</label>
-                        <Select value={formData.schoolId} onValueChange={handleSchoolChange}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a escola" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {getSchoolsFromSettings().map((school: any) => (
-                              <SelectItem key={school.id} value={school.id}>
-                                {school.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Central de Compras *</label>
-                        <Select 
-                          value={formData.centralComprasId} 
-                          onValueChange={(value) => setFormData({...formData, centralComprasId: value})}
-                          disabled={!formData.schoolId}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={formData.schoolId ? "Selecione a central" : "Selecione uma escola primeiro"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {getAvailablePurchasingCenters().map((center: any) => (
-                              <SelectItem key={center.id} value={center.id}>
-                                {center.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {formData.schoolId && getAvailablePurchasingCenters().length === 0 && (
-                          <p className="text-sm text-orange-600 mt-1">
-                            Nenhuma central de compras vinculada a esta escola. 
-                            <br />
-                            Verifique as configurações ou vincule a escola a uma central de compras.
-                          </p>
-                        )}
-                        {!formData.schoolId && (
-                          <p className="text-sm text-gray-500 mt-1">
-                            Selecione uma escola para ver as centrais disponíveis.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="border rounded-lg p-4">
-                      <h3 className="font-medium mb-3">Adicionar Item</h3>
-                      <div className="grid grid-cols-5 gap-2 mb-4">
-                        <Input
-                          placeholder="Nº Item"
-                          value={newItem.numeroItem}
-                          onChange={(e) => setNewItem({...newItem, numeroItem: e.target.value})}
-                        />
-                        <Input
-                          placeholder="Descrição do Produto"
-                          value={newItem.descricaoProduto}
-                          onChange={(e) => setNewItem({...newItem, descricaoProduto: e.target.value})}
-                        />
-                        <Select value={newItem.unidade} onValueChange={(value) => setNewItem({...newItem, unidade: value})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Unid" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Kg">Kg</SelectItem>
-                            <SelectItem value="Litro">Litro</SelectItem>
-                            <SelectItem value="Unidade">Unidade</SelectItem>
-                            <SelectItem value="Frc">Frc</SelectItem>
-                            <SelectItem value="Pacote">Pacote</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          type="number"
-                          placeholder="Quant"
-                          value={newItem.quantidade}
-                          onChange={(e) => setNewItem({...newItem, quantidade: e.target.value})}
-                        />
-                        <Button onClick={handleAddItem} size="sm">
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {ataItems.length > 0 && (
-                        <div className="space-y-2">
-                          <h4 className="font-medium">Itens Adicionados:</h4>
-                          {ataItems.map((item) => (
-                            <div key={item.id} className="p-3 bg-gray-50 rounded-md flex justify-between">
-                              <div>
-                                <p className="font-medium">{item.numeroItem} - {item.descricaoProduto}</p>
-                                <p className="text-sm text-gray-600">
-                                  {item.quantidade} {item.unidade}
-                                </p>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveItem(item.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                          
-                          <div className="flex justify-between items-center pt-4 border-t">
-                            <div>
-                              <p className="font-bold">
-                                Total de Itens: {ataItems.length}
-                              </p>
-                            </div>
-                            <Button onClick={handleSaveATA} className="bg-green-600 hover:bg-green-700">
-                              <Save className="h-4 w-4 mr-2" />
-                              Salvar ATA
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <ATAForm onSubmit={handleATASubmit} />
                 </DialogContent>
               </Dialog>
             </div>
@@ -719,7 +468,7 @@ const Planning = () => {
             <Card>
               <CardContent className="p-6">
                 <p className="text-gray-600">
-                  Clique no botão "Incluir Nova ATA" para registrar uma nova ATA de Registro de Preços.
+                  Clique no botão "Incluir Nova ATA" para registrar uma nova ATA de Registro de Preços com funcionalidade avançada de busca de produtos.
                 </p>
               </CardContent>
             </Card>
