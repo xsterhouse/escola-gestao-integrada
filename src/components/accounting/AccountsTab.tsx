@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -101,7 +102,7 @@ export function AccountsTab() {
       description: formData.description,
       type: formData.type as 'ativo' | 'passivo' | 'patrimonio' | 'receita' | 'despesa',
       level: formData.code.split('.').length,
-      parent: formData.parent || undefined,
+      parent: formData.parent === "none" ? undefined : formData.parent,
       isActive: true,
       createdAt: editingAccount?.createdAt || new Date()
     };
@@ -134,7 +135,7 @@ export function AccountsTab() {
       code: account.code,
       description: account.description,
       type: account.type,
-      parent: account.parent || ""
+      parent: account.parent || "none"
     });
     setEditingAccount(account);
   };
@@ -254,7 +255,7 @@ export function AccountsTab() {
                     <SelectValue placeholder="Selecione a conta pai" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma (Conta Principal)</SelectItem>
+                    <SelectItem value="none">Nenhuma (Conta Principal)</SelectItem>
                     {accounts.map(account => (
                       <SelectItem key={account.id} value={account.code}>
                         {account.code} - {account.description}
