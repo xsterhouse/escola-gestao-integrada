@@ -1,12 +1,6 @@
 
 import { useState } from "react";
-
-interface ProductSuggestion {
-  id: string;
-  description: string;
-  unit: string;
-  item?: number;
-}
+import { ProductSuggestion } from "@/components/planning/types";
 
 export function useKeyboardNavigation(
   suggestions: ProductSuggestion[],

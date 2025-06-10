@@ -1,12 +1,5 @@
-
 import { Card, CardContent } from "@/components/ui/card";
-
-interface ProductSuggestion {
-  id: string;
-  description: string;
-  unit: string;
-  item?: number;
-}
+import { ProductSuggestion } from "./types";
 
 interface ProductSuggestionsListProps {
   suggestions: ProductSuggestion[];
