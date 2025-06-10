@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { ATAItemsList } from "./ATAItemsList";
+import { PlanningFormData } from "./types";
 import { PlanningItem } from "@/lib/types";
 
-// Simplified form schema just for the items in the planning form
+// Fixed form schema to match PlanningFormData interface exactly
 const planningFormSchema = z.object({
   items: z.array(
     z.object({
@@ -20,15 +21,6 @@ const planningFormSchema = z.object({
     })
   ).min(1, "Adicione pelo menos um item"),
 });
-
-type PlanningFormData = z.infer<typeof planningFormSchema>;
-
-interface ProductSuggestion {
-  id: string;
-  description: string;
-  unit: string;
-  item?: number;
-}
 
 interface PlanningFormProps {
   addItem: (item: Omit<PlanningItem, "id" | "planningId" | "createdAt" | "updatedAt" | "availableQuantity">) => void;
