@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PlanningHeader } from "@/components/planning/PlanningHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlanningPage } from "@/components/planning/PlanningPage";
+import PlanningPage from "@/components/planning/PlanningPage";
 import { ATARegistrationTab } from "@/components/planning/ATARegistrationTab";
 import { ATAValidityTab } from "@/components/planning/ATAValidityTab";
 import { PendingTransfersTab } from "@/components/planning/PendingTransfersTab";
