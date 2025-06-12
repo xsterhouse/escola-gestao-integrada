@@ -70,19 +70,19 @@ export default function Contracts() {
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="tracking" className="space-y-8 mt-8">
+          <TabsContent value="tracking" className="space-y-6">
             <ExcelImportSection onImport={handleExcelImport} />
             <ContractsTable contracts={filteredContracts} />
           </TabsContent>
           
-          <TabsContent value="validity" className="space-y-8 mt-8">
+          <TabsContent value="validity" className="space-y-6">
             <ContractValiditySection 
               contracts={contracts} 
               onUpdateContract={handleUpdateContract}
             />
           </TabsContent>
           
-          <TabsContent value="reports" className="space-y-8 mt-8">
+          <TabsContent value="reports" className="space-y-6">
             <ContractReportsSection contracts={contracts} />
           </TabsContent>
         </Tabs>

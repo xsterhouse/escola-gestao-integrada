@@ -17,8 +17,8 @@ export function ContractsTable({ contracts }: ContractsTableProps) {
     }).format(value);
   };
 
-  const formatDate = (date: string) => {
-    return new Intl.DateTimeFormat('pt-BR').format(new Date(date));
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('pt-BR').format(date);
   };
 
   return (

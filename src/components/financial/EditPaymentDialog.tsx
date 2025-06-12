@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Check, X } from "lucide-react";
@@ -47,8 +48,8 @@ export function EditPaymentDialog({
         supplier: payment.supplier,
         dueDate: new Date(payment.dueDate),
         value: payment.value.toString(),
-        expenseType: payment.expenseType || "",
-        resourceCategory: payment.resourceCategory || "",
+        expenseType: payment.expenseType,
+        resourceCategory: payment.resourceCategory,
       });
     } else {
       // Reset form for new payment
@@ -88,7 +89,6 @@ export function EditPaymentDialog({
       value: parseFloat(formData.value),
       expenseType: formData.expenseType,
       resourceCategory: formData.resourceCategory,
-      category: formData.resourceCategory, // Adding required category field
       status: payment?.status || 'a_pagar',
       createdAt: payment?.createdAt || new Date(),
       updatedAt: new Date()

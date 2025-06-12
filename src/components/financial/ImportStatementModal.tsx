@@ -71,40 +71,40 @@ export function ImportStatementModal({
           id: uuidv4(),
           schoolId: "current-school-id",
           bankAccountId,
-          date: new Date().toISOString(),
+          date: new Date(),
           description: "Transferência Recebida",
           value: 1250.50,
           transactionType: "credito",
           reconciliationStatus: "pendente",
           source: "manual",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          createdAt: new Date(),
+          updatedAt: new Date()
         },
         {
           id: uuidv4(),
           schoolId: "current-school-id",
           bankAccountId,
-          date: new Date().toISOString(),
+          date: new Date(),
           description: "Pagamento Fornecedor XYZ",
           value: 546.78,
           transactionType: "debito",
           reconciliationStatus: "pendente",
           source: "manual",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          createdAt: new Date(),
+          updatedAt: new Date()
         },
         {
           id: uuidv4(),
           schoolId: "current-school-id",
           bankAccountId,
-          date: new Date().toISOString(),
+          date: new Date(),
           description: "Tarifa Bancária",
           value: 45.90,
           transactionType: "debito",
           reconciliationStatus: "pendente",
           source: "manual",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          createdAt: new Date(),
+          updatedAt: new Date()
         }
       ];
       
@@ -140,8 +140,8 @@ export function ImportStatementModal({
     }).format(value);
   };
   
-  const formatDate = (dateString: string) => {
-    return new Intl.DateTimeFormat('pt-BR').format(new Date(dateString));
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('pt-BR').format(date);
   };
   
   return (

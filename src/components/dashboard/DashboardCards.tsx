@@ -1,81 +1,78 @@
 
-import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Package, DollarSign, Users, FileText } from "lucide-react";
+import { DashboardMetric } from "@/lib/types";
+import { FileText, Package, Receipt, DollarSign } from "lucide-react";
 
-interface MetricCardProps {
-  title: string;
-  value: string;
-  change: string;
-  trend: 'up' | 'down' | 'stable';
-  icon: React.ReactNode;
-}
+type DashboardCardsProps = {
+  metrics: DashboardMetric[];
+};
 
-function MetricCard({ title, value, change, trend, icon }: MetricCardProps) {
-  const getTrendColor = () => {
-    switch (trend) {
-      case 'up': return 'text-green-600';
-      case 'down': return 'text-red-600';
-      default: return 'text-gray-600';
-    }
-  };
+const getIconComponent = (icon: string) => {
+  switch (icon) {
+    case "contracts":
+      return <FileText className="h-5 w-5 text-[#012340]" />;
+    case "stock":
+      return <Package className="h-5 w-5 text-[#012340]" />;
+    case "receipt":
+      return <Receipt className="h-5 w-5 text-[#012340]" />;
+    case "finance":
+      return <DollarSign className="h-5 w-5 text-[#012340]" />;
+    default:
+      return <FileText className="h-5 w-5 text-[#012340]" />;
+  }
+};
 
-  const getTrendIcon = () => {
-    switch (trend) {
-      case 'up': return <TrendingUp className="h-4 w-4" />;
-      case 'down': return <TrendingDown className="h-4 w-4" />;
-      default: return null;
-    }
-  };
+const getBackgroundColor = () => {
+  return "bg-[#012340]/10";
+};
 
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon}
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <div className={`flex items-center text-xs ${getTrendColor()}`}>
-          {getTrendIcon()}
-          <span className="ml-1">{change}</span>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+const getBorderColor = () => {
+  return "border-t-[#012340]";
+};
 
-export function DashboardCards() {
+const getTextColor = (color: string) => {
+  switch (color) {
+    case "blue":
+      return "text-[#012340]";
+    case "amber":
+      return "text-amber-600";
+    case "orange":
+      return "text-orange-600";
+    case "green":
+      return "text-green-600";
+    default:
+      return "text-[#012340]";
+  }
+};
+
+export function DashboardCards({ metrics }: DashboardCardsProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <MetricCard
-        title="Total de Produtos"
-        value="1,234"
-        change="+20.1% em relação ao mês anterior"
-        trend="up"
-        icon={<Package className="h-4 w-4 text-muted-foreground" />}
-      />
-      <MetricCard
-        title="Receita Total"
-        value="R$ 45.231"
-        change="+15.3% em relação ao mês anterior"
-        trend="up"
-        icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-      />
-      <MetricCard
-        title="Contratos Ativos"
-        value="89"
-        change="+5.2% em relação ao mês anterior"
-        trend="up"
-        icon={<FileText className="h-4 w-4 text-muted-foreground" />}
-      />
-      <MetricCard
-        title="Usuários Ativos"
-        value="573"
-        change="-2.1% em relação ao mês anterior"
-        trend="down"
-        icon={<Users className="h-4 w-4 text-muted-foreground" />}
-      />
+      {metrics.map((metric) => (
+        <Card 
+          key={metric.id} 
+          className={`border-t-4 ${getBorderColor()}`}
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">{metric.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="text-3xl font-bold">{metric.value}</div>
+              <div className={`${getBackgroundColor()} p-2 rounded-lg`}>
+                {getIconComponent(metric.icon)}
+              </div>
+            </div>
+            {metric.additionalInfo && (
+              <div className={`text-xs ${getTextColor(metric.color)} mt-2`}>
+                <span className="flex items-center">
+                  {metric.additionalInfo}
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

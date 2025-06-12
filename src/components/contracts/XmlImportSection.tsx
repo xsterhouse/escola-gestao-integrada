@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { InvoiceData, Supplier } from "@/lib/types";
+import { InvoiceData } from "@/lib/types";
 
 interface XmlImportSectionProps {
   onImport: (invoiceData: InvoiceData) => void;
@@ -36,32 +36,23 @@ export function XmlImportSection({ onImport }: XmlImportSectionProps) {
     
     // Simular processamento do XML
     setTimeout(() => {
-      const supplier: Supplier = {
-        id: "supplier-1",
-        cnpj: "12.345.678/0001-90",
-        razaoSocial: "Fornecedor Exemplo Ltda",
-        name: "Fornecedor Exemplo Ltda",
-        endereco: "Rua das Flores, 123 - Centro",
-        telefone: "(11) 1234-5678",
-        email: "contato@fornecedor.com.br",
-        address: "Rua das Flores, 123 - Centro",
-        phone: "(11) 1234-5678",
-        contactPerson: "João Silva",
-        city: "São Paulo",
-        state: "SP",
-        zipCode: "01234-567",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
       const mockInvoiceData: InvoiceData = {
         id: Date.now().toString(),
         number: "NF123456",
-        supplier: supplier.name,
-        issueDate: new Date(),
-        dueDate: new Date(),
-        totalValue: 15750.00,
+        supplier: {
+          id: "supplier-1",
+          cnpj: "12.345.678/0001-90",
+          razaoSocial: "Fornecedor Exemplo Ltda",
+          name: "Fornecedor Exemplo Ltda",
+          endereco: "Rua das Flores, 123 - Centro",
+          telefone: "(11) 1234-5678",
+          email: "contato@fornecedor.com.br",
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        dataEmissao: new Date(),
+        numeroDanfe: "123456789",
+        valorTotal: 15750.00,
         items: [
           {
             id: "1",
@@ -70,9 +61,7 @@ export function XmlImportSection({ onImport }: XmlImportSectionProps) {
             unitPrice: 12.50,
             totalPrice: 6250.00,
             unitOfMeasure: "Un",
-            invoiceId: Date.now().toString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            invoiceId: Date.now().toString()
           },
           {
             id: "2", 
@@ -81,9 +70,7 @@ export function XmlImportSection({ onImport }: XmlImportSectionProps) {
             unitPrice: 2.50,
             totalPrice: 2500.00,
             unitOfMeasure: "Un",
-            invoiceId: Date.now().toString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            invoiceId: Date.now().toString()
           },
           {
             id: "3",
@@ -92,12 +79,9 @@ export function XmlImportSection({ onImport }: XmlImportSectionProps) {
             unitPrice: 1.00,
             totalPrice: 2000.00,
             unitOfMeasure: "Un",
-            invoiceId: Date.now().toString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            invoiceId: Date.now().toString()
           }
-        ],
-        status: 'pending'
+        ]
       };
 
       onImport(mockInvoiceData);
