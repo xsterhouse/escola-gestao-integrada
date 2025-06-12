@@ -160,7 +160,8 @@ export function Sidebar({ className }: SidebarProps) {
   const hasPermission = (permission: string) => {
     if (!user) return false;
     if (user.role === "master") return true;
-    return user.permissions.some(p => p.name === permission && p.hasAccess);
+    // Fix the permission check
+    return user.permissions?.includes(permission) || false;
   };
 
   // Filter modules based on permissions
@@ -314,15 +315,14 @@ export function Sidebar({ className }: SidebarProps) {
     </Sheet>
   );
 
-  // Desktop sidebar
+  // Desktop sidebar - now properly fixed
   const DesktopSidebar = (
     <div
       className={cn(
-        "hidden md:flex flex-col h-full border-r border-white/10 transition-all duration-300",
+        "flex flex-col h-screen border-r border-white/10 transition-all duration-300 bg-[#012340]",
         isCollapsed ? "w-20" : "w-80",
         className
       )}
-      style={{ backgroundColor: '#012340' }}
     >
       {/* Header */}
       <div className={cn(

@@ -74,153 +74,155 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
-      <div className="flex flex-col gap-6">
-        {/* Header Section */}
-        <div className="bg-white p-6 rounded-lg shadow flex flex-col md:flex-row justify-between items-start md:items-center">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight mb-1">
-              Bem-vindo ao SIGRE
-            </h1>
-            <p className="text-muted-foreground">
-              Sistema Integrado de Gestão de Recursos Escolares
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 mt-4 md:mt-0">
-            <div className="text-sm text-muted-foreground">
-              Último acesso: {lastAccess}
+      <div className="px-6 py-6">
+        <div className="flex flex-col gap-6">
+          {/* Header Section */}
+          <div className="bg-white p-6 rounded-lg shadow flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight mb-1">
+                Bem-vindo ao SIGRE
+              </h1>
+              <p className="text-muted-foreground">
+                Sistema Integrado de Gestão de Recursos Escolares
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 mt-4 md:mt-0">
+              <div className="text-sm text-muted-foreground">
+                Último acesso: {lastAccess}
+              </div>
             </div>
           </div>
-        </div>
 
-        <Tabs defaultValue="actions" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="actions">Ações Rápidas</TabsTrigger>
-            <TabsTrigger value="financial">Análise Financeira</TabsTrigger>
-          </TabsList>
+          <Tabs defaultValue="actions" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="actions">Ações Rápidas</TabsTrigger>
+              <TabsTrigger value="financial">Análise Financeira</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="actions" className="mt-4 space-y-6">
-            {/* Quick Actions Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card 
-                className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
-                onClick={() => navigate('/contracts')}
-              >
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-[#012340]/10 p-3 rounded-lg">
-                      <FileText className="h-6 w-6 text-[#012340]" />
+            <TabsContent value="actions" className="mt-4 space-y-6">
+              {/* Quick Actions Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card 
+                  className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+                  onClick={() => navigate('/contracts')}
+                >
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-[#012340]/10 p-3 rounded-lg">
+                        <FileText className="h-6 w-6 text-[#012340]" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Novo Contrato</p>
+                        <p className="text-sm text-muted-foreground">Cadastrar novo contrato</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Novo Contrato</p>
-                      <p className="text-sm text-muted-foreground">Cadastrar novo contrato</p>
+                  </CardContent>
+                </Card>
+                
+                <Card 
+                  className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+                  onClick={() => navigate('/products')}
+                >
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-[#012340]/10 p-3 rounded-lg">
+                        <Package className="h-6 w-6 text-[#012340]" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Registrar Produto</p>
+                        <p className="text-sm text-muted-foreground">Adicionar novo produto</p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card 
-                className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
-                onClick={() => navigate('/products')}
-              >
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-[#012340]/10 p-3 rounded-lg">
-                      <Package className="h-6 w-6 text-[#012340]" />
+                  </CardContent>
+                </Card>
+                
+                <Card 
+                  className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+                  onClick={() => setIsImportModalOpen(true)}
+                >
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-[#012340]/10 p-3 rounded-lg">
+                        <Import className="h-6 w-6 text-[#012340]" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Importar Nota</p>
+                        <p className="text-sm text-muted-foreground">Importar Nota XML</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Registrar Produto</p>
-                      <p className="text-sm text-muted-foreground">Adicionar novo produto</p>
+                  </CardContent>
+                </Card>
+                
+                <Card 
+                  className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+                  onClick={() => navigate('/financial')}
+                >
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-[#012340]/10 p-3 rounded-lg">
+                        <DollarSign className="h-6 w-6 text-[#012340]" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Financeiro</p>
+                        <p className="text-sm text-muted-foreground">Gestão financeira</p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card 
-                className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
-                onClick={() => setIsImportModalOpen(true)}
-              >
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-[#012340]/10 p-3 rounded-lg">
-                      <Import className="h-6 w-6 text-[#012340]" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Importar Nota</p>
-                      <p className="text-sm text-muted-foreground">Importar Nota XML</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card 
-                className="bg-white shadow-sm border-l-4 border-l-[#012340] hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
-                onClick={() => navigate('/financial')}
-              >
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-[#012340]/10 p-3 rounded-lg">
-                      <DollarSign className="h-6 w-6 text-[#012340]" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Financeiro</p>
-                      <p className="text-sm text-muted-foreground">Gestão financeira</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-            {/* Metrics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="border-t-4 border-t-[#012340] md:col-span-1">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-medium">Contratos Ativos</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="text-3xl font-bold">{activeContracts}</div>
-                    <div className="bg-[#012340]/10 p-2 rounded-lg">
-                      <FileText className="h-5 w-5 text-[#012340]" />
+              {/* Metrics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border-t-4 border-t-[#012340] md:col-span-1">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium">Contratos Ativos</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="text-3xl font-bold">{activeContracts}</div>
+                      <div className="bg-[#012340]/10 p-2 rounded-lg">
+                        <FileText className="h-5 w-5 text-[#012340]" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-2">
-                    <span className="flex items-center">
-                      Contratos cadastrados no sistema
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="border-t-4 border-t-[#012340] md:col-span-1">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-medium">Produtos em Estoque</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="text-3xl font-bold">{stockProducts}</div>
-                    <div className="bg-[#012340]/10 p-2 rounded-lg">
-                      <Package className="h-5 w-5 text-[#012340]" />
+                    <div className="text-xs text-muted-foreground mt-2">
+                      <span className="flex items-center">
+                        Contratos cadastrados no sistema
+                      </span>
                     </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-2">
-                    <span className="flex items-center">
-                      Produtos cadastrados no sistema
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-t-4 border-t-[#012340] md:col-span-1">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium">Produtos em Estoque</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="text-3xl font-bold">{stockProducts}</div>
+                      <div className="bg-[#012340]/10 p-2 rounded-lg">
+                        <Package className="h-5 w-5 text-[#012340]" />
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-2">
+                      <span className="flex items-center">
+                        Produtos cadastrados no sistema
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-            {/* Financial Charts Module */}
-            <div className="mt-8">
+              {/* Financial Charts Module */}
+              <div className="mt-8">
+                <FinancialChartsModule />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="financial" className="mt-4">
               <FinancialChartsModule />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="financial" className="mt-4">
-            <FinancialChartsModule />
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
 
       <ImportXmlModal 
