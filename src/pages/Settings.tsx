@@ -20,7 +20,7 @@ const Settings = () => {
 
   return (
     <AppLayout>
-      <div className="flex flex-col gap-6">
+      <div className="px-6 py-6 flex flex-col gap-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight mb-2">Configurações</h1>
           <p className="text-muted-foreground">
