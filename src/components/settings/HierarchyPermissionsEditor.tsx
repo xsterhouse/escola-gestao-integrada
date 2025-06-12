@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserHierarchy } from "@/lib/types";
 import { Shield, Crown, User, Building, ShoppingCart } from "lucide-react";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { useToast } from "@/hooks/use-toast";
 
 interface HierarchyPermissionsEditorProps {
   hierarchyLevels: any[];
@@ -15,6 +17,8 @@ interface HierarchyPermissionsEditorProps {
 
 export function HierarchyPermissionsEditor({ hierarchyLevels, onUpdate }: HierarchyPermissionsEditorProps) {
   const [editingLevel, setEditingLevel] = useState<string | null>(null);
+  const { updateHierarchyConfig } = useUserPermissions();
+  const { toast } = useToast();
 
   const getHierarchyIcon = (type: string) => {
     switch (type) {
@@ -34,6 +38,18 @@ export function HierarchyPermissionsEditor({ hierarchyLevels, onUpdate }: Hierar
       case "purchasing_center": return "bg-purple-100 text-purple-800";
       default: return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const handleUpdatePermission = (userType: UserHierarchy, field: string, value: boolean) => {
+    updateHierarchyConfig(userType, { [field]: value });
+    
+    toast({
+      title: "Permissão atualizada",
+      description: `${field} foi ${value ? 'habilitado' : 'desabilitado'} para ${userType}`,
+    });
+
+    // Call the original onUpdate for compatibility
+    onUpdate(userType, { [field]: value });
   };
 
   return (
@@ -88,7 +104,7 @@ export function HierarchyPermissionsEditor({ hierarchyLevels, onUpdate }: Hierar
                       checked={level.config.canCreateUsers}
                       disabled={level.type === "master"}
                       onCheckedChange={(checked) => {
-                        onUpdate(level.type, { ...level.config, canCreateUsers: checked });
+                        handleUpdatePermission(level.type as UserHierarchy, 'canCreateUsers', checked);
                       }}
                     />
                   </TableCell>
@@ -97,7 +113,7 @@ export function HierarchyPermissionsEditor({ hierarchyLevels, onUpdate }: Hierar
                       checked={level.config.canManageSchool}
                       disabled={level.type === "master" || level.type === "central_compras"}
                       onCheckedChange={(checked) => {
-                        onUpdate(level.type, { ...level.config, canManageSchool: checked });
+                        handleUpdatePermission(level.type as UserHierarchy, 'canManageSchool', checked);
                       }}
                     />
                   </TableCell>
@@ -110,7 +126,13 @@ export function HierarchyPermissionsEditor({ hierarchyLevels, onUpdate }: Hierar
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setEditingLevel(level.type)}
+                      onClick={() => {
+                        setEditingLevel(level.type);
+                        toast({
+                          title: "Configuração",
+                          description: `Configurando permissões para ${level.config.name}`,
+                        });
+                      }}
                       disabled={level.type === "master"}
                     >
                       Configurar
@@ -148,6 +170,14 @@ export function HierarchyPermissionsEditor({ hierarchyLevels, onUpdate }: Hierar
                 <li>• Master vê todos os dados do sistema</li>
                 <li>• Auditoria registra todos os acessos entre escolas</li>
               </ul>
+            </div>
+
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h4 className="font-medium text-green-900 mb-2">✅ Sistema Ativo</h4>
+              <p className="text-sm text-green-800">
+                As configurações de permissão estão sendo aplicadas em tempo real. 
+                Qualquer alteração feita aqui será imediatamente refletida no sistema.
+              </p>
             </div>
           </div>
         </CardContent>

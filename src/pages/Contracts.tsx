@@ -49,7 +49,7 @@ export default function Contracts() {
     if (filter.fornecedor && !contract.fornecedor.razaoSocial.toLowerCase().includes(filter.fornecedor.toLowerCase())) {
       return false;
     }
-    if (filter.produto && !contract.items.some(item => item.produto.toLowerCase().includes(filter.produto!.toLowerCase()))) {
+    if (filter.produto && !contract.items.some(item => item.description.toLowerCase().includes(filter.produto!.toLowerCase()))) {
       return false;
     }
     if (filter.status && filter.status !== 'todos' && contract.status !== filter.status) {
@@ -59,7 +59,7 @@ export default function Contracts() {
   });
 
   return (
-    <AppLayout requireAuth={true} requiredPermission="view_contracts">
+    <AppLayout requireAuth={true} requiredPermission="6">
       <div className="px-6 py-6 space-y-8">
         <ContractsHeader />
         

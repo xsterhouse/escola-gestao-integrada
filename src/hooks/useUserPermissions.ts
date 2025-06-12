@@ -1,10 +1,12 @@
+
 import { useState, useEffect } from "react";
 import { useLocalStorageSync } from "./useLocalStorageSync";
-import { User, UserHierarchy, UserModulePermission } from "@/lib/types";
+import { User, UserHierarchy, UserModulePermission, HierarchyConfig, SavedHierarchyConfigs } from "@/lib/types";
 import { dataIsolationService } from "@/services/dataIsolationService";
 
 export function useUserPermissions() {
   const { data: userPermissions, saveData: setUserPermissions } = useLocalStorageSync<UserModulePermission>('userModulePermissions', []);
+  const { data: hierarchyConfigs, saveData: setHierarchyConfigs } = useLocalStorageSync<SavedHierarchyConfigs>('hierarchyConfigs', {});
 
   const hasPermission = (userId: string, moduleId: string): boolean => {
     const permission = userPermissions.find(p => p.userId === userId && p.moduleId === moduleId);
@@ -46,9 +48,11 @@ export function useUserPermissions() {
       return true;
     }
 
-    // Check if module is available for user's hierarchy
-    const availableModules = dataIsolationService.getAvailableModules();
-    if (!availableModules.includes(moduleId)) {
+    // Get current hierarchy config (saved or default)
+    const currentConfig = getHierarchyConfig(user.userType);
+    
+    // Check if module is in allowed modules for this user type
+    if (!currentConfig.allowedModules.includes(moduleId)) {
       return false;
     }
 
@@ -62,11 +66,11 @@ export function useUserPermissions() {
       case "7": // Contabilidade
         return isMasterUser;
       case "6": // Contratos
-        return (['master', 'diretor_escolar', 'central_compras'].includes(user.userType as UserHierarchy)) && hasExplicitPermission;
+        return (['master', 'diretor_escolar', 'central_compras'].includes(user.userType as UserHierarchy)) && (hasExplicitPermission || isMasterUser);
       case "4": // Financeiro
-        return hasExplicitPermission && user.schoolId !== null;
+        return (hasExplicitPermission || isMasterUser) && (user.schoolId !== null || isMasterUser);
       default:
-        return hasExplicitPermission;
+        return hasExplicitPermission || isMasterUser;
     }
   };
 
@@ -83,15 +87,22 @@ export function useUserPermissions() {
     return permission?.restrictions || {};
   };
 
-  const getHierarchyConfig = (userType: UserHierarchy) => {
-    const configs = {
+  const getHierarchyConfig = (userType: UserHierarchy): HierarchyConfig => {
+    // Check if we have saved config for this user type
+    const savedConfig = hierarchyConfigs[userType];
+    if (savedConfig) {
+      return savedConfig;
+    }
+
+    // Return default configs if no saved config exists
+    const defaultConfigs: Record<UserHierarchy, HierarchyConfig> = {
       master: {
         level: 1,
         name: "Administrador Master",
         description: "Acesso total ao sistema",
         canCreateUsers: true,
         canManageSchool: true,
-        dataScope: "global" as const,
+        dataScope: "global",
         allowedModules: ["1", "2", "3", "4", "5", "6", "7", "8"],
         restrictions: []
       },
@@ -101,7 +112,7 @@ export function useUserPermissions() {
         description: "Gerencia a escola e cria usuários",
         canCreateUsers: true,
         canManageSchool: true,
-        dataScope: "school" as const,
+        dataScope: "school",
         allowedModules: ["1", "2", "3", "4", "5", "6", "8"],
         restrictions: [{ schoolOnly: true }]
       },
@@ -111,7 +122,7 @@ export function useUserPermissions() {
         description: "Operações administrativas da escola",
         canCreateUsers: false,
         canManageSchool: false,
-        dataScope: "school" as const,
+        dataScope: "school",
         allowedModules: ["1", "2", "3", "4", "5"],
         restrictions: [{ schoolOnly: true, readOnly: true }]
       },
@@ -121,7 +132,7 @@ export function useUserPermissions() {
         description: "Operações básicas da escola",
         canCreateUsers: false,
         canManageSchool: false,
-        dataScope: "school" as const,
+        dataScope: "school",
         allowedModules: ["1", "2", "3"],
         restrictions: [{ schoolOnly: true, readOnly: true }]
       },
@@ -131,17 +142,44 @@ export function useUserPermissions() {
         description: "Gestão de compras para múltiplas escolas",
         canCreateUsers: false,
         canManageSchool: false,
-        dataScope: "purchasing_center" as const,
+        dataScope: "purchasing_center",
         allowedModules: ["1", "2", "3", "4", "6"],
         restrictions: [{ purchasingCenterOnly: true }]
       }
     };
 
-    return configs[userType];
+    return defaultConfigs[userType];
+  };
+
+  const updateHierarchyConfig = (userType: UserHierarchy, config: Partial<HierarchyConfig>) => {
+    const currentConfig = getHierarchyConfig(userType);
+    const updatedConfig = { ...currentConfig, ...config };
+    
+    const updatedConfigs = {
+      ...hierarchyConfigs,
+      [userType]: updatedConfig
+    };
+    
+    setHierarchyConfigs(updatedConfigs);
+    console.log(`🔧 Configuração atualizada para ${userType}:`, updatedConfig);
+  };
+
+  const updateModuleAccess = (userType: UserHierarchy, moduleId: string, hasAccess: boolean) => {
+    const currentConfig = getHierarchyConfig(userType);
+    let newAllowedModules = [...currentConfig.allowedModules];
+    
+    if (hasAccess && !newAllowedModules.includes(moduleId)) {
+      newAllowedModules.push(moduleId);
+    } else if (!hasAccess && newAllowedModules.includes(moduleId)) {
+      newAllowedModules = newAllowedModules.filter(id => id !== moduleId);
+    }
+    
+    updateHierarchyConfig(userType, { allowedModules: newAllowedModules });
   };
 
   return {
     userPermissions,
+    hierarchyConfigs,
     hasPermission,
     setPermission,
     getUserPermissions,
@@ -149,6 +187,8 @@ export function useUserPermissions() {
     canCreateUser,
     canManageUser,
     getModuleRestrictions,
-    getHierarchyConfig
+    getHierarchyConfig,
+    updateHierarchyConfig,
+    updateModuleAccess
   };
 }

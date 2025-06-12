@@ -6,6 +6,9 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, Eye, Plus, Edit, Trash2, FileText } from "lucide-react";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { useToast } from "@/hooks/use-toast";
+import { UserHierarchy } from "@/lib/types";
 
 interface ModuleAccessMatrixProps {
   hierarchyLevels: any[];
@@ -25,6 +28,8 @@ const systemModules = [
 
 export function ModuleAccessMatrix({ hierarchyLevels, onUpdate }: ModuleAccessMatrixProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const { updateModuleAccess, getHierarchyConfig } = useUserPermissions();
+  const { toast } = useToast();
 
   const filteredModules = systemModules.filter(module =>
     module.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -32,8 +37,22 @@ export function ModuleAccessMatrix({ hierarchyLevels, onUpdate }: ModuleAccessMa
   );
 
   const hasModuleAccess = (moduleId: string, hierarchyType: string) => {
-    const level = hierarchyLevels.find(l => l.type === hierarchyType);
-    return level?.config.allowedModules.includes(moduleId) || false;
+    const config = getHierarchyConfig(hierarchyType as UserHierarchy);
+    return config.allowedModules.includes(moduleId);
+  };
+
+  const handleModuleToggle = (moduleId: string, hierarchyType: string, checked: boolean) => {
+    updateModuleAccess(hierarchyType as UserHierarchy, moduleId, checked);
+    
+    const moduleName = systemModules.find(m => m.id === moduleId)?.name || `Módulo ${moduleId}`;
+    
+    toast({
+      title: "Módulo atualizado",
+      description: `${moduleName} foi ${checked ? 'habilitado' : 'desabilitado'} para ${hierarchyType}`,
+    });
+
+    // Call the original onUpdate for compatibility
+    onUpdate(moduleId, { [hierarchyType]: checked });
   };
 
   const getPermissionBadge = (moduleId: string, hierarchyType: string) => {
@@ -41,8 +60,8 @@ export function ModuleAccessMatrix({ hierarchyLevels, onUpdate }: ModuleAccessMa
       return <Badge variant="destructive">Sem Acesso</Badge>;
     }
 
-    const level = hierarchyLevels.find(l => l.type === hierarchyType);
-    const restrictions = level?.config.restrictions[0] || {};
+    const config = getHierarchyConfig(hierarchyType as UserHierarchy);
+    const restrictions = config.restrictions[0] || {};
 
     if (restrictions.readOnly) {
       return <Badge variant="secondary">Somente Leitura</Badge>;
@@ -103,15 +122,7 @@ export function ModuleAccessMatrix({ hierarchyLevels, onUpdate }: ModuleAccessMa
                             checked={hasModuleAccess(module.id, level.type)}
                             disabled={level.type === "master"} // Master sempre tem acesso
                             onCheckedChange={(checked) => {
-                              const currentModules = level.config.allowedModules;
-                              const newModules = checked 
-                                ? [...currentModules, module.id]
-                                : currentModules.filter((id: string) => id !== module.id);
-                              
-                              onUpdate(module.id, {
-                                ...level.config,
-                                allowedModules: newModules
-                              });
+                              handleModuleToggle(module.id, level.type, checked);
                             }}
                           />
                           {getPermissionBadge(module.id, level.type)}
@@ -171,6 +182,14 @@ export function ModuleAccessMatrix({ hierarchyLevels, onUpdate }: ModuleAccessMa
                 Permissão para remover registros
               </p>
             </div>
+          </div>
+
+          <div className="mt-6 bg-green-50 p-4 rounded-lg">
+            <h4 className="font-medium text-green-900 mb-2">✅ Sistema Funcional</h4>
+            <p className="text-sm text-green-800">
+              As alterações feitas nesta matrix são aplicadas imediatamente. 
+              Os usuários verão apenas os módulos que têm permissão de acesso.
+            </p>
           </div>
         </CardContent>
       </Card>

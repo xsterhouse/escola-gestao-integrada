@@ -1,3 +1,4 @@
+
 export interface School {
   id: string;
   name: string;
@@ -137,12 +138,21 @@ export interface InventoryMovement {
 
 export interface DeletionHistory {
   id: string;
-  type: 'product' | 'invoice' | 'movement';
-  deletedItemId: string;
-  deletedItemDescription: string;
+  entityType: 'product' | 'invoice' | 'movement';
+  entityId: string;
+  entityName: string;
+  danfeNumber?: string;
+  supplierName?: string;
+  supplierCnpj?: string;
+  issueDate?: Date;
+  totalValue?: number;
+  items?: InvoiceItem[];
   deletedBy: string;
-  deletedAt: string;
+  deletedAt: Date;
   reason: string;
+  type?: 'product' | 'invoice' | 'movement';
+  deletedItemId?: string;
+  deletedItemDescription?: string;
 }
 
 // Multi-tenant types
@@ -200,6 +210,29 @@ export interface UserModulePermission {
     purchasingCenterOnly?: boolean;
     approvalRequired?: boolean;
   };
+}
+
+// New interfaces for hierarchy configuration
+export interface HierarchyConfig {
+  level: number;
+  name: string;
+  description: string;
+  canCreateUsers: boolean;
+  canManageSchool: boolean;
+  dataScope: 'global' | 'school' | 'purchasing_center';
+  allowedModules: string[];
+  restrictions: HierarchyRestriction[];
+}
+
+export interface HierarchyRestriction {
+  schoolOnly?: boolean;
+  readOnly?: boolean;
+  purchasingCenterOnly?: boolean;
+  approvalRequired?: boolean;
+}
+
+export interface SavedHierarchyConfigs {
+  [key: string]: HierarchyConfig;
 }
 
 export interface ATAContract {
