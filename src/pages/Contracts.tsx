@@ -60,7 +60,7 @@ export default function Contracts() {
 
   return (
     <AppLayout requireAuth={true} requiredPermission="view_contracts">
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="space-y-8">
         <ContractsHeader />
         
         <Tabs defaultValue="tracking" className="w-full">
@@ -70,19 +70,19 @@ export default function Contracts() {
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="tracking" className="space-y-6">
+          <TabsContent value="tracking" className="space-y-8 mt-8">
             <ExcelImportSection onImport={handleExcelImport} />
             <ContractsTable contracts={filteredContracts} />
           </TabsContent>
           
-          <TabsContent value="validity" className="space-y-6">
+          <TabsContent value="validity" className="space-y-8 mt-8">
             <ContractValiditySection 
               contracts={contracts} 
               onUpdateContract={handleUpdateContract}
             />
           </TabsContent>
           
-          <TabsContent value="reports" className="space-y-6">
+          <TabsContent value="reports" className="space-y-8 mt-8">
             <ContractReportsSection contracts={contracts} />
           </TabsContent>
         </Tabs>

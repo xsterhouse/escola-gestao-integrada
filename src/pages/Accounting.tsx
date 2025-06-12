@@ -20,19 +20,19 @@ const Accounting = () => {
 
   return (
     <AppLayout>
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Módulo de Contabilidade</h1>
-            <p className="text-gray-600 mt-1">Sistema integrado de gestão contábil com automação avançada</p>
+            <h1 className="text-3xl font-bold text-gray-900">Módulo de Contabilidade</h1>
+            <p className="text-gray-600 mt-2">Sistema integrado de gestão contábil com automação avançada</p>
           </div>
           <AccountingHeader />
         </div>
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7 mb-6">
+          <TabsList className="grid w-full grid-cols-7 mb-8">
             <TabsTrigger value="dashboard" className="text-sm font-medium">Dashboard</TabsTrigger>
             <TabsTrigger value="entries" className="text-sm font-medium">Lançamentos</TabsTrigger>
             <TabsTrigger value="entries-list" className="text-sm font-medium">Visualizar</TabsTrigger>
@@ -42,31 +42,31 @@ const Accounting = () => {
             <TabsTrigger value="close" className="text-sm font-medium">Encerramento</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dashboard" className="mt-6">
+          <TabsContent value="dashboard" className="mt-8">
             <AccountingDashboard onNavigateToTab={handleNavigateToTab} />
           </TabsContent>
 
-          <TabsContent value="entries" className="mt-6">
+          <TabsContent value="entries" className="mt-8">
             <IntegratedEntryForm />
           </TabsContent>
 
-          <TabsContent value="entries-list" className="mt-6">
+          <TabsContent value="entries-list" className="mt-8">
             <AccountingEntriesTab />
           </TabsContent>
 
-          <TabsContent value="reconciliation" className="mt-6">
+          <TabsContent value="reconciliation" className="mt-8">
             <AdvancedBankReconciliationTab />
           </TabsContent>
 
-          <TabsContent value="accounts" className="mt-6">
+          <TabsContent value="accounts" className="mt-8">
             <AccountConfigTab />
           </TabsContent>
 
-          <TabsContent value="reports" className="mt-6">
+          <TabsContent value="reports" className="mt-8">
             <AccountingReportsTab />
           </TabsContent>
 
-          <TabsContent value="close" className="mt-6">
+          <TabsContent value="close" className="mt-8">
             <CloseExerciseTab />
           </TabsContent>
         </Tabs>

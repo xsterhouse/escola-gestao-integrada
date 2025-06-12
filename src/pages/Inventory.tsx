@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { InventoryHeader } from "@/components/inventory/InventoryHeader";
@@ -12,7 +13,7 @@ export default function Inventory() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="space-y-8">
         <InventoryHeader />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -23,19 +24,19 @@ export default function Inventory() {
             <TabsTrigger value="history">Histórico</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="inventory" className="mt-6">
+          <TabsContent value="inventory" className="mt-8">
             <InventoryTable />
           </TabsContent>
 
-          <TabsContent value="movements" className="mt-6">
+          <TabsContent value="movements" className="mt-8">
             <InventoryMovements />
           </TabsContent>
 
-          <TabsContent value="reports" className="mt-6">
+          <TabsContent value="reports" className="mt-8">
             <InventoryReports />
           </TabsContent>
 
-          <TabsContent value="history" className="mt-6">
+          <TabsContent value="history" className="mt-8">
             <InventoryHistory />
           </TabsContent>
         </Tabs>

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PlanningHeader } from "@/components/planning/PlanningHeader";
@@ -13,7 +14,7 @@ export default function Planning() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="space-y-8">
         <PlanningHeader />
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -25,23 +26,23 @@ export default function Planning() {
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="planning">
+          <TabsContent value="planning" className="mt-8">
             <PlanningPage />
           </TabsContent>
 
-          <TabsContent value="ata-registration">
+          <TabsContent value="ata-registration" className="mt-8">
             <ATARegistrationTab />
           </TabsContent>
 
-          <TabsContent value="ata-validity">
+          <TabsContent value="ata-validity" className="mt-8">
             <ATAValidityTab />
           </TabsContent>
 
-          <TabsContent value="pending-transfers">
+          <TabsContent value="pending-transfers" className="mt-8">
             <PendingTransfersTab />
           </TabsContent>
 
-          <TabsContent value="reports">
+          <TabsContent value="reports" className="mt-8">
             <ATAReportsTab />
           </TabsContent>
         </Tabs>

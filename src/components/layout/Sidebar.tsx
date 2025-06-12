@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -191,134 +190,136 @@ export function Sidebar({ className }: SidebarProps) {
 
   // Mobile sidebar
   const MobileSidebar = (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon"
-          className="md:hidden"
-        >
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle Menu</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-0" style={{ backgroundColor: '#012340' }}>
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="px-6 py-6 border-b border-white/10">
-            <div className="flex flex-col gap-4 mb-4">
-              <h2 className="text-xl font-bold text-white text-left">SIGRE</h2>
-              <div className="flex items-center gap-3 justify-center">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-blue-200 truncate text-center">
-                    {contextDisplay.primary}
-                  </p>
-                  {contextDisplay.secondary && (
-                    <p className="text-xs text-blue-300 truncate text-center mt-1">
-                      {contextDisplay.secondary}
+    <div className="md:hidden">
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="fixed top-4 left-4 z-50"
+          >
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Toggle Menu</span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-72 p-0" style={{ backgroundColor: '#012340' }}>
+          <div className="flex flex-col h-full">
+            {/* Header */}
+            <div className="px-6 py-6 border-b border-white/10">
+              <div className="flex flex-col gap-4 mb-4">
+                <h2 className="text-xl font-bold text-white text-left">SIGRE</h2>
+                <div className="flex items-center gap-3 justify-center">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-blue-200 truncate text-center">
+                      {contextDisplay.primary}
                     </p>
-                  )}
+                    {contextDisplay.secondary && (
+                      <p className="text-xs text-blue-300 truncate text-center mt-1">
+                        {contextDisplay.secondary}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* User Profile */}
+              <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+                <div className="bg-white/10 p-2 rounded-full">
+                  <User className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+                  <p className="text-xs text-blue-200 truncate">{user?.email}</p>
                 </div>
               </div>
             </div>
             
-            {/* User Profile */}
-            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-              <div className="bg-white/10 p-2 rounded-full">
-                <User className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-                <p className="text-xs text-blue-200 truncate">{user?.email}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Session Time */}
-          <div className="px-6 py-4 border-b border-white/10">
-            <div className="bg-white/5 p-4 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="h-4 w-4 text-blue-200" />
-                <span className="text-xs text-blue-200">Tempo de sessão</span>
-              </div>
-              <div className="text-lg font-mono font-bold text-white">
-                {sessionTime}
+            {/* Session Time */}
+            <div className="px-6 py-4 border-b border-white/10">
+              <div className="bg-white/5 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-blue-200" />
+                  <span className="text-xs text-blue-200">Tempo de sessão</span>
+                </div>
+                <div className="text-lg font-mono font-bold text-white">
+                  {sessionTime}
+                </div>
               </div>
             </div>
-          </div>
-
-          <ScrollArea className="flex-1 p-6">
-            <div className="space-y-8">
-              <div className="space-y-4">
-                <h3 className="text-xs font-medium text-blue-200 uppercase tracking-wider">Módulos</h3>
-                <nav className="space-y-3">
-                  {allowedModules.map((module) => (
-                    <Link
-                      key={module.id}
-                      to={module.path}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-4 py-3 text-sm transition-all duration-200",
-                        isActive(module.path)
-                          ? "bg-white/15 text-white font-medium shadow-lg"
-                          : "text-blue-100 hover:bg-white/10 hover:text-white"
-                      )}
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <module.icon className="h-5 w-5" />
-                      <span>{module.name}</span>
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-              {user?.role === "master" && allowedAdminRoutes.length > 0 && (
+            
+            <ScrollArea className="flex-1 p-6">
+              <div className="space-y-8">
                 <div className="space-y-4">
-                  <h3 className="text-xs font-medium text-blue-200 uppercase tracking-wider">Administração</h3>
+                  <h3 className="text-xs font-medium text-blue-200 uppercase tracking-wider">Módulos</h3>
                   <nav className="space-y-3">
-                    {allowedAdminRoutes.map((route) => (
+                    {allowedModules.map((module) => (
                       <Link
-                        key={route.id}
-                        to={route.path}
+                        key={module.id}
+                        to={module.path}
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-4 py-3 text-sm transition-all duration-200",
-                          isActive(route.path)
+                          isActive(module.path)
                             ? "bg-white/15 text-white font-medium shadow-lg"
                             : "text-blue-100 hover:bg-white/10 hover:text-white"
                         )}
                         onClick={() => setIsOpen(false)}
                       >
-                        <route.icon className="h-5 w-5" />
-                        <span>{route.name}</span>
+                        <module.icon className="h-5 w-5" />
+                        <span>{module.name}</span>
                       </Link>
                     ))}
                   </nav>
                 </div>
-              )}
+                {user?.role === "master" && allowedAdminRoutes.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-medium text-blue-200 uppercase tracking-wider">Administração</h3>
+                    <nav className="space-y-3">
+                      {allowedAdminRoutes.map((route) => (
+                        <Link
+                          key={route.id}
+                          to={route.path}
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg px-4 py-3 text-sm transition-all duration-200",
+                            isActive(route.path)
+                              ? "bg-white/15 text-white font-medium shadow-lg"
+                              : "text-blue-100 hover:bg-white/10 hover:text-white"
+                          )}
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <route.icon className="h-5 w-5" />
+                          <span>{route.name}</span>
+                        </Link>
+                      ))}
+                    </nav>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+            
+            <div className="px-6 py-4 border-t border-white/10">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  logout();
+                  setIsOpen(false);
+                }}
+                className="h-8 w-8 text-white hover:bg-white/10"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
-          </ScrollArea>
-          
-          <div className="px-6 py-4 border-t border-white/10">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                logout();
-                setIsOpen(false);
-              }}
-              className="h-8 w-8 text-white hover:bg-white/10"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
           </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+        </SheetContent>
+      </Sheet>
+    </div>
   );
 
   // Desktop sidebar
   const DesktopSidebar = (
     <div
       className={cn(
-        "hidden md:flex flex-col h-full border-r border-white/10 transition-all duration-300",
+        "hidden md:flex flex-col h-screen border-r border-white/10 transition-all duration-300",
         isCollapsed ? "w-20" : "w-80",
         className
       )}

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { FinancialHeader } from "@/components/financial/FinancialHeader";
@@ -13,7 +14,7 @@ export default function Financial() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="space-y-8">
         <FinancialHeader />
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -25,23 +26,23 @@ export default function Financial() {
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dashboard" className="mt-6">
+          <TabsContent value="dashboard" className="mt-8">
             <FinancialDashboard />
           </TabsContent>
 
-          <TabsContent value="payable" className="mt-6">
+          <TabsContent value="payable" className="mt-8">
             <PayableAccounts />
           </TabsContent>
 
-          <TabsContent value="receivable" className="mt-6">
+          <TabsContent value="receivable" className="mt-8">
             <ReceivableAccounts />
           </TabsContent>
 
-          <TabsContent value="bank" className="mt-6">
+          <TabsContent value="bank" className="mt-8">
             <BankAccounts />
           </TabsContent>
 
-          <TabsContent value="reports" className="mt-6">
+          <TabsContent value="reports" className="mt-8">
             <FinancialReports />
           </TabsContent>
         </Tabs>
