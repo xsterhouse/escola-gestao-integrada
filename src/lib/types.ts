@@ -1,5 +1,4 @@
 
-
 import { LucideIcon } from 'lucide-react';
 
 // Auth Types
@@ -38,8 +37,19 @@ export interface School {
   contactPerson: string;
   isActive: boolean;
   purchasingCenterIds?: string[];
+  cnpj?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Dashboard Types
+export interface DashboardMetric {
+  id: string;
+  title: string;
+  value: number;
+  change: number;
+  trend: 'up' | 'down' | 'stable';
+  icon: LucideIcon;
 }
 
 // Product Types
@@ -145,9 +155,14 @@ export interface ReceivableAccount {
   expectedDate: string;
   dueDate: string;
   value: number;
+  originalValue: number;
+  receivedAmount: number;
   resourceType: string;
   notes: string;
   status: 'pendente' | 'recebido' | 'cancelado';
+  isPartialPayment: boolean;
+  receivedDate?: string;
+  bankAccountId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -158,10 +173,14 @@ export interface BankAccount {
   schoolId: string;
   bankName: string;
   agency: string;
+  agencyNumber: string;
   accountNumber: string;
   accountType: 'corrente' | 'poupanca' | 'movimento' | 'aplicacao';
+  description: string;
   managementType: 'municipal' | 'terceirizada';
   balance: number;
+  initialBalance: number;
+  currentBalance: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -177,6 +196,9 @@ export interface BankTransaction {
   transactionType: 'credito' | 'debito';
   reconciliationStatus: 'pendente' | 'conciliado' | 'divergente';
   source: 'manual' | 'imported';
+  isPartialPayment: boolean;
+  partialAmount: number;
+  isDuplicate: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -224,6 +246,20 @@ export interface InvoiceData {
   totalValue: number;
   items: InvoiceItem[];
   status: 'pending' | 'approved' | 'rejected';
+}
+
+export interface Invoice {
+  id: string;
+  number: string;
+  supplier: string;
+  issueDate: string;
+  dueDate: string;
+  totalValue: number;
+  items: InvoiceItem[];
+  status: 'pending' | 'approved' | 'rejected';
+  schoolId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DeletionHistory {
@@ -276,7 +312,7 @@ export interface ContractDivergence {
   valorATA: string | number;
   status: 'pending' | 'resolved';
   contractId: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 // Contract Types
@@ -287,14 +323,14 @@ export interface ContractData {
   fornecedor: Supplier;
   items: ContractItem[];
   status: 'ativo' | 'vencido' | 'suspenso' | 'liquidado' | 'divergencia_dados';
-  dataInicio: Date;
-  dataFim: Date;
+  dataInicio: string;
+  dataFim: string;
   valorTotal: number;
   divergencias?: ContractDivergence[];
   ataValidated?: boolean;
-  lastValidationAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  lastValidationAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ContractItem {
@@ -317,6 +353,19 @@ export interface ContractItem {
   valorPago: number;
   saldoQuantidade: number;
   saldoValor: number;
+  unit?: string;
+  contractId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ContractImportData {
+  id: string;
+  ataId: string;
+  contractData: ContractData;
+  status: 'pending' | 'imported' | 'failed';
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ContractFilter {
@@ -328,13 +377,14 @@ export interface ContractFilter {
 // Legacy Contract Types (for backward compatibility)
 export interface Contract {
   id: string;
+  number: string;
   fornecedor: string;
   numeroContrato: string;
   itensContratados: string[];
   quantidade: number;
   valorContratado: number;
-  dataInicio: Date;
-  dataFim: Date;
+  dataInicio: string;
+  dataFim: string;
   status: 'ativo' | 'vencido' | 'liquidado';
 }
 
@@ -391,4 +441,3 @@ export interface SchoolFinancialData {
   schoolName: string;
   financialSummary: FinancialSummary;
 }
-
