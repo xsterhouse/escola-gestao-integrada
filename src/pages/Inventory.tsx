@@ -85,7 +85,7 @@ export default function Inventory() {
 
   return (
     <AppLayout requireAuth={true} requiredPermission="inventory">
-      <div className="space-y-6">
+      <div className="px-6 py-6 space-y-6">
         <InventoryHeader 
           onAddInvoice={() => setIsAddInvoiceOpen(true)}
           onImportXml={() => setIsImportXmlOpen(true)}

@@ -250,7 +250,7 @@ export default function Financial() {
 
   return (
     <AppLayout requireAuth={true} requiredPermission="financial">
-      <div className="space-y-6">
+      <div className="px-6 py-6 space-y-6">
         <FinancialHeader 
           bankAccounts={bankAccounts}
           onAddTransaction={handleAddTransaction}
