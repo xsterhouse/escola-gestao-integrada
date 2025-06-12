@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Check, X } from "lucide-react";
@@ -41,10 +40,10 @@ export function EditReceivableDialog({
     if (receivable) {
       setFormData({
         description: receivable.description,
-        origin: receivable.origin,
-        expectedDate: new Date(receivable.expectedDate),
+        origin: receivable.origin || receivable.source,
+        expectedDate: receivable.expectedDate ? new Date(receivable.expectedDate) : new Date(receivable.dueDate),
         value: receivable.value.toString(),
-        resourceType: receivable.resourceType,
+        resourceType: receivable.resourceType || "",
         notes: receivable.notes || "",
       });
     } else {
@@ -81,7 +80,10 @@ export function EditReceivableDialog({
       schoolId: currentSchool?.id || '',
       description: formData.description,
       origin: formData.origin,
+      source: formData.origin, // Adding required source field
+      category: formData.resourceType || "Outros", // Adding required category field
       expectedDate: formData.expectedDate,
+      dueDate: formData.expectedDate, // Adding required dueDate field
       value: parseFloat(formData.value),
       resourceType: formData.resourceType,
       notes: formData.notes,

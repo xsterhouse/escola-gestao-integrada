@@ -1,3 +1,4 @@
+
 export interface School {
   id: string;
   name: string;
@@ -10,6 +11,7 @@ export interface School {
   state: string;
   zipCode: string;
   cnpj: string;
+  code?: string; // Adding code property
   isActive: boolean;
 }
 
@@ -130,6 +132,7 @@ export interface InventoryMovement {
   source?: 'manual' | 'invoice' | 'transfer';
   status?: 'entrada' | 'saida' | 'pendente';
   invoiceId?: string;
+  requestId?: string; // Adding requestId property
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -143,6 +146,13 @@ export interface DeletionHistory {
   deletedBy: string;
   deletedAt: string;
   reason: string;
+  // Additional properties for invoice deletions
+  danfeNumber?: string;
+  supplierName?: string;
+  supplierCnpj?: string;
+  issueDate?: Date;
+  totalValue?: number;
+  items?: InvoiceItem[];
 }
 
 // Multi-tenant types
@@ -219,10 +229,12 @@ export interface ATAItem {
   numeroItem: string;
   descricaoProduto: string;
   descricao?: string;
+  nome?: string; // Adding nome property
   unidade: string;
   quantidade: number;
   valorUnitario: number;
   valorTotal: number;
+  saldoDisponivel?: number; // Adding saldoDisponivel property
 }
 
 // Financial and Accounting Types
@@ -270,6 +282,7 @@ export interface BankTransaction {
   transactionType: 'credito' | 'debito';
   reconciliationStatus: 'conciliado' | 'pendente' | 'pgt_parcial';
   bankAccountId?: string;
+  schoolId?: string;
   createdAt?: string;
   updatedAt?: string;
   isPartialPayment?: boolean;
