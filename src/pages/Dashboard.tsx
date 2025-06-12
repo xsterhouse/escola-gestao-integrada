@@ -11,25 +11,23 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600 mt-2">Bem-vindo ao sistema de gestão escolar</p>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-2">Bem-vindo ao sistema de gestão escolar</p>
         </div>
+      </div>
 
-        {/* Cards do Dashboard */}
-        <DashboardCards />
+      {/* Cards do Dashboard */}
+      <DashboardCards />
 
-        {/* Módulos de ação */}
-        <ActionCards />
+      {/* Módulos de ação */}
+      <ActionCards />
 
-        {/* Módulos avançados */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <DanfeConsultModule />
-          <FinancialChartsModule />
-        </div>
+      {/* Módulos avançados */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <DanfeConsultModule />
+        <FinancialChartsModule />
       </div>
     </AppLayout>
   );

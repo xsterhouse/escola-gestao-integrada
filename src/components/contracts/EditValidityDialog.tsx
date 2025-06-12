@@ -17,10 +17,10 @@ interface EditValidityDialogProps {
 export function EditValidityDialog({ contract, onUpdate, onClose }: EditValidityDialogProps) {
   const { toast } = useToast();
   const [dataInicio, setDataInicio] = useState(
-    contract.dataInicio.toISOString().split('T')[0]
+    contract.dataInicio.split('T')[0]
   );
   const [dataFim, setDataFim] = useState(
-    contract.dataFim.toISOString().split('T')[0]
+    contract.dataFim.split('T')[0]
   );
 
   const handleSave = () => {
@@ -38,9 +38,9 @@ export function EditValidityDialog({ contract, onUpdate, onClose }: EditValidity
 
     const updatedContract: ContractData = {
       ...contract,
-      dataInicio: novaDataInicio,
-      dataFim: novaDataFim,
-      updatedAt: new Date(),
+      dataInicio: novaDataInicio.toISOString(),
+      dataFim: novaDataFim.toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     onUpdate(updatedContract);
@@ -51,8 +51,8 @@ export function EditValidityDialog({ contract, onUpdate, onClose }: EditValidity
     });
   };
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('pt-BR').format(date);
+  const formatDate = (dateString: string) => {
+    return new Intl.DateTimeFormat('pt-BR').format(new Date(dateString));
   };
 
   return (
