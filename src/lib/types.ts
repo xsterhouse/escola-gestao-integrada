@@ -1,4 +1,5 @@
 
+
 import { LucideIcon } from 'lucide-react';
 
 // Auth Types
@@ -158,7 +159,7 @@ export interface BankAccount {
   bankName: string;
   agency: string;
   accountNumber: string;
-  accountType: 'corrente' | 'poupanca';
+  accountType: 'corrente' | 'poupanca' | 'movimento' | 'aplicacao';
   managementType: 'municipal' | 'terceirizada';
   balance: number;
   isActive: boolean;
@@ -261,6 +262,23 @@ export interface Supplier {
   updatedAt: string;
 }
 
+// Contract Divergence Types
+export interface ContractDivergence {
+  id: string;
+  contractItemId: string;
+  itemId: string;
+  field: string;
+  type: 'specification' | 'quantity' | 'price';
+  description: string;
+  expectedValue: string;
+  actualValue: string;
+  valorContrato: string | number;
+  valorATA: string | number;
+  status: 'pending' | 'resolved';
+  contractId: string;
+  createdAt: Date;
+}
+
 // Contract Types
 export interface ContractData {
   id: string;
@@ -269,18 +287,26 @@ export interface ContractData {
   fornecedor: Supplier;
   items: ContractItem[];
   status: 'ativo' | 'vencido' | 'suspenso' | 'liquidado' | 'divergencia_dados';
-  dataInicio: string;
-  dataFim: string;
+  dataInicio: Date;
+  dataFim: Date;
   valorTotal: number;
-  divergencias?: string[];
+  divergencias?: ContractDivergence[];
+  ataValidated?: boolean;
+  lastValidationAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ContractItem {
   id: string;
   produto: string;
+  description: string;
   quantidade: number;
+  quantity: number;
   valorUnitario: number;
+  unitPrice: number;
   valorTotal: number;
+  totalPrice: number;
   quantidadeUtilizada: number;
   saldoDisponivel: number;
   quantidadeContratada: number;
@@ -365,3 +391,4 @@ export interface SchoolFinancialData {
   schoolName: string;
   financialSummary: FinancialSummary;
 }
+
