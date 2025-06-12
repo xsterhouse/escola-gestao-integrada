@@ -1,3 +1,4 @@
+
 import { LucideIcon } from 'lucide-react';
 
 // Auth Types
@@ -150,6 +151,35 @@ export interface ReceivableAccount {
   updatedAt: string;
 }
 
+// Bank Types
+export interface BankAccount {
+  id: string;
+  schoolId: string;
+  bankName: string;
+  agency: string;
+  accountNumber: string;
+  accountType: 'corrente' | 'poupanca';
+  managementType: 'municipal' | 'terceirizada';
+  balance: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BankTransaction {
+  id: string;
+  schoolId: string;
+  bankAccountId: string;
+  date: string;
+  description: string;
+  value: number;
+  transactionType: 'credito' | 'debito';
+  reconciliationStatus: 'pendente' | 'conciliado' | 'divergente';
+  source: 'manual' | 'imported';
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Inventory Types
 export interface InventoryMovement {
   id: string;
@@ -235,12 +265,14 @@ export interface Supplier {
 export interface ContractData {
   id: string;
   ataId: string;
+  numeroContrato: string;
   fornecedor: Supplier;
   items: ContractItem[];
-  status: 'ativo' | 'vencido' | 'suspenso';
+  status: 'ativo' | 'vencido' | 'suspenso' | 'liquidado' | 'divergencia_dados';
   dataInicio: string;
   dataFim: string;
   valorTotal: number;
+  divergencias?: string[];
 }
 
 export interface ContractItem {
@@ -251,12 +283,33 @@ export interface ContractItem {
   valorTotal: number;
   quantidadeUtilizada: number;
   saldoDisponivel: number;
+  quantidadeContratada: number;
+  precoUnitario: number;
+  valorTotalContrato: number;
+  notasFiscais: any[];
+  quantidadePaga: number;
+  valorPago: number;
+  saldoQuantidade: number;
+  saldoValor: number;
 }
 
 export interface ContractFilter {
   fornecedor?: string;
   produto?: string;
   status?: string;
+}
+
+// Legacy Contract Types (for backward compatibility)
+export interface Contract {
+  id: string;
+  fornecedor: string;
+  numeroContrato: string;
+  itensContratados: string[];
+  quantidade: number;
+  valorContratado: number;
+  dataInicio: Date;
+  dataFim: Date;
+  status: 'ativo' | 'vencido' | 'liquidado';
 }
 
 // Accounting Types
@@ -271,6 +324,14 @@ export interface AccountingEntry {
   entryType: 'manual' | 'automatic';
   reconciled: boolean;
   invoiceId?: string;
+  history: string;
+  totalValue: number;
+  debitDescription: string;
+  creditDescription: string;
+  debitHistory: string;
+  creditHistory: string;
+  reconciledBy?: string;
+  reconciledAt?: string;
   createdAt: string;
   updatedAt: string;
 }
