@@ -1,4 +1,3 @@
-
 export interface School {
   id: string;
   name: string;
@@ -42,6 +41,8 @@ export interface Supplier {
   razaoSocial?: string;
   endereco?: string;
   isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Product {
@@ -79,6 +80,7 @@ export interface Invoice {
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
+  financialProgramming?: string;
 }
 
 export interface InvoiceItem {
@@ -123,16 +125,81 @@ export interface InventoryMovement {
   unitOfMeasure: string;
   type: 'entrada' | 'saida';
   reason: string;
-  unitPrice?: number; // Added for compatibility
+  unitPrice?: number;
+  totalCost?: number;
+  source?: 'manual' | 'invoice' | 'transfer';
+  status?: 'entrada' | 'saida' | 'pendente';
+  invoiceId?: string;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
+
+export interface DeletionHistory {
+  id: string;
+  type: 'product' | 'invoice' | 'movement';
+  deletedItemId: string;
+  deletedItemDescription: string;
+  deletedBy: string;
+  deletedAt: string;
+  reason: string;
+}
+
+// Multi-tenant types
+export interface Tenant {
+  id: string;
+  name: string;
+  domain?: string;
+  logo?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  settings: TenantSettings;
+}
+
+export interface TenantSettings {
+  allowTransfers: boolean;
+  allowExternalAccess: boolean;
+  requireApproval: boolean;
+  maxUsers: number;
+  modules: string[];
+}
+
+export type UserHierarchy = 'master' | 'diretor_escolar' | 'secretario' | 'funcionario' | 'central_compras';
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'manager' | 'employee' | 'master'; // Added 'master' for compatibility
+  matricula?: string;
+  role: 'admin' | 'manager' | 'employee' | 'master';
+  userType: UserHierarchy;
+  hierarchyLevel: number;
   schoolId?: string;
+  tenantId?: string;
+  purchasingCenterIds?: string[];
   permissions: string[];
+  status: 'active' | 'blocked';
+  dataScope: 'school' | 'purchasing_center' | 'global';
+  canCreateUsers: boolean;
+  canManageSchool: boolean;
+  lastLogin?: string;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+export interface UserModulePermission {
+  userId: string;
+  moduleId: string;
+  hasAccess: boolean;
+  restrictions?: {
+    readOnly?: boolean;
+    schoolOnly?: boolean;
+    purchasingCenterOnly?: boolean;
+    approvalRequired?: boolean;
+  };
 }
 
 export interface ATAContract {
@@ -179,6 +246,7 @@ export interface AccountingEntry {
   auditTrail?: any;
   createdAt: string;
   updatedAt?: string;
+  tenantId?: string;
 }
 
 export interface BankReconciliation {
@@ -191,6 +259,7 @@ export interface BankReconciliation {
   status: 'pending' | 'completed' | 'cancelled';
   createdAt: Date;
   updatedAt?: Date;
+  tenantId?: string;
 }
 
 export interface BankTransaction {
@@ -211,6 +280,7 @@ export interface BankTransaction {
   category?: string;
   resourceType?: string;
   duplicateJustification?: string;
+  tenantId?: string;
 }
 
 export interface BankAccount {
@@ -228,6 +298,7 @@ export interface BankAccount {
   createdAt: Date;
   updatedAt?: Date;
   schoolId?: string;
+  tenantId?: string;
 }
 
 export interface PaymentAccount {
@@ -243,6 +314,7 @@ export interface PaymentAccount {
   createdAt: Date;
   updatedAt?: Date;
   schoolId?: string;
+  tenantId?: string;
   expenseType?: string;
   resourceCategory?: string;
   documentUrl?: string;
@@ -266,6 +338,7 @@ export interface ReceivableAccount {
   createdAt: Date;
   updatedAt?: Date;
   schoolId?: string;
+  tenantId?: string;
   origin?: string;
   expectedDate?: Date;
   resourceType?: string;
@@ -442,4 +515,49 @@ export interface FinancialReportFilter {
   accountType?: string;
   category?: string;
   status?: string;
+}
+
+// Transfer system for multi-tenant
+export interface TransferRequest {
+  id: string;
+  type: 'balance' | 'stock';
+  fromTenantId: string;
+  toTenantId: string;
+  fromSchoolId?: string;
+  toSchoolId?: string;
+  ataId?: string;
+  amount?: number;
+  items?: TransferItem[];
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  requestedBy: string;
+  requestedAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  completedAt?: string;
+  notes?: string;
+  reason: string;
+}
+
+export interface TransferItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitOfMeasure: string;
+  unitPrice?: number;
+}
+
+// Audit system
+export interface AuditLog {
+  id: string;
+  userId: string;
+  userType: UserHierarchy;
+  action: string;
+  resource: string;
+  resourceId?: string;
+  tenantId?: string;
+  targetTenantId?: string;
+  details: any;
+  timestamp: string;
+  ipAddress?: string;
+  userAgent?: string;
 }

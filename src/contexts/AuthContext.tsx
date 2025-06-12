@@ -1,15 +1,19 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { User, School } from "@/lib/types";
+import { User, School, Tenant } from "@/lib/types";
+import { multiTenantService } from "@/services/multiTenantService";
 
 interface AuthContextType {
   user: User | null;
   currentSchool: School | null;
+  currentTenant: Tenant | null;
   availableSchools: School[];
+  availableTenants: Tenant[];
   isAuthenticated: boolean;
-  login: (matricula: string, password: string) => Promise<boolean>;
+  login: (credential: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
+  switchTenant: (tenantId: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,13 +41,15 @@ interface SystemUser {
   id: string;
   name: string;
   matricula: string;
-  userType: "funcionario" | "central_compras";
+  email?: string;
+  userType: "funcionario" | "central_compras" | "diretor_escolar" | "secretario";
   hierarchyLevel: number;
   schoolId: string | null;
+  tenantId?: string;
   purchasingCenterIds?: string[];
   isLinkedToPurchasing: boolean;
   status: "active" | "blocked";
-  dataScope: "school" | "purchasing_center";
+  dataScope: "school" | "purchasing_center" | "global";
   canCreateUsers: boolean;
   canManageSchool: boolean;
 }
@@ -51,10 +57,11 @@ interface SystemUser {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [currentSchool, setCurrentSchool] = useState<School | null>(null);
+  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
   const [availableSchools, setAvailableSchools] = useState<School[]>([]);
+  const [availableTenants, setAvailableTenants] = useState<Tenant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Computed property for authentication status
   const isAuthenticated = !!user;
 
   useEffect(() => {
@@ -64,6 +71,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
+        
+        // Initialize multi-tenant context
+        if (parsedUser) {
+          const tenants = multiTenantService.getUserTenants(parsedUser);
+          setAvailableTenants(tenants);
+          
+          const lastTenantId = localStorage.getItem("currentTenantId");
+          const selectedTenantId = lastTenantId && tenants.some(t => t.id === lastTenantId) 
+            ? lastTenantId 
+            : tenants[0]?.id;
+            
+          if (selectedTenantId) {
+            multiTenantService.setContext(parsedUser, selectedTenantId);
+            const tenant = multiTenantService.getTenantById(selectedTenantId);
+            setCurrentTenant(tenant);
+          }
+        }
+        
         loadUserSchools(parsedUser);
       } catch (error) {
         console.error("Error parsing stored user:", error);
@@ -77,11 +102,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const schools: School[] = JSON.parse(localStorage.getItem('schools') || '[]');
     
     if (authUser.role === "master") {
-      // Master user can access all schools
       setAvailableSchools(schools);
       setCurrentSchool(schools.length > 0 ? schools[0] : null);
     } else if (authUser.userType === "central_compras" && authUser.purchasingCenterIds) {
-      // Central de compras user - get schools from purchasing centers
       const purchasingCenters = JSON.parse(localStorage.getItem('purchasingCenters') || '[]');
       const userCenters = purchasingCenters.filter(pc => 
         authUser.purchasingCenterIds?.includes(pc.id)
@@ -96,7 +119,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAvailableSchools(linkedSchools);
       setCurrentSchool(linkedSchools.length > 0 ? linkedSchools[0] : null);
     } else if (authUser.schoolId) {
-      // School user - only their school
       const userSchool = schools.find(school => school.id === authUser.schoolId);
       if (userSchool) {
         setAvailableSchools([userSchool]);
@@ -105,14 +127,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = async (matricula: string, password: string): Promise<boolean> => {
+  const login = async (credential: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
     try {
-      console.log(`🔐 Tentando login para matrícula: ${matricula}`);
+      console.log(`🔐 Tentando login para credencial: ${credential}`);
       
       // Check for master user FIRST
-      if (matricula === "master" && password === "master123") {
+      if (credential === "master" && password === "master123") {
         console.log(`✅ Login master detectado!`);
         const masterUser: User = {
           id: "master",
@@ -123,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           userType: "master",
           hierarchyLevel: 1,
           schoolId: null,
+          tenantId: null,
           permissions: [],
           status: "active",
           dataScope: "global",
@@ -134,79 +157,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         setUser(masterUser);
         localStorage.setItem("currentUser", JSON.stringify(masterUser));
+        
+        // Setup master tenant access
+        const tenants = multiTenantService.getUserTenants(masterUser);
+        setAvailableTenants(tenants);
+        
+        if (tenants.length > 0) {
+          multiTenantService.setContext(masterUser, tenants[0].id);
+          setCurrentTenant(tenants[0]);
+        }
+        
         loadUserSchools(masterUser);
         console.log(`✅ Login bem-sucedido para usuário master`);
         return true;
       }
       
-      // Then check system users (escola e central de compras)
-      const systemUsers: SystemUser[] = JSON.parse(localStorage.getItem('systemUsers') || '[]');
-      const systemUser = systemUsers.find(u => u.matricula === matricula && u.status === 'active');
-      
-      if (systemUser) {
-        console.log(`👤 Usuário do sistema encontrado: ${systemUser.name}`);
-        console.log(`🏢 Tipo de usuário: ${systemUser.userType}`);
-        console.log(`📊 Escopo de dados: ${systemUser.dataScope}`);
-        
-        const storedPassword = getUserPassword(systemUser.id);
-        console.log(`🔑 Senha armazenada encontrada: ${!!storedPassword}`);
-        
-        if (storedPassword === password) {
-          const authUser: User = {
-            id: systemUser.id,
-            name: systemUser.name,
-            matricula: systemUser.matricula,
-            email: `${systemUser.matricula}@sistema.local`,
-            role: systemUser.userType === "central_compras" ? "admin" : "user",
-            userType: systemUser.userType,
-            hierarchyLevel: systemUser.hierarchyLevel,
-            schoolId: systemUser.schoolId,
-            purchasingCenterIds: systemUser.purchasingCenterIds,
-            permissions: [],
-            status: "active",
-            dataScope: systemUser.dataScope,
-            canCreateUsers: systemUser.canCreateUsers,
-            canManageSchool: systemUser.canManageSchool,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-          
-          setUser(authUser);
-          localStorage.setItem("currentUser", JSON.stringify(authUser));
-          loadUserSchools(authUser);
-          console.log(`✅ Login bem-sucedido para usuário do sistema: ${authUser.name}`);
-          return true;
-        } else {
-          console.log(`❌ Senha incorreta para usuário do sistema`);
-        }
+      // Check by email
+      const systemUsersByEmail = await findUserByEmail(credential);
+      if (systemUsersByEmail) {
+        return await authenticateUser(systemUsersByEmail, password);
       }
       
-      // Finally check regular users
-      const users: User[] = JSON.parse(localStorage.getItem('users') || '[]');
-      const regularUser = users.find(u => u.matricula === matricula);
-      
-      if (regularUser) {
-        console.log(`👤 Usuário regular encontrado: ${regularUser.name}`);
-        
-        // For demo purposes, allow any password for regular users
-        // In production, you would check against stored password
-        const authUser: User = {
-          ...regularUser,
-          userType: regularUser.userType || "funcionario",
-          hierarchyLevel: regularUser.hierarchyLevel || 4,
-          dataScope: regularUser.dataScope || "school",
-          canCreateUsers: regularUser.canCreateUsers || false,
-          canManageSchool: regularUser.canManageSchool || false,
-        };
-        
-        setUser(authUser);
-        localStorage.setItem("currentUser", JSON.stringify(authUser));
-        loadUserSchools(authUser);
-        console.log(`✅ Login bem-sucedido para usuário regular: ${authUser.name}`);
-        return true;
+      // Check by matricula
+      const systemUsersByMatricula = await findUserByMatricula(credential);
+      if (systemUsersByMatricula) {
+        return await authenticateUser(systemUsersByMatricula, password);
       }
       
-      console.log(`❌ Usuário não encontrado ou credenciais inválidas`);
+      console.log(`❌ Usuário não encontrado para credencial: ${credential}`);
       return false;
     } catch (error) {
       console.error("Erro durante o login:", error);
@@ -216,11 +194,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const findUserByEmail = async (email: string): Promise<SystemUser | null> => {
+    const systemUsers: SystemUser[] = JSON.parse(localStorage.getItem('systemUsers') || '[]');
+    return systemUsers.find(u => u.email === email && u.status === 'active') || null;
+  };
+
+  const findUserByMatricula = async (matricula: string): Promise<SystemUser | null> => {
+    const systemUsers: SystemUser[] = JSON.parse(localStorage.getItem('systemUsers') || '[]');
+    return systemUsers.find(u => u.matricula === matricula && u.status === 'active') || null;
+  };
+
+  const authenticateUser = async (systemUser: SystemUser, password: string): Promise<boolean> => {
+    console.log(`👤 Usuário encontrado: ${systemUser.name}`);
+    
+    const storedPassword = getUserPassword(systemUser.id);
+    if (!storedPassword || storedPassword !== password) {
+      console.log(`❌ Senha incorreta para usuário: ${systemUser.name}`);
+      return false;
+    }
+
+    const authUser: User = {
+      id: systemUser.id,
+      name: systemUser.name,
+      matricula: systemUser.matricula,
+      email: systemUser.email || `${systemUser.matricula}@sistema.local`,
+      role: systemUser.userType === "central_compras" ? "admin" : "user",
+      userType: systemUser.userType,
+      hierarchyLevel: systemUser.hierarchyLevel,
+      schoolId: systemUser.schoolId,
+      tenantId: systemUser.tenantId,
+      purchasingCenterIds: systemUser.purchasingCenterIds,
+      permissions: [],
+      status: "active",
+      dataScope: systemUser.dataScope,
+      canCreateUsers: systemUser.canCreateUsers,
+      canManageSchool: systemUser.canManageSchool,
+      lastLogin: new Date().toISOString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    setUser(authUser);
+    localStorage.setItem("currentUser", JSON.stringify(authUser));
+    
+    // Setup multi-tenant context
+    const tenants = multiTenantService.getUserTenants(authUser);
+    setAvailableTenants(tenants);
+    
+    if (tenants.length > 0) {
+      const defaultTenantId = authUser.tenantId || authUser.schoolId || tenants[0].id;
+      multiTenantService.setContext(authUser, defaultTenantId);
+      const tenant = multiTenantService.getTenantById(defaultTenantId);
+      setCurrentTenant(tenant);
+    }
+    
+    loadUserSchools(authUser);
+    console.log(`✅ Login bem-sucedido para usuário: ${authUser.name}`);
+    return true;
+  };
+
+  const switchTenant = (tenantId: string) => {
+    if (!user) return;
+    
+    try {
+      multiTenantService.setContext(user, tenantId);
+      const tenant = multiTenantService.getTenantById(tenantId);
+      setCurrentTenant(tenant);
+      
+      // Update current school if needed
+      if (tenant) {
+        const schools: School[] = JSON.parse(localStorage.getItem('schools') || '[]');
+        const tenantSchool = schools.find(s => s.id === tenantId);
+        if (tenantSchool) {
+          setCurrentSchool(tenantSchool);
+        }
+      }
+    } catch (error) {
+      console.error("Error switching tenant:", error);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setCurrentSchool(null);
+    setCurrentTenant(null);
     setAvailableSchools([]);
+    setAvailableTenants([]);
     localStorage.removeItem("currentUser");
+    multiTenantService.clearContext();
     console.log(`👋 Usuário deslogado`);
   };
 
@@ -228,11 +289,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{ 
       user, 
       currentSchool, 
+      currentTenant,
       availableSchools, 
+      availableTenants,
       isAuthenticated, 
       login, 
       logout, 
-      isLoading 
+      isLoading,
+      switchTenant
     }}>
       {children}
     </AuthContext.Provider>

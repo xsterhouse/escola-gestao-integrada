@@ -1,5 +1,5 @@
 
-import { LoginForm } from "@/components/auth/LoginForm";
+import { DualLoginForm } from "@/components/auth/DualLoginForm";
 
 const Login = () => {
   return (
@@ -57,12 +57,11 @@ const Login = () => {
       
       {/* Main content */}
       <div className="relative z-10 w-full max-w-md px-4">
-        <div className="bg-white/15 backdrop-blur-xl shadow-2xl rounded-3xl p-8 border border-white/30 hover:bg-white/20 hover:shadow-3xl transition-all duration-500 hover:scale-[1.02] ring-1 ring-white/20">          
-          <LoginForm />
-        </div>
+        <DualLoginForm />
         
         <div className="mt-6 text-center text-sm text-slate-100/90 backdrop-blur-sm bg-white/25 rounded-lg p-3 border border-white/20">
           <p>&copy; {new Date().getFullYear()} SIGRE - Sistema Integrado de Gestão de Recursos Escolares</p>
+          <p className="text-xs mt-1 text-slate-200/70">Versão Multi-Tenant</p>
         </div>
       </div>
     </div>

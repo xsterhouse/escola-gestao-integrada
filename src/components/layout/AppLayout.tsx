@@ -1,63 +1,21 @@
 
-import { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { OfflineIndicator } from "@/components/ui/offline-indicator";
+import { TenantHeader } from "./TenantHeader";
+import { Sidebar } from "./Sidebar";
 
-type AppLayoutProps = {
-  children: ReactNode;
-  requireAuth?: boolean;
-  requiredPermission?: string;
-};
+interface AppLayoutProps {
+  children: React.ReactNode;
+}
 
-export function AppLayout({ 
-  children, 
-  requireAuth = true,
-  requiredPermission 
-}: AppLayoutProps) {
-  const { isAuthenticated, user, isLoading } = useAuth();
-
-  // Check if user is authenticated when required
-  if (requireAuth && !isLoading && !isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Check for specific permission when required
-  if (
-    requireAuth && 
-    requiredPermission && 
-    user && 
-    user.role !== "master" &&
-    !user.permissions.some(p => p.name === requiredPermission && p.hasAccess)
-  ) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="border-4 border-t-blue-600 border-r-transparent border-b-transparent border-l-transparent rounded-full h-12 w-12 animate-spin"></div>
-          <p className="text-lg font-medium">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
-
+export function AppLayout({ children }: AppLayoutProps) {
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex">
       <Sidebar />
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6">
+      <div className="flex-1 flex flex-col">
+        <TenantHeader />
+        <main className="flex-1 overflow-auto">
           {children}
         </main>
       </div>
-      
-      {/* Indicador de status offline/online */}
-      <OfflineIndicator />
     </div>
   );
 }
