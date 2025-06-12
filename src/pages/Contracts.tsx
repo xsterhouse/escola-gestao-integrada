@@ -60,7 +60,7 @@ export default function Contracts() {
 
   return (
     <AppLayout requireAuth={true} requiredPermission="view_contracts">
-      <div className="space-y-8">
+      <div className="container mx-auto py-6 space-y-6">
         <ContractsHeader />
         
         <Tabs defaultValue="tracking" className="w-full">

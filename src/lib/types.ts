@@ -1,576 +1,306 @@
+import { LucideIcon } from 'lucide-react';
+
+// Auth Types
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user' | 'viewer';
+  schoolId?: string;
+  tenantId: string;
+  permissions: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  settings?: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface School {
   id: string;
   name: string;
+  code: string;
+  tenantId: string;
   address: string;
   phone: string;
   email: string;
-  principal: string;
-  vicePrincipal: string;
   city: string;
   state: string;
   zipCode: string;
-  cnpj: string;
-  code?: string; // Adding code property
-  isActive: boolean;
-}
-
-export interface PurchasingCenter {
-  id: string;
-  name: string;
-  address: string;
-  phone: string;
-  email: string;
   contactPerson: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  schoolIds: string[];
-}
-
-export interface Supplier {
-  id: string;
-  name: string;
-  cnpj: string;
-  address: string;
-  phone: string;
-  telefone?: string; // Added for compatibility
-  email: string;
-  contactPerson: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  razaoSocial?: string;
-  endereco?: string;
   isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  purchasingCenterIds?: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
+// Product Types
 export interface Product {
   id: string;
   name: string;
   description: string;
+  item: number;
+  unit: string;
   unitOfMeasure: string;
-  supplierId: string;
-  categoryId: string;
-  isActive: boolean;
+  quantity?: number;
+  unitPrice?: number;
+  familyAgriculture: boolean;
+  category: string;
+  supplier?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface Category {
+// Planning Types
+export interface PlanningItem {
   id: string;
   name: string;
   description: string;
-  isActive: boolean;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  totalPrice: number;
+  category: string;
+  priority: 'alta' | 'media' | 'baixa';
+  status: 'planejado' | 'aprovado' | 'rejeitado';
+  planningId: string;
+  availableQuantity: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface Invoice {
+export interface Planning {
   id: string;
-  invoiceNumber: string;
-  issueDate: Date;
-  dueDate: Date;
-  supplier: Supplier;
-  items: InvoiceItem[];
-  totalAmount: number;
-  totalValue?: number;
-  danfeNumber?: string;
-  xmlContent?: string;
-  supplierId?: string;
-  status: 'pendente' | 'aprovada' | 'rejeitada';
-  paymentStatus: 'pendente' | 'pago' | 'parcialmente_pago';
-  notes?: string;
-  isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-  financialProgramming?: string;
+  name: string;
+  description: string;
+  period: string;
+  status: 'rascunho' | 'ativo' | 'finalizado';
+  totalBudget: number;
+  usedBudget: number;
+  items: PlanningItem[];
+  schoolId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ATA Types
+export interface ATAItem {
+  id: string;
+  numeroItem: number;
+  nome: string;
+  descricaoProduto: string;
+  unidade: string;
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+  descricao: string;
+  saldoDisponivel: number;
+}
+
+export interface ATAContract {
+  id: string;
+  numeroAta: string;
+  fornecedor: string;
+  dataInicio: string;
+  dataFim: string;
+  valorTotal: number;
+  status: 'ativo' | 'vencido' | 'suspenso';
+  items: ATAItem[];
+  schoolId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Financial Types
+export interface PaymentAccount {
+  id: string;
+  schoolId: string;
+  description: string;
+  supplier: string;
+  dueDate: string;
+  value: number;
+  expenseType: string;
+  resourceCategory: string;
+  category: string;
+  status: 'a_pagar' | 'pago' | 'pgt_parcial' | 'cancelado' | 'pendente';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReceivableAccount {
+  id: string;
+  schoolId: string;
+  description: string;
+  origin: string;
+  source: string;
+  category: string;
+  expectedDate: string;
+  dueDate: string;
+  value: number;
+  resourceType: string;
+  notes: string;
+  status: 'pendente' | 'recebido' | 'cancelado';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Inventory Types
+export interface InventoryMovement {
+  id: string;
+  type: 'entrada' | 'saida';
+  date: string;
+  productDescription: string;
+  quantity: number;
+  unitOfMeasure: string;
+  unitPrice: number;
+  totalCost: number;
+  source: 'manual' | 'invoice' | 'transfer';
+  reason: string;
+  status?: string;
+  invoiceId?: string;
+  requestId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface InvoiceItem {
   id: string;
   description: string;
   quantity: number;
-  unitOfMeasure: string;
   unitPrice: number;
   totalPrice: number;
-  invoiceId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface InventoryReport {
-  productCode: string;
-  productName: string;
-  lastEntryDate: Date;
-  supplierCode: string;
-  supplierName: string;
-  currentQuantity: number;
-  unitCost: number;
-  totalCost: number;
-}
-
-export interface PurchaseReport {
-  productCode: string;
-  description: string;
-  supplier: string;
-  entryDate: Date;
-  quantity: number;
   unitOfMeasure: string;
-  value: number;
-  currentBalance: number;
-}
-
-export interface InventoryMovement {
-  id: string;
-  date: Date;
-  productDescription: string;
-  quantity: number;
-  unitOfMeasure: string;
-  type: 'entrada' | 'saida';
-  reason: string;
-  unitPrice?: number;
-  totalCost?: number;
-  source?: 'manual' | 'invoice' | 'transfer';
-  status?: 'entrada' | 'saida' | 'pendente';
-  invoiceId?: string;
-  requestId?: string; // Adding requestId property
-  createdBy?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface DeletionHistory {
-  id: string;
-  type: 'product' | 'invoice' | 'movement';
-  deletedItemId: string;
-  deletedItemDescription: string;
-  deletedBy: string;
-  deletedAt: string;
-  reason: string;
-  // Additional properties for invoice deletions
-  danfeNumber?: string;
-  supplierName?: string;
-  supplierCnpj?: string;
-  issueDate?: Date;
-  totalValue?: number;
-  items?: InvoiceItem[];
-}
-
-// Multi-tenant types
-export interface Tenant {
-  id: string;
-  name: string;
-  domain?: string;
-  logo?: string;
-  primaryColor?: string;
-  secondaryColor?: string;
-  isActive: boolean;
+  invoiceId: string;
+  productId?: string;
+  productName?: string;
+  unit?: string;
   createdAt: string;
-  updatedAt?: string;
-  settings: TenantSettings;
-}
-
-export interface TenantSettings {
-  allowTransfers: boolean;
-  allowExternalAccess: boolean;
-  requireApproval: boolean;
-  maxUsers: number;
-  modules: string[];
-}
-
-export type UserHierarchy = 'master' | 'diretor_escolar' | 'secretario' | 'funcionario' | 'central_compras';
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  matricula?: string;
-  role: 'admin' | 'manager' | 'employee' | 'master';
-  userType: UserHierarchy;
-  hierarchyLevel: number;
-  schoolId?: string;
-  tenantId?: string;
-  purchasingCenterIds?: string[];
-  permissions: string[];
-  status: 'active' | 'blocked';
-  dataScope: 'school' | 'purchasing_center' | 'global';
-  canCreateUsers: boolean;
-  canManageSchool: boolean;
-  lastLogin?: string;
-  createdAt: Date;
-  updatedAt?: Date;
-}
-
-export interface UserModulePermission {
-  userId: string;
-  moduleId: string;
-  hasAccess: boolean;
-  restrictions?: {
-    readOnly?: boolean;
-    schoolOnly?: boolean;
-    purchasingCenterOnly?: boolean;
-    approvalRequired?: boolean;
-  };
-}
-
-export interface ATAContract {
-  id: string;
-  numeroProcesso: string;
-  fornecedor: string;
-  dataATA: Date;
-  dataInicioVigencia: Date;
-  dataFimVigencia: Date;
-  items: ATAItem[];
-  createdBy: string;
-  schoolId: string;
-}
-
-export interface ATAItem {
-  id: string;
-  numeroItem: string;
-  descricaoProduto: string;
-  descricao?: string;
-  nome?: string; // Adding nome property
-  unidade: string;
-  quantidade: number;
-  valorUnitario: number;
-  valorTotal: number;
-  saldoDisponivel?: number; // Adding saldoDisponivel property
-}
-
-// Financial and Accounting Types
-export interface AccountingEntry {
-  id: string;
-  date: string;
-  debitAccount: string;
-  debitValue: number;
-  debitDescription: string;
-  creditAccount: string;
-  creditValue: number;
-  creditDescription: string;
-  history: string;
-  totalValue: number;
-  entryType?: 'manual' | 'automatic';
-  reconciled?: boolean;
-  reconciledAt?: string;
-  reconciledBy?: string;
-  debitHistory?: string;
-  creditHistory?: string;
-  auditTrail?: any;
-  createdAt: string;
-  updatedAt?: string;
-  tenantId?: string;
-}
-
-export interface BankReconciliation {
-  id: string;
-  bankAccountId: string;
-  reconciliationDate: Date;
-  startingBalance: number;
-  endingBalance: number;
-  transactions: BankTransaction[];
-  status: 'pending' | 'completed' | 'cancelled';
-  createdAt: Date;
-  updatedAt?: Date;
-  tenantId?: string;
-}
-
-export interface BankTransaction {
-  id: string;
-  date: string;
-  description: string;
-  value: number;
-  transactionType: 'credito' | 'debito';
-  reconciliationStatus: 'conciliado' | 'pendente' | 'pgt_parcial';
-  bankAccountId?: string;
-  schoolId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  isPartialPayment?: boolean;
-  partialAmount?: number;
-  isDuplicate?: boolean;
-  remainingAmount?: number;
-  source?: 'manual' | 'payment' | 'receivable';
-  category?: string;
-  resourceType?: string;
-  duplicateJustification?: string;
-  tenantId?: string;
-}
-
-export interface BankAccount {
-  id: string;
-  bankName: string;
-  accountNumber: string;
-  agency: string;
-  agencyNumber?: string;
-  accountType: 'movimento' | 'aplicacao';
-  managementType?: string;
-  description?: string;
-  initialBalance?: number;
-  currentBalance: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt?: Date;
-  schoolId?: string;
-  tenantId?: string;
-}
-
-export interface PaymentAccount {
-  id: string;
-  description: string;
-  value: number;
-  dueDate: Date;
-  supplier: string;
-  category: string;
-  status: 'pendente' | 'pago' | 'cancelado' | 'a_pagar' | 'pgt_parcial';
-  paymentDate?: Date;
-  bankAccountId?: string;
-  createdAt: Date;
-  updatedAt?: Date;
-  schoolId?: string;
-  tenantId?: string;
-  expenseType?: string;
-  resourceCategory?: string;
-  documentUrl?: string;
-  invoiceId?: string;
-  isDuplicate?: boolean;
-}
-
-export interface ReceivableAccount {
-  id: string;
-  description: string;
-  value: number;
-  originalValue?: number;
-  receivedAmount?: number;
-  isPartialPayment?: boolean;
-  dueDate: Date;
-  source: string;
-  category: string;
-  status: 'pendente' | 'recebido' | 'cancelado';
-  receivedDate?: Date;
-  bankAccountId?: string;
-  createdAt: Date;
-  updatedAt?: Date;
-  schoolId?: string;
-  tenantId?: string;
-  origin?: string;
-  expectedDate?: Date;
-  resourceType?: string;
-  notes?: string;
-  documentUrl?: string;
-  parentReceivableId?: string;
-}
-
-// Fornecedor type for Brazilian system
-export interface Fornecedor {
-  id: string;
-  cnpj: string;
-  razaoSocial: string;
-  endereco: string;
-  telefone: string;
-  email: string;
-  name?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-// Contracts Types
-export interface ContractData {
-  id: string;
-  numeroContrato: string;
-  fornecedor: Fornecedor;
-  dataInicio: Date;
-  dataFim: Date;
-  valor: number;
-  status: 'ativo' | 'inativo' | 'suspenso' | 'divergencia_dados' | 'liquidado' | 'vencido' | 'encerrado';
-  items: ContractItem[];
-  contracts?: Contract[];
-  totalItems?: number;
-  hasDivergences?: boolean;
-  divergencias?: ContractDivergence[];
-  ataId?: string;
-  ataValidated?: boolean;
-  createdAt: Date;
-  updatedAt?: Date;
-  lastValidationAt?: Date;
-  fornecedorId?: string;
-}
-
-export interface Contract {
-  id: string;
-  number: string;
-  supplier: string;
-  fornecedor?: string;
-  startDate: Date;
-  endDate: Date;
-  dataInicio?: Date;
-  dataFim?: Date;
-  value: number;
-  quantidade?: number;
-  valorContratado?: number;
-  status: 'active' | 'inactive' | 'suspended' | 'ativo' | 'vencido' | 'liquidado';
-  items: ContractItem[];
-  itensContratados?: string[];
-}
-
-export interface ContractItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  unit: string;
-  produto?: string;
-  quantidadeContratada?: number;
-  precoUnitario?: number;
-  valorTotalContrato?: number;
-  saldoValor?: number;
-  valorPago?: number;
-  quantidadePaga?: number;
-  saldoQuantidade?: number;
-  notasFiscais?: Record<string, number>;
-  contractId?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-export interface ContractFilter {
-  status?: string;
-  supplier?: string;
-  fornecedor?: string;
-  produto?: string;
-  dateRange?: {
-    start: Date;
-    end: Date;
-  };
-}
-
-export interface ContractDivergence {
-  id: string;
-  contractId: string;
-  contractItemId?: string;
-  itemId: string;
-  field: string;
-  type: 'price' | 'quantity' | 'specification';
-  description: string;
-  expectedValue: string;
-  actualValue: string;
-  valorContrato: string | number;
-  valorATA: string | number;
-  status: 'pending' | 'resolved' | 'dismissed';
-  createdAt: Date;
-  resolvedAt?: Date;
-  resolved?: boolean;
-}
-
-export interface ContractImportData {
-  contracts: ContractData[];
-  divergences: ContractDivergence[];
-  importSummary: {
-    total: number;
-    successful: number;
-    failed: number;
-    warnings: number;
-  };
+  updatedAt: string;
 }
 
 export interface InvoiceData {
   id: string;
   number: string;
   supplier: string;
-  issueDate: Date;
-  dueDate: Date;
+  issueDate: string;
+  dueDate: string;
   totalValue: number;
   items: InvoiceItem[];
-  xmlContent?: string;
   status: 'pending' | 'approved' | 'rejected';
 }
 
-// Dashboard Types
-export interface DashboardMetric {
+export interface DeletionHistory {
   id: string;
-  title: string;
-  value: string | number;
-  icon: string;
-  color: string;
-  additionalInfo?: string;
+  type: 'invoice' | 'movement';
+  entityId: string;
+  reason: string;
+  deletedBy: string;
+  deletedAt: string;
+  danfeNumber?: string;
+  supplierName?: string;
+  supplierCnpj?: string;
+  issueDate?: string;
+  totalValue?: number;
+  items?: InvoiceItem[];
+  metadata?: Record<string, any>;
 }
 
-// Planning Types
-export interface PlanningItem {
+// Supplier Types
+export interface Supplier {
   id: string;
-  productName: string;
-  description: string;
-  unit: string;
-  quantity: number;
-  estimatedPrice: number;
-  unitPrice?: number;
-  category: string;
-  priority: 'high' | 'medium' | 'low';
-  status: 'planned' | 'approved' | 'purchased';
+  cnpj: string;
+  razaoSocial: string;
+  name: string;
+  endereco: string;
+  address: string;
+  telefone: string;
+  phone: string;
+  email: string;
+  contactPerson: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-// Financial Types
-export interface FinancialSummary {
-  totalReceivables: number;
-  totalPayables: number;
-  totalBankBalance: number;
-  monthlyIncome: number;
-  monthlyExpenses: number;
-  netCashFlow: number;
-  paymentsToday?: number;
-  receivablesToday?: number;
-  monthlyRevenues?: number;
+// Contract Types
+export interface ContractData {
+  id: string;
+  ataId: string;
+  fornecedor: Supplier;
+  items: ContractItem[];
+  status: 'ativo' | 'vencido' | 'suspenso';
+  dataInicio: string;
+  dataFim: string;
+  valorTotal: number;
 }
 
-export interface FinancialReportFilter {
-  startDate: Date;
-  endDate: Date;
-  accountType?: string;
-  category?: string;
+export interface ContractItem {
+  id: string;
+  produto: string;
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+  quantidadeUtilizada: number;
+  saldoDisponivel: number;
+}
+
+export interface ContractFilter {
+  fornecedor?: string;
+  produto?: string;
   status?: string;
 }
 
-// Transfer system for multi-tenant
-export interface TransferRequest {
+// Accounting Types
+export interface AccountingEntry {
   id: string;
-  type: 'balance' | 'stock';
-  fromTenantId: string;
-  toTenantId: string;
-  fromSchoolId?: string;
-  toSchoolId?: string;
-  ataId?: string;
-  amount?: number;
-  items?: TransferItem[];
-  status: 'pending' | 'approved' | 'rejected' | 'completed';
-  requestedBy: string;
-  requestedAt: string;
-  approvedBy?: string;
-  approvedAt?: string;
-  completedAt?: string;
-  notes?: string;
-  reason: string;
+  date: string;
+  description: string;
+  debitAccount: string;
+  creditAccount: string;
+  debitValue: number;
+  creditValue: number;
+  entryType: 'manual' | 'automatic';
+  reconciled: boolean;
+  invoiceId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface TransferItem {
-  productId: string;
-  productName: string;
-  quantity: number;
-  unitOfMeasure: string;
-  unitPrice?: number;
+export interface BankReconciliation {
+  id: string;
+  bankStatement: string;
+  accountingEntry: string;
+  reconciliationDate: string;
+  status: 'reconciled' | 'pending';
+  createdAt: string;
+  updatedAt: string;
 }
 
-// Audit system
-export interface AuditLog {
-  id: string;
-  userId: string;
-  userType: UserHierarchy;
-  action: string;
-  resource: string;
-  resourceId?: string;
-  tenantId?: string;
-  targetTenantId?: string;
-  details: any;
-  timestamp: string;
-  ipAddress?: string;
-  userAgent?: string;
+// Navigation Types
+export interface NavigationItem {
+  name: string;
+  icon: LucideIcon;
+  href: string;
+  hasAccess: boolean;
+}
+
+export interface FinancialSummary {
+  totalRevenue: number;
+  totalExpenses: number;
+  netBalance: number;
+}
+
+export interface SchoolFinancialData {
+  schoolId: string;
+  schoolName: string;
+  financialSummary: FinancialSummary;
 }
