@@ -40,7 +40,6 @@ export function ExitMovementDialog({
     description: string;
     unitOfMeasure: string;
   } | null>(null);
-  const [selectedProductDescription, setSelectedProductDescription] = useState("");
   const [quantity, setQuantity] = useState("");
   const [exitType, setExitType] = useState("");
   const [reason, setReason] = useState("");
@@ -69,8 +68,8 @@ export function ExitMovementDialog({
   }, [open]);
 
   const resetForm = () => {
+    console.log("🔄 Resetando formulário do modal");
     setSelectedProduct(null);
-    setSelectedProductDescription("");
     setQuantity("");
     setExitType("");
     setReason("");
@@ -80,16 +79,27 @@ export function ExitMovementDialog({
     setErrors([]);
     setCurrentStep(1);
     setIsValidating(false);
+    
+    // Reset do componente ProductAutocomplete
+    if ((window as any).resetProductAutocomplete) {
+      (window as any).resetProductAutocomplete();
+    }
   };
 
   const handleProductSelect = (product: { description: string; unitOfMeasure: string; unitPrice: number }) => {
-    console.log("📦 Produto selecionado no modal:", product);
+    console.log("📦 Produto selecionado no modal de saída:", product);
     
     setSelectedProduct({
       description: product.description,
       unitOfMeasure: product.unitOfMeasure
     });
-    setSelectedProductDescription(product.description);
+    setErrors([]);
+  };
+
+  const handleProductClear = () => {
+    console.log("🧹 Limpando produto selecionado");
+    setSelectedProduct(null);
+    setQuantity("");
     setErrors([]);
   };
 
@@ -162,6 +172,9 @@ export function ExitMovementDialog({
       productDescription: selectedProduct!.description,
       quantity: parseFloat(quantity),
       unitOfMeasure: selectedProduct!.unitOfMeasure,
+      unitPrice: unitPrice,
+      totalCost: totalCost,
+      source: 'manual' as const,
       reason: `${EXIT_TYPES.find(t => t.value === exitType)?.label}: ${reason}`,
     };
 
@@ -256,8 +269,8 @@ export function ExitMovementDialog({
                   <Label className="text-base font-medium">Produto *</Label>
                   <ProductAutocomplete
                     invoices={invoices}
-                    value={selectedProductDescription}
                     onProductSelect={handleProductSelect}
+                    onClear={handleProductClear}
                     placeholder="Digite para buscar produtos..."
                   />
                   {selectedProduct && (

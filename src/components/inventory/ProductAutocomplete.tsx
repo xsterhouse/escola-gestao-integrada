@@ -21,28 +21,24 @@ import { InvoiceItem } from "@/lib/types";
 
 interface ProductAutocompleteProps {
   invoices: any[];
-  value?: string;
   onProductSelect: (product: {
     description: string;
     unitOfMeasure: string;
     unitPrice: number;
   }) => void;
   placeholder?: string;
+  onClear?: () => void;
 }
 
 export function ProductAutocomplete({ 
   invoices, 
-  value, 
   onProductSelect, 
-  placeholder = "Selecione um produto..." 
+  placeholder = "Selecione um produto...",
+  onClear
 }: ProductAutocompleteProps) {
   const [open, setOpen] = useState(false);
-  const [selectedValue, setSelectedValue] = useState(value || "");
-  
-  // Update selectedValue when value prop changes
-  useEffect(() => {
-    setSelectedValue(value || "");
-  }, [value]);
+  const [selectedValue, setSelectedValue] = useState("");
+  const [displayValue, setDisplayValue] = useState("");
   
   // Extract unique products from all approved invoices
   const allProducts = invoices
@@ -61,28 +57,63 @@ export function ProductAutocomplete({
     index === self.findIndex(p => p.key === product.key)
   );
 
-  const handleSelect = (currentValue: string) => {
-    console.log("🎯 Produto sendo selecionado:", currentValue);
+  console.log("📦 ProductAutocomplete - produtos únicos disponíveis:", uniqueProducts.length);
+
+  const handleSelect = (productDescription: string) => {
+    console.log("🎯 Tentando selecionar produto:", productDescription);
     
-    const selectedProduct = uniqueProducts.find(p => p.description === currentValue);
+    const selectedProduct = uniqueProducts.find(p => p.description === productDescription);
     
     if (selectedProduct) {
-      console.log("✅ Produto encontrado:", selectedProduct);
-      setSelectedValue(currentValue);
+      console.log("✅ Produto encontrado e selecionando:", selectedProduct);
       
+      // Atualizar estados internos
+      setSelectedValue(productDescription);
+      setDisplayValue(productDescription);
+      
+      // Chamar callback para o componente pai
       onProductSelect({
         description: selectedProduct.description,
         unitOfMeasure: selectedProduct.unitOfMeasure,
         unitPrice: selectedProduct.unitPrice
       });
+      
+      // Fechar o popover
+      setOpen(false);
+      
+      console.log("🔄 Estado atualizado - valor selecionado:", productDescription);
+    } else {
+      console.log("❌ Produto não encontrado na lista");
     }
-    
-    setOpen(false);
   };
 
   const clearSelection = () => {
+    console.log("🧹 Limpando seleção");
     setSelectedValue("");
+    setDisplayValue("");
+    setOpen(false);
+    if (onClear) {
+      onClear();
+    }
   };
+
+  // Função externa para limpar o componente (chamada pelo componente pai)
+  useEffect(() => {
+    // Expor função de limpeza para o componente pai via ref se necessário
+  }, []);
+
+  // Função para resetar o componente externamente
+  const resetComponent = () => {
+    clearSelection();
+  };
+
+  // Adicionar método para resetar o componente
+  useEffect(() => {
+    (window as any).resetProductAutocomplete = resetComponent;
+    return () => {
+      delete (window as any).resetProductAutocomplete;
+    };
+  }, []);
 
   return (
     <div className="space-y-2">
@@ -93,11 +124,15 @@ export function ProductAutocomplete({
             role="combobox"
             aria-expanded={open}
             className="w-full justify-between h-12 text-left"
+            onClick={() => {
+              console.log("🖱️ Botão do popover clicado, estado atual:", { open, selectedValue });
+              setOpen(!open);
+            }}
           >
             <div className="flex items-center gap-2">
               <Search className="h-4 w-4 text-gray-500" />
-              <span className={selectedValue ? "text-gray-900" : "text-gray-500"}>
-                {selectedValue || placeholder}
+              <span className={displayValue ? "text-gray-900" : "text-gray-500"}>
+                {displayValue || placeholder}
               </span>
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -124,8 +159,11 @@ export function ProductAutocomplete({
                   <CommandItem
                     key={product.key}
                     value={product.description}
-                    onSelect={handleSelect}
-                    className="cursor-pointer py-3"
+                    onSelect={(currentValue) => {
+                      console.log("🖱️ CommandItem clicado:", currentValue);
+                      handleSelect(currentValue);
+                    }}
+                    className="cursor-pointer py-3 hover:bg-gray-100"
                   >
                     <Check
                       className={cn(
