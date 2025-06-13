@@ -160,7 +160,7 @@ export function SimpleExitMovementDialog({
 
     const movement: Omit<InventoryMovement, "id" | "createdAt" | "updatedAt"> = {
       type: 'saida',
-      date: new Date(),
+      date: new Date().toISOString(),
       productDescription,
       quantity: quantityNum,
       unitOfMeasure,
@@ -173,6 +173,7 @@ export function SimpleExitMovementDialog({
 
     console.log("✅ Submetendo movimento de saída:", movement);
     onSubmit(movement);
+    onOpenChange(false);
   };
 
   return (

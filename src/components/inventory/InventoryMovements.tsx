@@ -219,6 +219,40 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
   const handleAddExitMovement = (movement: Omit<InventoryMovement, "id" | "createdAt" | "updatedAt">) => {
     console.log("📥 Recebendo movimento de saída:", movement);
     
+    // Verificar se o produto existe no estoque
+    const productExists = entriesFromInvoices.some(entry => 
+      entry.productDescription === movement.productDescription
+    );
+    
+    if (!productExists) {
+      toast({
+        title: "Produto não encontrado",
+        description: "Não é possível dar baixa em produto que não existe no estoque.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Calcular estoque disponível
+    const totalEntries = entriesFromInvoices
+      .filter(entry => entry.productDescription === movement.productDescription)
+      .reduce((sum, entry) => sum + entry.quantity, 0);
+    
+    const totalExits = manualMovements
+      .filter(mov => mov.productDescription === movement.productDescription && mov.type === 'saida')
+      .reduce((sum, mov) => sum + mov.quantity, 0);
+    
+    const availableStock = totalEntries - totalExits;
+    
+    if (movement.quantity > availableStock) {
+      toast({
+        title: "Estoque insuficiente",
+        description: `Estoque disponível: ${availableStock} ${movement.unitOfMeasure}`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const newMovement: InventoryMovement = {
       ...movement,
       id: `exit-${Date.now()}`,
@@ -232,10 +266,9 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
     
     toast({
       title: "Saída registrada",
-      description: "A saída foi registrada com sucesso.",
+      description: `Saída de ${movement.quantity} ${movement.unitOfMeasure} de ${movement.productDescription} registrada com sucesso.`,
     });
     
-    setIsExitMovementOpen(false);
     console.log("✅ Saída registrada com sucesso:", newMovement.id);
   };
   
@@ -254,7 +287,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
     
     const csvData = filteredMovements.map(movement => [
       movement.type === 'entrada' ? 'Entrada' : 'Saída',
-      format(movement.date, 'dd/MM/yyyy'),
+      format(new Date(movement.date), 'dd/MM/yyyy'),
       movement.productDescription,
       movement.quantity.toString(),
       movement.unitOfMeasure,
@@ -349,7 +382,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
                     {movement.type === 'entrada' ? 'Entrada' : 'Saída'}
                   </span>
                 </TableCell>
-                <TableCell>{format(movement.date, 'dd/MM/yyyy')}</TableCell>
+                <TableCell>{format(new Date(movement.date), 'dd/MM/yyyy')}</TableCell>
                 <TableCell>{movement.productDescription}</TableCell>
                 <TableCell>{movement.quantity}</TableCell>
                 <TableCell>{movement.unitOfMeasure}</TableCell>
@@ -536,7 +569,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
                               NF {group.invoice.danfeNumber} - {group.invoice.supplier.name}
                             </h4>
                             <p className="text-sm text-muted-foreground">
-                              {format(group.invoice.issueDate, 'dd/MM/yyyy')} • {group.movements.length} itens • {' '}
+                              {format(new Date(group.invoice.issueDate), 'dd/MM/yyyy')} • {group.movements.length} itens • {' '}
                               {new Intl.NumberFormat('pt-BR', {
                                 style: 'currency',
                                 currency: 'BRL'
