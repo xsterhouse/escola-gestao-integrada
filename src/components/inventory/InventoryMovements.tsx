@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -70,8 +69,8 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
         source: 'invoice' as const,
         status: 'entrada' as const,
         reason: 'Entrada via nota fiscal',
-        createdAt: new Date(invoice.createdAt),
-        updatedAt: new Date(invoice.updatedAt),
+        createdAt: new Date(invoice.createdAt || new Date()).toISOString(),
+        updatedAt: new Date(invoice.updatedAt || new Date()).toISOString(),
       }))
     );
   
@@ -203,8 +202,8 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       id: `manual-${Date.now()}`,
       source: 'manual',
       status: movement.type === 'saida' ? 'saida' : 'entrada',
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
     setManualMovements([...manualMovements, newMovement]);
@@ -225,8 +224,8 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       id: `exit-${Date.now()}`,
       source: 'manual',
       status: 'saida',
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
     setManualMovements([...manualMovements, newMovement]);

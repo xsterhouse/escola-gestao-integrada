@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { InventoryMovement } from "@/lib/types";
 import { ProductAutocomplete } from "./ProductAutocomplete";
 
@@ -40,6 +41,7 @@ const formSchema = z.object({
   quantity: z.number().positive("Quantidade deve ser positiva"),
   unitOfMeasure: z.string().min(1, "Unidade de medida é obrigatória"),
   unitPrice: z.number().nonnegative("Valor unitário deve ser não-negativo"),
+  reason: z.string().min(1, "Motivo é obrigatório"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -66,6 +68,7 @@ export function AddManualMovementDialog({
       quantity: 1,
       unitOfMeasure: "",
       unitPrice: 0,
+      reason: "",
     },
   });
 
@@ -92,6 +95,7 @@ export function AddManualMovementDialog({
       unitPrice: values.unitPrice,
       totalCost,
       source: 'manual',
+      reason: values.reason,
     };
 
     onSubmit(movement);
@@ -228,6 +232,23 @@ export function AddManualMovementDialog({
                       {...field}
                       onChange={e => field.onChange(parseFloat(e.target.value))}
                       readOnly={watchType === 'saida' && !!selectedProduct}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="reason"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Motivo</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      {...field} 
+                      placeholder="Descreva o motivo da movimentação..."
                     />
                   </FormControl>
                   <FormMessage />

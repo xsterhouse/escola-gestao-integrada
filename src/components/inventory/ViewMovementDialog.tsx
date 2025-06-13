@@ -19,6 +19,18 @@ interface ViewMovementDialogProps {
 }
 
 export function ViewMovementDialog({ movement, open, onOpenChange }: ViewMovementDialogProps) {
+  const formatDate = (date: Date | string) => {
+    if (!date) return "—";
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return format(dateObj, 'dd/MM/yyyy');
+  };
+
+  const formatDateTime = (date: Date | string) => {
+    if (!date) return "—";
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return format(dateObj, 'dd/MM/yyyy HH:mm');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -45,7 +57,7 @@ export function ViewMovementDialog({ movement, open, onOpenChange }: ViewMovemen
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Data</p>
-              <p>{format(movement.date, 'dd/MM/yyyy')}</p>
+              <p>{formatDate(movement.date)}</p>
             </div>
           </div>
           
@@ -66,14 +78,14 @@ export function ViewMovementDialog({ movement, open, onOpenChange }: ViewMovemen
               <p>{new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL'
-              }).format(movement.unitPrice)}</p>
+              }).format(movement.unitPrice || 0)}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Custo Total</p>
               <p>{new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL'
-              }).format(movement.totalCost)}</p>
+              }).format(movement.totalCost || 0)}</p>
             </div>
           </div>
           
@@ -110,11 +122,11 @@ export function ViewMovementDialog({ movement, open, onOpenChange }: ViewMovemen
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Criado em</p>
-              <p>{format(movement.createdAt, 'dd/MM/yyyy HH:mm')}</p>
+              <p>{formatDateTime(movement.createdAt || new Date())}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Atualizado em</p>
-              <p>{format(movement.updatedAt, 'dd/MM/yyyy HH:mm')}</p>
+              <p>{formatDateTime(movement.updatedAt || new Date())}</p>
             </div>
           </div>
         </div>
