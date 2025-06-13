@@ -1,6 +1,7 @@
 
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,7 +11,9 @@ import {
   RefreshCw, 
   AlertCircle, 
   CheckCircle2,
-  Clock
+  Clock,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -22,22 +25,23 @@ export function OfflineIndicator() {
     lastSyncTime, 
     handleManualSync 
   } = useSyncManager();
+  const isMobile = useIsMobile();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getConnectionBadge = () => {
     if (!isOnline) {
       return (
-        <Badge variant="destructive" className="flex items-center gap-1">
-          <WifiOff className="h-3 w-3" />
+        <Badge variant="destructive" className={`flex items-center gap-1 ${isMobile ? 'text-xs px-2 py-1' : ''}`}>
+          <WifiOff className={`${isMobile ? 'h-2 w-2' : 'h-3 w-3'}`} />
           Offline
         </Badge>
       );
     }
 
     return (
-      <Badge variant="outline" className="flex items-center gap-1 text-green-600 border-green-600">
-        <Wifi className="h-3 w-3" />
-        Online {effectiveType && `(${effectiveType})`}
+      <Badge variant="outline" className={`flex items-center gap-1 text-green-600 border-green-600 ${isMobile ? 'text-xs px-2 py-1' : ''}`}>
+        <Wifi className={`${isMobile ? 'h-2 w-2' : 'h-3 w-3'}`} />
+        Online {effectiveType && !isMobile && `(${effectiveType})`}
       </Badge>
     );
   };
@@ -59,60 +63,63 @@ export function OfflineIndicator() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      <Card className="max-w-sm">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+    <div className={`fixed ${isMobile ? 'bottom-2 right-2 left-2' : 'bottom-4 right-4'} z-50`}>
+      <Card className={`${isMobile ? 'w-full' : 'max-w-sm'} shadow-lg`}>
+        <CardContent className={`${isMobile ? 'p-2' : 'p-3'}`}>
+          <div className={`flex items-center justify-between ${isMobile ? 'gap-2' : 'gap-3'}`}>
+            <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-2'}`}>
               {getConnectionBadge()}
               
               {pendingCount > 0 && (
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {pendingCount} pendente{pendingCount > 1 ? 's' : ''}
+                <Badge variant="secondary" className={`flex items-center gap-1 ${isMobile ? 'text-xs px-2 py-1' : ''}`}>
+                  <Clock className={`${isMobile ? 'h-2 w-2' : 'h-3 w-3'}`} />
+                  {pendingCount} {isMobile ? 'pend.' : `pendente${pendingCount > 1 ? 's' : ''}`}
                 </Badge>
               )}
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-2'}`}>
               {pendingCount > 0 && isOnline && (
                 <Button
                   onClick={handleManualSync}
                   disabled={isSyncing}
-                  size="sm"
+                  size={isMobile ? "sm" : "sm"}
                   variant="outline"
-                  className="flex items-center gap-1"
+                  className={`flex items-center gap-1 ${isMobile ? 'px-2 py-1 text-xs' : ''}`}
                 >
-                  <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
+                  <RefreshCw className={`${isMobile ? 'h-2 w-2' : 'h-3 w-3'} ${isSyncing ? 'animate-spin' : ''}`} />
+                  {isMobile ? 'Sync' : (isSyncing ? 'Sincronizando...' : 'Sincronizar')}
                 </Button>
               )}
               
               <Button
                 onClick={() => setIsExpanded(!isExpanded)}
-                size="sm"
+                size={isMobile ? "sm" : "sm"}
                 variant="ghost"
-                className="px-2"
+                className={`${isMobile ? 'px-1' : 'px-2'}`}
               >
-                {isExpanded ? '−' : '+'}
+                {isExpanded ? 
+                  <ChevronDown className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} /> : 
+                  <ChevronUp className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                }
               </Button>
             </div>
           </div>
           
           {isExpanded && (
-            <div className="mt-3 pt-3 border-t space-y-2 text-sm text-muted-foreground">
+            <div className={`pt-3 border-t space-y-2 text-muted-foreground ${isMobile ? 'mt-2 text-xs' : 'mt-3 text-sm'}`}>
               <div className="flex items-center justify-between">
                 <span>Status da conexão:</span>
                 <span className="flex items-center gap-1">
                   {isOnline ? (
                     <>
-                      <CheckCircle2 className="h-3 w-3 text-green-600" />
-                      Conectado
+                      <CheckCircle2 className={`${isMobile ? 'h-2 w-2' : 'h-3 w-3'} text-green-600`} />
+                      {isMobile ? 'On' : 'Conectado'}
                     </>
                   ) : (
                     <>
-                      <AlertCircle className="h-3 w-3 text-red-600" />
-                      Desconectado
+                      <AlertCircle className={`${isMobile ? 'h-2 w-2' : 'h-3 w-3'} text-red-600`} />
+                      {isMobile ? 'Off' : 'Desconectado'}
                     </>
                   )}
                 </span>
@@ -124,8 +131,15 @@ export function OfflineIndicator() {
               </div>
               
               {!isOnline && pendingCount > 0 && (
-                <div className="text-orange-600 text-xs">
+                <div className={`text-orange-600 ${isMobile ? 'text-xs' : 'text-xs'}`}>
                   ⚠️ Dados serão sincronizados quando a conexão for restabelecida
+                </div>
+              )}
+
+              {effectiveType && !isMobile && (
+                <div className="flex items-center justify-between">
+                  <span>Tipo de conexão:</span>
+                  <span className="uppercase">{effectiveType}</span>
                 </div>
               )}
             </div>

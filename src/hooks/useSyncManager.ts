@@ -14,23 +14,67 @@ export const useSyncManager = () => {
 
   useEffect(() => {
     updatePendingCount();
+    
+    // Carregar última data de sincronização do localStorage
+    const savedLastSync = localStorage.getItem('lastSyncTime');
+    if (savedLastSync) {
+      setLastSyncTime(new Date(savedLastSync));
+    }
   }, []);
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     if (isOnline && pendingCount > 0) {
-      // Auto-sync quando volta online
-      setTimeout(() => {
-        handleManualSync();
-      }, 2000); // Aguarda 2 segundos para estabilizar a conexão
+      // Auto-sync quando volta online (com delay para estabilizar)
+      timeoutId = setTimeout(() => {
+        console.log('🔄 Iniciando sincronização automática...');
+        handleAutoSync();
+      }, 3000);
     }
+
+    // Listener para evento customizado de reconexão
+    const handleConnectionRestored = () => {
+      if (pendingCount > 0) {
+        timeoutId = setTimeout(() => {
+          handleAutoSync();
+        }, 2000);
+      }
+    };
+
+    window.addEventListener('connection-restored', handleConnectionRestored);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      window.removeEventListener('connection-restored', handleConnectionRestored);
+    };
   }, [isOnline, pendingCount]);
 
   const updatePendingCount = async () => {
     try {
       const queue = await offlineStorage.getSyncQueue();
       setPendingCount(queue.length);
+      console.log(`📊 ${queue.length} itens pendentes para sincronização`);
     } catch (error) {
       console.error('Erro ao atualizar contagem pendente:', error);
+    }
+  };
+
+  const handleAutoSync = async () => {
+    if (!isOnline || isSyncing) return;
+    
+    try {
+      setIsSyncing(true);
+      await syncService.syncPendingData();
+      await updatePendingCount();
+      setLastSyncTime(new Date());
+      localStorage.setItem('lastSyncTime', new Date().toISOString());
+      
+      console.log('✅ Sincronização automática concluída');
+    } catch (error) {
+      console.error('❌ Erro na sincronização automática:', error);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -63,7 +107,9 @@ export const useSyncManager = () => {
 
       await syncService.syncPendingData();
       await updatePendingCount();
-      setLastSyncTime(new Date());
+      const syncTime = new Date();
+      setLastSyncTime(syncTime);
+      localStorage.setItem('lastSyncTime', syncTime.toISOString());
 
       toast({
         title: "Sincronização concluída",
@@ -86,11 +132,13 @@ export const useSyncManager = () => {
       await offlineStorage.addToSyncQueue(type, data, action);
       await updatePendingCount();
       
-      if (isOnline) {
-        // Se estiver online, tenta sincronizar imediatamente
+      console.log(`📝 Adicionado à fila: ${type} - ${action}`);
+      
+      if (isOnline && !isSyncing) {
+        // Se estiver online, tenta sincronizar após um pequeno delay
         setTimeout(() => {
-          handleManualSync();
-        }, 1000);
+          handleAutoSync();
+        }, 1500);
       }
     } catch (error) {
       console.error('Erro ao adicionar à fila de sincronização:', error);
