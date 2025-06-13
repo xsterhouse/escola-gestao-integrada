@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,9 @@ export function ViewMovementDialog({ movement, open, onOpenChange }: ViewMovemen
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Detalhes da Movimentação</DialogTitle>
+          <DialogDescription>
+            Visualize os detalhes completos desta movimentação de estoque.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="mt-4 space-y-4">
@@ -96,10 +100,10 @@ export function ViewMovementDialog({ movement, open, onOpenChange }: ViewMovemen
             </div>
           )}
           
-          {movement.requestId && (
+          {movement.reason && (
             <div>
-              <p className="text-sm font-medium text-muted-foreground">ID da Requisição</p>
-              <p>{movement.requestId}</p>
+              <p className="text-sm font-medium text-muted-foreground">Motivo</p>
+              <p>{movement.reason}</p>
             </div>
           )}
           

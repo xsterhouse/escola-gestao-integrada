@@ -67,8 +67,9 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
         invoiceId: invoice.id,
         source: 'invoice' as const,
         status: 'entrada' as const,
-        createdAt: invoice.createdAt,
-        updatedAt: invoice.updatedAt,
+        reason: 'Entrada via nota fiscal',
+        createdAt: new Date(invoice.createdAt),
+        updatedAt: new Date(invoice.updatedAt),
       }))
     );
   
@@ -215,6 +216,8 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
   };
 
   const handleAddExitMovement = (movement: Omit<InventoryMovement, "id" | "createdAt" | "updatedAt">) => {
+    console.log("📥 Recebendo movimento de saída:", movement);
+    
     const newMovement: InventoryMovement = {
       ...movement,
       id: `exit-${Date.now()}`,
@@ -232,6 +235,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
     });
     
     setIsExitMovementOpen(false);
+    console.log("✅ Saída registrada com sucesso:", newMovement.id);
   };
   
   const handleExportCsv = () => {
@@ -677,7 +681,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
         ProductAutocomplete={ProductAutocomplete}
       />
 
-      <ExitMovementDialog
+      <SimpleExitMovementDialog
         open={isExitMovementOpen}
         onOpenChange={setIsExitMovementOpen}
         onSubmit={handleAddExitMovement}
