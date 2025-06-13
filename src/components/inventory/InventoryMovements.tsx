@@ -1,3 +1,4 @@
+
 import {
   Table,
   TableBody,
@@ -22,6 +23,7 @@ import { toast } from "@/hooks/use-toast";
 import { ViewMovementDialog } from "./ViewMovementDialog";
 import { AddManualMovementDialog } from "./AddManualMovementDialog";
 import { ExitMovementDialog } from "./ExitMovementDialog";
+import { SimpleExitMovementDialog } from "./SimpleExitMovementDialog";
 import { ProductAutocomplete } from "./ProductAutocomplete";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { generateInventoryReportPDF } from "@/lib/inventory-pdf-utils";
