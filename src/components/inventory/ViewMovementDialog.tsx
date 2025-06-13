@@ -62,14 +62,14 @@ export function ViewMovementDialog({ movement, open, onOpenChange }: ViewMovemen
               <p>{new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL'
-              }).format(movement.unitPrice)}</p>
+              }).format(movement.unitPrice || 0)}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Custo Total</p>
               <p>{new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL'
-              }).format(movement.totalCost)}</p>
+              }).format(movement.totalCost || 0)}</p>
             </div>
           </div>
           
@@ -96,21 +96,19 @@ export function ViewMovementDialog({ movement, open, onOpenChange }: ViewMovemen
             </div>
           )}
           
-          {movement.requestId && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">ID da Requisição</p>
-              <p>{movement.requestId}</p>
-            </div>
-          )}
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Motivo</p>
+            <p>{movement.reason}</p>
+          </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Criado em</p>
-              <p>{format(movement.createdAt, 'dd/MM/yyyy HH:mm')}</p>
+              <p>{movement.createdAt ? format(new Date(movement.createdAt), 'dd/MM/yyyy HH:mm') : 'N/A'}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Atualizado em</p>
-              <p>{format(movement.updatedAt, 'dd/MM/yyyy HH:mm')}</p>
+              <p>{movement.updatedAt ? format(new Date(movement.updatedAt), 'dd/MM/yyyy HH:mm') : 'N/A'}</p>
             </div>
           </div>
         </div>
