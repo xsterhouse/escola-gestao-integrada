@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Package, Minus, ArrowDown, ArrowUp, Search, FileText, Edit } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { InventoryMovement, Invoice } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -238,7 +238,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
         </div>
       </div>
 
-      {/* Movements List */}
+      {/* Movements List with ScrollArea */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -253,55 +253,57 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
               <p>Nenhuma movimentação encontrada.</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {filteredMovements
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .map((movement) => (
-                  <div
-                    key={movement.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                    onClick={() => setSelectedMovement(movement)}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`p-2 rounded-full ${
-                        movement.type === 'entrada' 
-                          ? 'bg-green-100 text-green-600' 
-                          : 'bg-red-100 text-red-600'
-                      }`}>
-                        {getMovementIcon(movement)}
+            <ScrollArea className="h-[500px] w-full rounded-md border">
+              <div className="space-y-2 p-4">
+                {filteredMovements
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .map((movement) => (
+                    <div
+                      key={movement.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => setSelectedMovement(movement)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded-full ${
+                          movement.type === 'entrada' 
+                            ? 'bg-green-100 text-green-600' 
+                            : 'bg-red-100 text-red-600'
+                        }`}>
+                          {getMovementIcon(movement)}
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-medium">{movement.productDescription}</h4>
+                          <p className="text-sm text-gray-600">
+                            {formatDate(movement.date)} • {getMovementDescription(movement)}
+                          </p>
+                        </div>
                       </div>
                       
-                      <div>
-                        <h4 className="font-medium">{movement.productDescription}</h4>
-                        <p className="text-sm text-gray-600">
-                          {formatDate(movement.date)} • {getMovementDescription(movement)}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="text-right">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
-                          {movement.type === 'entrada' ? '+' : '-'}{movement.quantity} {movement.unitOfMeasure}
-                        </span>
-                        <Badge variant={movement.type === 'entrada' ? 'default' : 'secondary'}>
-                          {movement.type === 'entrada' ? 'Entrada' : 'Saída'}
-                        </Badge>
-                        {movement.source === 'invoice' && (
-                          <Badge variant="outline" className="text-blue-600 border-blue-300">
-                            NF
+                      <div className="text-right">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            {movement.type === 'entrada' ? '+' : '-'}{movement.quantity} {movement.unitOfMeasure}
+                          </span>
+                          <Badge variant={movement.type === 'entrada' ? 'default' : 'secondary'}>
+                            {movement.type === 'entrada' ? 'Entrada' : 'Saída'}
                           </Badge>
+                          {movement.source === 'invoice' && (
+                            <Badge variant="outline" className="text-blue-600 border-blue-300">
+                              NF
+                            </Badge>
+                          )}
+                        </div>
+                        {movement.totalCost && (
+                          <p className="text-sm text-gray-600">
+                            {formatCurrency(movement.totalCost)}
+                          </p>
                         )}
                       </div>
-                      {movement.totalCost && (
-                        <p className="text-sm text-gray-600">
-                          {formatCurrency(movement.totalCost)}
-                        </p>
-                      )}
                     </div>
-                  </div>
-                ))}
-            </div>
+                  ))}
+              </div>
+            </ScrollArea>
           )}
         </CardContent>
       </Card>
