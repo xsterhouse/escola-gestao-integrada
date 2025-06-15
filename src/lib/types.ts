@@ -54,6 +54,8 @@ export interface Product {
   supplierId: string;
   categoryId: string;
   isActive: boolean;
+  unit?: string;
+  item?: string;
 }
 
 export interface Category {
@@ -66,8 +68,8 @@ export interface Category {
 export interface Invoice {
   id: string;
   invoiceNumber: string;
-  issueDate: Date;
-  dueDate: Date;
+  issueDate: string;
+  dueDate: string;
   supplier: Supplier;
   items: InvoiceItem[];
   totalAmount: number;
@@ -99,7 +101,7 @@ export interface InvoiceItem {
 export interface InventoryReport {
   productCode: string;
   productName: string;
-  lastEntryDate: Date;
+  lastEntryDate: string;
   supplierCode: string;
   supplierName: string;
   currentQuantity: number;
@@ -111,7 +113,7 @@ export interface PurchaseReport {
   productCode: string;
   description: string;
   supplier: string;
-  entryDate: Date;
+  entryDate: string;
   quantity: number;
   unitOfMeasure: string;
   value: number;
@@ -120,7 +122,7 @@ export interface PurchaseReport {
 
 export interface InventoryMovement {
   id: string;
-  date: Date;
+  date: string;
   productDescription: string;
   quantity: number;
   unitOfMeasure: string;
@@ -144,11 +146,11 @@ export interface DeletionHistory {
   danfeNumber?: string;
   supplierName?: string;
   supplierCnpj?: string;
-  issueDate?: Date;
+  issueDate?: string;
   totalValue?: number;
   items?: InvoiceItem[];
   deletedBy: string;
-  deletedAt: Date;
+  deletedAt: string;
   reason: string;
   type?: 'product' | 'invoice' | 'movement';
   deletedItemId?: string;
@@ -196,8 +198,8 @@ export interface User {
   canCreateUsers: boolean;
   canManageSchool: boolean;
   lastLogin?: string;
-  createdAt: Date;
-  updatedAt?: Date;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface UserModulePermission {
@@ -239,9 +241,9 @@ export interface ATAContract {
   id: string;
   numeroProcesso: string;
   fornecedor: string;
-  dataATA: Date;
-  dataInicioVigencia: Date;
-  dataFimVigencia: Date;
+  dataATA: string;
+  dataInicioVigencia: string;
+  dataFimVigencia: string;
   items: ATAItem[];
   createdBy: string;
   schoolId: string;
@@ -256,6 +258,8 @@ export interface ATAItem {
   quantidade: number;
   valorUnitario: number;
   valorTotal: number;
+  nome?: string;
+  saldoDisponivel?: number;
 }
 
 // Financial and Accounting Types
@@ -285,13 +289,13 @@ export interface AccountingEntry {
 export interface BankReconciliation {
   id: string;
   bankAccountId: string;
-  reconciliationDate: Date;
+  reconciliationDate: string;
   startingBalance: number;
   endingBalance: number;
   transactions: BankTransaction[];
   status: 'pending' | 'completed' | 'cancelled';
-  createdAt: Date;
-  updatedAt?: Date;
+  createdAt: string;
+  updatedAt?: string;
   tenantId?: string;
 }
 
@@ -328,8 +332,8 @@ export interface BankAccount {
   initialBalance?: number;
   currentBalance: number;
   isActive: boolean;
-  createdAt: Date;
-  updatedAt?: Date;
+  createdAt: string;
+  updatedAt?: string;
   schoolId?: string;
   tenantId?: string;
 }
@@ -338,14 +342,14 @@ export interface PaymentAccount {
   id: string;
   description: string;
   value: number;
-  dueDate: Date;
+  dueDate: string;
   supplier: string;
   category: string;
   status: 'pendente' | 'pago' | 'cancelado' | 'a_pagar' | 'pgt_parcial';
-  paymentDate?: Date;
+  paymentDate?: string;
   bankAccountId?: string;
-  createdAt: Date;
-  updatedAt?: Date;
+  createdAt: string;
+  updatedAt?: string;
   schoolId?: string;
   tenantId?: string;
   expenseType?: string;
@@ -362,18 +366,18 @@ export interface ReceivableAccount {
   originalValue?: number;
   receivedAmount?: number;
   isPartialPayment?: boolean;
-  dueDate: Date;
+  dueDate: string;
   source: string;
   category: string;
   status: 'pendente' | 'recebido' | 'cancelado';
-  receivedDate?: Date;
+  receivedDate?: string;
   bankAccountId?: string;
-  createdAt: Date;
-  updatedAt?: Date;
+  createdAt: string;
+  updatedAt?: string;
   schoolId?: string;
   tenantId?: string;
   origin?: string;
-  expectedDate?: Date;
+  expectedDate?: string;
   resourceType?: string;
   notes?: string;
   documentUrl?: string;
@@ -389,8 +393,8 @@ export interface Fornecedor {
   telefone: string;
   email: string;
   name?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Contracts Types
@@ -398,8 +402,8 @@ export interface ContractData {
   id: string;
   numeroContrato: string;
   fornecedor: Fornecedor;
-  dataInicio: Date;
-  dataFim: Date;
+  dataInicio: string;
+  dataFim: string;
   valor: number;
   status: 'ativo' | 'inativo' | 'suspenso' | 'divergencia_dados' | 'liquidado' | 'vencido' | 'encerrado';
   items: ContractItem[];
@@ -409,9 +413,9 @@ export interface ContractData {
   divergencias?: ContractDivergence[];
   ataId?: string;
   ataValidated?: boolean;
-  createdAt: Date;
-  updatedAt?: Date;
-  lastValidationAt?: Date;
+  createdAt: string;
+  updatedAt?: string;
+  lastValidationAt?: string;
   fornecedorId?: string;
 }
 
@@ -420,10 +424,10 @@ export interface Contract {
   number: string;
   supplier: string;
   fornecedor?: string;
-  startDate: Date;
-  endDate: Date;
-  dataInicio?: Date;
-  dataFim?: Date;
+  startDate: string;
+  endDate: string;
+  dataInicio?: string;
+  dataFim?: string;
   value: number;
   quantidade?: number;
   valorContratado?: number;
@@ -449,8 +453,8 @@ export interface ContractItem {
   saldoQuantidade?: number;
   notasFiscais?: Record<string, number>;
   contractId?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ContractFilter {
@@ -459,8 +463,8 @@ export interface ContractFilter {
   fornecedor?: string;
   produto?: string;
   dateRange?: {
-    start: Date;
-    end: Date;
+    start: string;
+    end: string;
   };
 }
 
@@ -477,8 +481,8 @@ export interface ContractDivergence {
   valorContrato: string | number;
   valorATA: string | number;
   status: 'pending' | 'resolved' | 'dismissed';
-  createdAt: Date;
-  resolvedAt?: Date;
+  createdAt: string;
+  resolvedAt?: string;
   resolved?: boolean;
 }
 
@@ -497,8 +501,8 @@ export interface InvoiceData {
   id: string;
   number: string;
   supplier: string;
-  issueDate: Date;
-  dueDate: Date;
+  issueDate: string;
+  dueDate: string;
   totalValue: number;
   items: InvoiceItem[];
   xmlContent?: string;
@@ -527,6 +531,18 @@ export interface PlanningItem {
   category: string;
   priority: 'high' | 'medium' | 'low';
   status: 'planned' | 'approved' | 'purchased';
+  name?: string;
+  availableQuantity?: number;
+}
+
+export interface Planning {
+  id: string;
+  name: string;
+  description: string;
+  status: 'draft' | 'active' | 'completed';
+  items: PlanningItem[];
+  createdAt: string;
+  updatedAt?: string;
 }
 
 // Financial Types
@@ -543,8 +559,8 @@ export interface FinancialSummary {
 }
 
 export interface FinancialReportFilter {
-  startDate: Date;
-  endDate: Date;
+  startDate: string;
+  endDate: string;
   accountType?: string;
   category?: string;
   status?: string;
