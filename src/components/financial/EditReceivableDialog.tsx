@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Check, X } from "lucide-react";
@@ -41,10 +40,10 @@ export function EditReceivableDialog({
     if (receivable) {
       setFormData({
         description: receivable.description,
-        origin: receivable.origin,
-        expectedDate: new Date(receivable.expectedDate),
+        origin: receivable.source || receivable.origin || "",
+        expectedDate: new Date(receivable.dueDate || receivable.expectedDate || new Date()),
         value: receivable.value.toString(),
-        resourceType: receivable.resourceType,
+        resourceType: receivable.category || receivable.resourceType || "",
         notes: receivable.notes || "",
       });
     } else {
@@ -80,14 +79,17 @@ export function EditReceivableDialog({
       id: receivable?.id || `receivable_${Date.now()}`,
       schoolId: currentSchool?.id || '',
       description: formData.description,
-      origin: formData.origin,
-      expectedDate: formData.expectedDate,
+      source: formData.origin,
+      category: formData.resourceType,
+      dueDate: formData.expectedDate.toISOString(),
       value: parseFloat(formData.value),
       resourceType: formData.resourceType,
       notes: formData.notes,
       status: receivable?.status || 'pendente',
-      createdAt: receivable?.createdAt || new Date(),
-      updatedAt: new Date()
+      createdAt: receivable?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      origin: formData.origin,
+      expectedDate: formData.expectedDate.toISOString(),
     };
     
     onSave(receivableData);

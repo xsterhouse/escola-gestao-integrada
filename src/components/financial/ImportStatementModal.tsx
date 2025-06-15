@@ -69,42 +69,39 @@ export function ImportStatementModal({
       const mockTransactions: BankTransaction[] = [
         {
           id: uuidv4(),
-          schoolId: "current-school-id",
           bankAccountId,
-          date: new Date(),
+          date: new Date().toISOString(),
           description: "Transferência Recebida",
           value: 1250.50,
           transactionType: "credito",
           reconciliationStatus: "pendente",
           source: "manual",
-          createdAt: new Date(),
-          updatedAt: new Date()
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         },
         {
           id: uuidv4(),
-          schoolId: "current-school-id",
           bankAccountId,
-          date: new Date(),
+          date: new Date().toISOString(),
           description: "Pagamento Fornecedor XYZ",
           value: 546.78,
           transactionType: "debito",
           reconciliationStatus: "pendente",
           source: "manual",
-          createdAt: new Date(),
-          updatedAt: new Date()
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         },
         {
           id: uuidv4(),
-          schoolId: "current-school-id",
           bankAccountId,
-          date: new Date(),
+          date: new Date().toISOString(),
           description: "Tarifa Bancária",
           value: 45.90,
           transactionType: "debito",
           reconciliationStatus: "pendente",
           source: "manual",
-          createdAt: new Date(),
-          updatedAt: new Date()
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         }
       ];
       
@@ -226,7 +223,7 @@ export function ImportStatementModal({
                 <tbody>
                   {previewTransactions.map((transaction) => (
                     <tr key={transaction.id} className="border-t border-muted">
-                      <td className="py-2 px-4">{formatDate(transaction.date)}</td>
+                      <td className="py-2 px-4">{formatDate(new Date(transaction.date))}</td>
                       <td className="py-2 px-4">{transaction.description}</td>
                       <td className={cn(
                         "py-2 px-4 text-right",

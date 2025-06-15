@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -24,9 +23,10 @@ interface SimplifiedContract {
   id: string;
   fornecedor: string;
   numeroContrato: string;
-  dataInicio: Date;
-  dataFim: Date;
+  dataInicio: string;
+  dataFim: string;
   status: string;
+  originalContract: ContractData;
 }
 
 export function ContractValiditySection({ contracts, onUpdateContract }: ContractValiditySectionProps) {
@@ -135,7 +135,7 @@ export function ContractValiditySection({ contracts, onUpdateContract }: Contrac
               </TableHeader>
               <TableBody>
                 {simplifiedContracts.map((contract) => {
-                  const progress = calculateValidityProgress(contract.dataInicio, contract.dataFim);
+                  const progress = calculateValidityProgress(new Date(contract.dataInicio), new Date(contract.dataFim));
                   const progressColor = getProgressColor(progress);
                   const statusText = getStatusText(progress);
 
@@ -143,8 +143,8 @@ export function ContractValiditySection({ contracts, onUpdateContract }: Contrac
                     <TableRow key={contract.id}>
                       <TableCell className="font-medium">{contract.fornecedor}</TableCell>
                       <TableCell className="font-medium">{contract.numeroContrato}</TableCell>
-                      <TableCell>{formatDate(contract.dataInicio)}</TableCell>
-                      <TableCell>{formatDate(contract.dataFim)}</TableCell>
+                      <TableCell>{formatDate(new Date(contract.dataInicio))}</TableCell>
+                      <TableCell>{formatDate(new Date(contract.dataFim))}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {progress >= 80 && <AlertTriangle className="h-4 w-4 text-orange-500" />}

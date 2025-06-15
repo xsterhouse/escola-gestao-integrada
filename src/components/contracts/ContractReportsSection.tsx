@@ -32,7 +32,7 @@ export function ContractReportsSection({ contracts }: ContractReportsSectionProp
     if (!date) return 'Data inválida';
     
     try {
-      const dateObj = date instanceof Date ? date : new Date(date);
+      const dateObj = new Date(date);
       
       // Check if the date is valid
       if (isNaN(dateObj.getTime())) {
