@@ -136,7 +136,15 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
   const filteredMovements = movements.filter(movement => {
     const matchesSearch = movement.productDescription.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          movement.reason?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === "all" || movement.type === typeFilter;
+    
+    let matchesType = true;
+    if (typeFilter === "entrada") {
+      matchesType = movement.type === "entrada";
+    } else if (typeFilter === "saida") {
+      matchesType = movement.type === "saida";
+    }
+    // Para "all", matchesType permanece true
+    
     return matchesSearch && matchesType;
   });
 
