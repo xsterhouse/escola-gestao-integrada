@@ -1,3 +1,4 @@
+
 import {
   Dialog,
   DialogContent,
@@ -15,7 +16,7 @@ import { InventoryMovement, Invoice } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
 import { SimpleProductAutocomplete } from "@/components/planning/SimpleProductAutocomplete";
 import { ProductSuggestion } from "@/components/planning/types";
-import { calculateProductStock } from "@/lib/inventory-calculations";
+import { getAllProductsStock } from "@/lib/inventory-calculations";
 
 interface SimpleExitMovementDialogProps {
   open: boolean;
@@ -39,8 +40,30 @@ export function SimpleExitMovementDialog({
   const [unitOfMeasure, setUnitOfMeasure] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
   const [availableStock, setAvailableStock] = useState(0);
+  const [availableProducts, setAvailableProducts] = useState<ProductSuggestion[]>([]);
 
   console.log("🔄 SimpleExitMovementDialog renderizado - open:", open);
+
+  // Calcular produtos disponíveis no estoque
+  useEffect(() => {
+    if (open) {
+      console.log("📊 Calculando produtos disponíveis no estoque...");
+      const stockData = getAllProductsStock(invoices, movements);
+      
+      const productsWithStock = stockData
+        .filter(stock => stock.currentStock > 0)
+        .map(stock => ({
+          id: `${stock.productDescription}-${stock.unitOfMeasure}`,
+          description: stock.productDescription,
+          unit: stock.unitOfMeasure,
+          availableStock: stock.currentStock,
+          averageUnitCost: stock.averageUnitCost
+        }));
+      
+      console.log("📦 Produtos com estoque disponível:", productsWithStock.length);
+      setAvailableProducts(productsWithStock);
+    }
+  }, [open, invoices, movements]);
 
   const resetForm = () => {
     console.log("🧹 Resetando formulário do modal");
@@ -61,18 +84,12 @@ export function SimpleExitMovementDialog({
 
   useEffect(() => {
     if (selectedProduct) {
-      const stock = calculateProductStock(
-        selectedProduct.description,
-        selectedProduct.unit,
-        invoices,
-        movements
-      );
-      setAvailableStock(stock.currentStock);
-      setUnitPrice(stock.averageUnitCost.toString());
+      setAvailableStock(selectedProduct.availableStock || 0);
+      setUnitPrice((selectedProduct.averageUnitCost || 0).toString());
     } else {
       setAvailableStock(0);
     }
-  }, [selectedProduct, invoices, movements, open]);
+  }, [selectedProduct]);
 
   const handleProductSelect = (product: ProductSuggestion) => {
     console.log("🎯 Produto selecionado no modal:", product);
@@ -84,6 +101,8 @@ export function SimpleExitMovementDialog({
     console.log("📋 Dados preenchidos automaticamente:", {
       description: product.description,
       unit: product.unit,
+      availableStock: product.availableStock,
+      averageUnitCost: product.averageUnitCost
     });
   };
 
@@ -108,7 +127,6 @@ export function SimpleExitMovementDialog({
     }
 
     const quantityNum = parseFloat(quantity);
-    const unitPriceNum = parseFloat(unitPrice);
 
     if (isNaN(quantityNum) || quantityNum <= 0) {
       toast({
@@ -131,7 +149,7 @@ export function SimpleExitMovementDialog({
       return;
     }
 
-    const stockInfo = calculateProductStock(productDescription, unitOfMeasure, invoices, movements);
+    const averageUnitCost = selectedProduct?.averageUnitCost || parseFloat(unitPrice) || 0;
 
     const movement: Omit<InventoryMovement, "id" | "createdAt" | "updatedAt"> = {
       type: 'saida',
@@ -139,8 +157,8 @@ export function SimpleExitMovementDialog({
       productDescription,
       quantity: quantityNum,
       unitOfMeasure,
-      unitPrice: stockInfo.averageUnitCost,
-      totalCost: quantityNum * stockInfo.averageUnitCost,
+      unitPrice: averageUnitCost,
+      totalCost: quantityNum * averageUnitCost,
       source: 'manual',
       status: 'saida',
       reason
@@ -168,7 +186,8 @@ export function SimpleExitMovementDialog({
               value={productDescription}
               onChange={setProductDescription}
               onProductSelect={handleProductSelect}
-              placeholder="Digite para buscar produtos..."
+              availableProducts={availableProducts}
+              placeholder="Digite para buscar produtos em estoque..."
             />
             {selectedProduct && (
               <p className="text-sm text-muted-foreground mt-1">

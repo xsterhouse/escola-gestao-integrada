@@ -2,13 +2,13 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Product } from "@/lib/types";
 import { ProductSuggestion } from "./types";
 
 interface SimpleProductAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   onProductSelect: (product: ProductSuggestion) => void;
+  availableProducts?: ProductSuggestion[];
   placeholder?: string;
   disabled?: boolean;
 }
@@ -17,40 +17,19 @@ export function SimpleProductAutocomplete({
   value,
   onChange,
   onProductSelect,
+  availableProducts = [],
   placeholder = "Digite para buscar produtos...",
   disabled = false,
 }: SimpleProductAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Carregar produtos do localStorage
-  useEffect(() => {
-    try {
-      const storedProducts = localStorage.getItem("products");
-      if (storedProducts) {
-        const parsedData = JSON.parse(storedProducts);
-        let productArray: Product[] = [];
-        
-        if (Array.isArray(parsedData)) {
-          productArray = parsedData;
-        } else if (parsedData?.data && Array.isArray(parsedData.data)) {
-          productArray = parsedData.data;
-        }
-        
-        setProducts(productArray);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar produtos:", error);
-    }
-    setIsLoading(false);
-  }, []);
+  console.log("🔍 SimpleProductAutocomplete - produtos disponíveis:", availableProducts.length);
 
   // Filtrar produtos com base no texto digitado
   useEffect(() => {
-    if (isLoading || value.length < 2) {
+    if (value.length < 2) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -59,25 +38,20 @@ export function SimpleProductAutocomplete({
     const timeoutId = setTimeout(() => {
       const searchTerm = value.toLowerCase().trim();
       
-      const filtered = products
+      const filtered = availableProducts
         .filter(product => 
           product.description?.toLowerCase().includes(searchTerm)
         )
-        .slice(0, 8)
-        .map(product => ({
-          id: product.id,
-          description: product.description,
-          unit: product.unit,
-          item: product.item?.toString()
-        }));
+        .slice(0, 8);
       
+      console.log("🔍 Produtos filtrados:", filtered.length);
       setSuggestions(filtered);
       setShowSuggestions(filtered.length > 0);
       setSelectedIndex(-1);
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [value, products, isLoading]);
+  }, [value, availableProducts]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -85,6 +59,7 @@ export function SimpleProductAutocomplete({
   };
 
   const handleProductSelect = (product: ProductSuggestion) => {
+    console.log("✅ Produto selecionado:", product);
     onChange(product.description);
     onProductSelect(product);
     setShowSuggestions(false);
@@ -144,18 +119,12 @@ export function SimpleProductAutocomplete({
         className="w-full"
       />
       
-      {isLoading && (
-        <div className="absolute z-50 w-full mt-1 p-2 bg-background border rounded-md shadow-md">
-          <div className="text-sm text-muted-foreground">Carregando produtos...</div>
-        </div>
-      )}
-      
-      {showSuggestions && suggestions.length > 0 && !isLoading && (
+      {showSuggestions && suggestions.length > 0 && (
         <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto shadow-lg">
           <CardContent className="p-0">
             {suggestions.map((product, index) => (
               <div
-                key={product.id}
+                key={`${product.description}-${product.unit}`}
                 className={`p-3 cursor-pointer border-b last:border-b-0 hover:bg-muted/50 ${
                   index === selectedIndex ? 'bg-muted' : ''
                 }`}
@@ -164,7 +133,11 @@ export function SimpleProductAutocomplete({
                 <div className="font-medium text-sm">{product.description}</div>
                 <div className="text-xs text-muted-foreground">
                   Unidade: {product.unit}
-                  {product.item && ` | Item: ${product.item}`}
+                  {product.availableStock !== undefined && (
+                    <span className="ml-2 text-green-600">
+                      Estoque: {product.availableStock}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -172,11 +145,11 @@ export function SimpleProductAutocomplete({
         </Card>
       )}
       
-      {showSuggestions && suggestions.length === 0 && value.length >= 2 && !isLoading && (
+      {showSuggestions && suggestions.length === 0 && value.length >= 2 && (
         <Card className="absolute z-50 w-full mt-1 shadow-lg">
           <CardContent className="p-3">
             <div className="text-sm text-muted-foreground">
-              Nenhum produto encontrado para "{value}".
+              Nenhum produto encontrado no estoque para "{value}".
             </div>
           </CardContent>
         </Card>
