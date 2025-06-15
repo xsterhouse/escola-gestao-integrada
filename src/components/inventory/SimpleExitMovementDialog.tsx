@@ -1,4 +1,3 @@
-
 import {
   Dialog,
   DialogContent,
@@ -16,6 +15,7 @@ import { InventoryMovement, Invoice } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
 import { SimpleProductAutocomplete } from "@/components/planning/SimpleProductAutocomplete";
 import { ProductSuggestion } from "@/components/planning/types";
+import { calculateProductStock } from "@/lib/inventory-calculations";
 
 interface SimpleExitMovementDialogProps {
   open: boolean;
@@ -38,6 +38,7 @@ export function SimpleExitMovementDialog({
   const [reason, setReason] = useState("");
   const [unitOfMeasure, setUnitOfMeasure] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
+  const [availableStock, setAvailableStock] = useState(0);
 
   console.log("🔄 SimpleExitMovementDialog renderizado - open:", open);
 
@@ -49,6 +50,7 @@ export function SimpleExitMovementDialog({
     setReason("");
     setUnitOfMeasure("");
     setUnitPrice("");
+    setAvailableStock(0);
   };
 
   useEffect(() => {
@@ -57,28 +59,20 @@ export function SimpleExitMovementDialog({
     }
   }, [open]);
 
-  // Calcular entradas do produto das notas fiscais aprovadas
-  const getProductEntries = (description: string) => {
-    return invoices
-      .filter(invoice => invoice.status === 'aprovada' && invoice.isActive)
-      .flatMap(invoice => invoice.items)
-      .filter(item => item.description === description)
-      .reduce((sum, item) => sum + item.quantity, 0);
-  };
-
-  // Calcular saídas já registradas do produto
-  const getProductExits = (description: string) => {
-    return movements
-      .filter(movement => movement.productDescription === description && movement.type === 'saida')
-      .reduce((sum, movement) => sum + movement.quantity, 0);
-  };
-
-  // Calcular estoque disponível
-  const getAvailableStock = (description: string) => {
-    const entries = getProductEntries(description);
-    const exits = getProductExits(description);
-    return entries - exits;
-  };
+  useEffect(() => {
+    if (selectedProduct) {
+      const stock = calculateProductStock(
+        selectedProduct.description,
+        selectedProduct.unit,
+        invoices,
+        movements
+      );
+      setAvailableStock(stock.currentStock);
+      setUnitPrice(stock.averageUnitCost.toString());
+    } else {
+      setAvailableStock(0);
+    }
+  }, [selectedProduct, invoices, movements, open]);
 
   const handleProductSelect = (product: ProductSuggestion) => {
     console.log("🎯 Produto selecionado no modal:", product);
@@ -87,20 +81,9 @@ export function SimpleExitMovementDialog({
     setProductDescription(product.description);
     setUnitOfMeasure(product.unit);
     
-    // Buscar preço do produto nas notas fiscais
-    const productInInvoice = invoices
-      .filter(invoice => invoice.status === 'aprovada' && invoice.isActive)
-      .flatMap(invoice => invoice.items)
-      .find(item => item.description === product.description);
-    
-    if (productInInvoice) {
-      setUnitPrice(productInInvoice.unitPrice.toString());
-    }
-    
     console.log("📋 Dados preenchidos automaticamente:", {
       description: product.description,
       unit: product.unit,
-      price: productInInvoice?.unitPrice
     });
   };
 
@@ -115,7 +98,7 @@ export function SimpleExitMovementDialog({
       unitPrice
     });
 
-    if (!productDescription || !quantity || !reason || !unitOfMeasure || !unitPrice) {
+    if (!productDescription || !quantity || !reason || !unitOfMeasure) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos.",
@@ -136,17 +119,7 @@ export function SimpleExitMovementDialog({
       return;
     }
 
-    if (isNaN(unitPriceNum) || unitPriceNum <= 0) {
-      toast({
-        title: "Preço inválido",
-        description: "Por favor, insira um preço válido.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     // Verificar estoque disponível
-    const availableStock = getAvailableStock(productDescription);
     console.log("📊 Verificando estoque disponível:", availableStock, "para quantidade:", quantityNum);
 
     if (quantityNum > availableStock) {
@@ -158,14 +131,16 @@ export function SimpleExitMovementDialog({
       return;
     }
 
+    const stockInfo = calculateProductStock(productDescription, unitOfMeasure, invoices, movements);
+
     const movement: Omit<InventoryMovement, "id" | "createdAt" | "updatedAt"> = {
       type: 'saida',
       date: new Date().toISOString(),
       productDescription,
       quantity: quantityNum,
       unitOfMeasure,
-      unitPrice: unitPriceNum,
-      totalCost: quantityNum * unitPriceNum,
+      unitPrice: stockInfo.averageUnitCost,
+      totalCost: quantityNum * stockInfo.averageUnitCost,
       source: 'manual',
       status: 'saida',
       reason
@@ -197,7 +172,7 @@ export function SimpleExitMovementDialog({
             />
             {selectedProduct && (
               <p className="text-sm text-muted-foreground mt-1">
-                Estoque disponível: {getAvailableStock(productDescription)} {unitOfMeasure}
+                Estoque disponível: {availableStock} {unitOfMeasure}
               </p>
             )}
           </div>
@@ -222,21 +197,24 @@ export function SimpleExitMovementDialog({
                 value={unitOfMeasure}
                 onChange={(e) => setUnitOfMeasure(e.target.value)}
                 placeholder="Ex: UN, KG, L"
+                readOnly={!!selectedProduct}
+                className={selectedProduct ? 'bg-gray-100' : ''}
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="unitPrice">Valor Unitário</Label>
+            <Label htmlFor="unitPrice">Custo Médio Unitário</Label>
             <Input
               id="unitPrice"
               type="number"
               value={unitPrice}
               onChange={(e) => setUnitPrice(e.target.value)}
               placeholder="0,00"
-              min="0"
-              step="0.01"
+              readOnly
+              className="bg-gray-100"
             />
+             {selectedProduct && <p className="text-xs text-muted-foreground mt-1">O custo médio é calculado automaticamente.</p>}
           </div>
 
           <div>

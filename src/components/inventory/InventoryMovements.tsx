@@ -26,7 +26,7 @@ import { SimpleExitMovementDialog } from "./SimpleExitMovementDialog";
 import { ProductAutocomplete } from "./ProductAutocomplete";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { generateInventoryReportPDF } from "@/lib/inventory-pdf-utils";
-import { getAllProductsStock } from "@/lib/inventory-calculations";
+import { getAllProductsStock, validateExitQuantity } from "@/lib/inventory-calculations";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface InventoryMovementsProps {
@@ -218,41 +218,24 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
 
   const handleAddExitMovement = (movement: Omit<InventoryMovement, "id" | "createdAt" | "updatedAt">) => {
     console.log("📥 Recebendo movimento de saída:", movement);
-    
-    // Verificar se o produto existe no estoque
-    const productExists = entriesFromInvoices.some(entry => 
-      entry.productDescription === movement.productDescription
+
+    const validation = validateExitQuantity(
+      movement.productDescription,
+      movement.unitOfMeasure,
+      movement.quantity,
+      invoices,
+      manualMovements
     );
-    
-    if (!productExists) {
+
+    if (!validation.isValid) {
       toast({
-        title: "Produto não encontrado",
-        description: "Não é possível dar baixa em produto que não existe no estoque.",
-        variant: "destructive"
+        title: "Erro de Validação",
+        description: validation.message || `Estoque insuficiente. Disponível: ${validation.availableStock}`,
+        variant: "destructive",
       });
       return;
     }
-    
-    // Calcular estoque disponível
-    const totalEntries = entriesFromInvoices
-      .filter(entry => entry.productDescription === movement.productDescription)
-      .reduce((sum, entry) => sum + entry.quantity, 0);
-    
-    const totalExits = manualMovements
-      .filter(mov => mov.productDescription === movement.productDescription && mov.type === 'saida')
-      .reduce((sum, mov) => sum + mov.quantity, 0);
-    
-    const availableStock = totalEntries - totalExits;
-    
-    if (movement.quantity > availableStock) {
-      toast({
-        title: "Estoque insuficiente",
-        description: `Estoque disponível: ${availableStock} ${movement.unitOfMeasure}`,
-        variant: "destructive"
-      });
-      return;
-    }
-    
+
     const newMovement: InventoryMovement = {
       ...movement,
       id: `exit-${Date.now()}`,

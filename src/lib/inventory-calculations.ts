@@ -18,7 +18,7 @@ export const calculateProductStock = (
   movements: InventoryMovement[]
 ): StockCalculation => {
   // Calculate entries from approved invoices
-  const entries = invoices
+  const invoiceEntries = invoices
     .filter(invoice => invoice.status === 'aprovada' && invoice.isActive)
     .flatMap(invoice => 
       invoice.items.filter(item => 
@@ -27,17 +27,27 @@ export const calculateProductStock = (
       )
     );
 
-  const totalEntries = entries.reduce((sum, item) => sum + item.quantity, 0);
-  const totalEntryCost = entries.reduce((sum, item) => sum + item.totalPrice, 0);
+  const totalInvoiceEntriesQty = invoiceEntries.reduce((sum, item) => sum + item.quantity, 0);
+  const totalInvoiceEntriesCost = invoiceEntries.reduce((sum, item) => sum + item.totalPrice, 0);
 
-  // Calculate exits from movements
-  const exits = movements.filter(movement => 
+  // Filter all movements for the specific product
+  const productMovements = movements.filter(movement => 
     movement.productDescription === productDescription && 
-    movement.unitOfMeasure === unitOfMeasure &&
-    movement.type === 'saida'
+    movement.unitOfMeasure === unitOfMeasure
   );
 
+  // Calculate entries from manual movements
+  const manualEntries = productMovements.filter(m => m.type === 'entrada');
+  const totalManualEntriesQty = manualEntries.reduce((sum, item) => sum + item.quantity, 0);
+  const totalManualEntriesCost = manualEntries.reduce((sum, item) => sum + (item.totalCost || item.quantity * (item.unitPrice || 0)), 0);
+
+  const totalEntries = totalInvoiceEntriesQty + totalManualEntriesQty;
+  const totalEntryCost = totalInvoiceEntriesCost + totalManualEntriesCost;
+
+  // Calculate exits from movements
+  const exits = productMovements.filter(movement => movement.type === 'saida');
   const totalExits = exits.reduce((sum, movement) => sum + movement.quantity, 0);
+
   const currentStock = Math.max(0, totalEntries - totalExits);
   const averageUnitCost = totalEntries > 0 ? totalEntryCost / totalEntries : 0;
 
