@@ -3,18 +3,19 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Package, Plus, Minus, ArrowDown, ArrowUp, Search } from "lucide-react";
+import { AlertTriangle, Package, Minus, ArrowDown, ArrowUp, Search, FileText, Edit } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLocalStorageSync } from "@/hooks/useLocalStorageSync";
 import { InventoryMovement, Invoice } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { AddManualMovementDialog } from "./AddManualMovementDialog";
 import { SimpleExitMovementDialog } from "./SimpleExitMovementDialog";
 import { ViewMovementDialog } from "./ViewMovementDialog";
+import { CurrentStockTable } from "./CurrentStockTable";
 import { toast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
 import { getAllProductsStock, checkLowStock } from "@/lib/inventory-calculations";
+import { generateMovementsFromInvoices } from "@/lib/invoice-movements";
 
 interface InventoryMovementsProps {
   invoices: Invoice[];
@@ -24,21 +25,29 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
   const { currentSchool } = useAuth();
   
   const movementsKey = currentSchool ? `inventory-movements_${currentSchool.id}` : 'inventory-movements';
-  const { data: movements, saveData: setMovements } = useLocalStorageSync<InventoryMovement>(movementsKey, []);
+  const { data: manualMovements, saveData: setManualMovements } = useLocalStorageSync<InventoryMovement>(movementsKey, []);
   
-  const [isAddMovementOpen, setIsAddMovementOpen] = useState(false);
   const [isExitMovementOpen, setIsExitMovementOpen] = useState(false);
   const [selectedMovement, setSelectedMovement] = useState<InventoryMovement | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [lowStockAlerts, setLowStockAlerts] = useState<any[]>([]);
+  const [stockData, setStockData] = useState<any[]>([]);
 
-  console.log(`📦 Carregando movimentações com chave: ${movementsKey} - ${movements.length} movimentações`);
+  console.log(`📦 Carregando movimentações com chave: ${movementsKey} - ${manualMovements.length} movimentações manuais`);
+
+  // Generate movements from invoices and combine with manual movements
+  const invoiceMovements = generateMovementsFromInvoices(invoices);
+  const allMovements = [...invoiceMovements, ...manualMovements];
+  
+  console.log(`📋 Total de movimentações: ${allMovements.length} (${invoiceMovements.length} de notas fiscais + ${manualMovements.length} manuais)`);
 
   // Check for low stock alerts whenever movements or invoices change
   useEffect(() => {
-    const stockData = getAllProductsStock(invoices, movements);
-    const lowStockItems = checkLowStock(stockData, 10); // threshold of 10 units
+    const calculatedStockData = getAllProductsStock(invoices, manualMovements);
+    setStockData(calculatedStockData);
+    
+    const lowStockItems = checkLowStock(calculatedStockData, 10);
     
     if (lowStockItems.length > 0) {
       console.log("⚠️ Itens com estoque baixo detectados:", lowStockItems.length);
@@ -46,7 +55,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       
       // Show toast notification for low stock
       lowStockItems.forEach(item => {
-        if (item.currentStock <= 5) { // Critical stock level
+        if (item.currentStock <= 5) {
           toast({
             title: "⚠️ Estoque Crítico",
             description: `${item.productDescription}: apenas ${item.currentStock} ${item.unitOfMeasure} restantes`,
@@ -57,35 +66,12 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
     } else {
       setLowStockAlerts([]);
     }
-  }, [movements, invoices]);
-
-  const handleAddMovement = (movement: Omit<InventoryMovement, "id" | "createdAt" | "updatedAt">) => {
-    console.log("➕ Adicionando nova movimentação:", movement);
-    
-    const newMovement: InventoryMovement = {
-      ...movement,
-      id: uuidv4(),
-      date: movement.date || new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    const updatedMovements = [...movements, newMovement];
-    setMovements(updatedMovements);
-    
-    console.log("✅ Movimentação adicionada com sucesso:", newMovement.id);
-    
-    toast({
-      title: movement.type === 'entrada' ? "Entrada registrada" : "Saída registrada",
-      description: `${movement.productDescription} - ${movement.quantity} ${movement.unitOfMeasure}`,
-    });
-  };
+  }, [manualMovements, invoices]);
 
   const handleExitMovement = (movement: Omit<InventoryMovement, "id" | "createdAt" | "updatedAt">) => {
     console.log("📤 Processando saída de estoque:", movement);
     
     // Validate stock before processing exit
-    const stockData = getAllProductsStock(invoices, movements);
     const productStock = stockData.find(stock => 
       stock.productDescription === movement.productDescription && 
       stock.unitOfMeasure === movement.unitOfMeasure
@@ -111,11 +97,10 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       totalCost: movement.totalCost || (movement.quantity * (movement.unitPrice || productStock.averageUnitCost))
     };
 
-    const updatedMovements = [...movements, newMovement];
-    setMovements(updatedMovements);
+    const updatedMovements = [...manualMovements, newMovement];
+    setManualMovements(updatedMovements);
     
     console.log("✅ Saída de estoque processada com sucesso:", newMovement.id);
-    console.log("📊 Novo saldo do produto:", productStock.currentStock - movement.quantity);
     
     // Check if this creates a low stock situation
     const remainingStock = productStock.currentStock - movement.quantity;
@@ -133,7 +118,7 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
     });
   };
 
-  const filteredMovements = movements.filter(movement => {
+  const filteredMovements = allMovements.filter(movement => {
     const matchesSearch = movement.productDescription.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          movement.reason?.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -161,6 +146,23 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
+  };
+
+  const getMovementIcon = (movement: InventoryMovement) => {
+    if (movement.source === 'invoice') {
+      return <FileText className="h-4 w-4" />;
+    } else if (movement.type === 'entrada') {
+      return <ArrowDown className="h-4 w-4" />;
+    } else {
+      return <ArrowUp className="h-4 w-4" />;
+    }
+  };
+
+  const getMovementDescription = (movement: InventoryMovement) => {
+    if (movement.source === 'invoice') {
+      return `Nota Fiscal • ${movement.reason}`;
+    }
+    return movement.reason;
   };
 
   return (
@@ -197,6 +199,9 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
         </Card>
       )}
 
+      {/* Current Stock Table */}
+      <CurrentStockTable stockData={stockData} />
+
       {/* Actions Header */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
@@ -222,13 +227,6 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
         </div>
         
         <div className="flex gap-2">
-          <Button 
-            onClick={() => setIsAddMovementOpen(true)}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Entrada Manual
-          </Button>
           <Button 
             onClick={() => setIsExitMovementOpen(true)}
             variant="outline"
@@ -270,17 +268,13 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
                           ? 'bg-green-100 text-green-600' 
                           : 'bg-red-100 text-red-600'
                       }`}>
-                        {movement.type === 'entrada' ? (
-                          <ArrowDown className="h-4 w-4" />
-                        ) : (
-                          <ArrowUp className="h-4 w-4" />
-                        )}
+                        {getMovementIcon(movement)}
                       </div>
                       
                       <div>
                         <h4 className="font-medium">{movement.productDescription}</h4>
                         <p className="text-sm text-gray-600">
-                          {formatDate(movement.date)} • {movement.reason}
+                          {formatDate(movement.date)} • {getMovementDescription(movement)}
                         </p>
                       </div>
                     </div>
@@ -293,6 +287,11 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
                         <Badge variant={movement.type === 'entrada' ? 'default' : 'secondary'}>
                           {movement.type === 'entrada' ? 'Entrada' : 'Saída'}
                         </Badge>
+                        {movement.source === 'invoice' && (
+                          <Badge variant="outline" className="text-blue-600 border-blue-300">
+                            NF
+                          </Badge>
+                        )}
                       </div>
                       {movement.totalCost && (
                         <p className="text-sm text-gray-600">
@@ -308,18 +307,12 @@ export function InventoryMovements({ invoices }: InventoryMovementsProps) {
       </Card>
 
       {/* Dialogs */}
-      <AddManualMovementDialog 
-        open={isAddMovementOpen}
-        onOpenChange={setIsAddMovementOpen}
-        onSubmit={handleAddMovement}
-      />
-
       <SimpleExitMovementDialog 
         open={isExitMovementOpen}
         onOpenChange={setIsExitMovementOpen}
         onSubmit={handleExitMovement}
         invoices={invoices}
-        movements={movements}
+        movements={manualMovements}
       />
 
       {selectedMovement && (
