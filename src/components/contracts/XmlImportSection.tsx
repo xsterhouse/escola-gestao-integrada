@@ -42,7 +42,7 @@ export function XmlImportSection({ onImport }: XmlImportSectionProps) {
         id: Date.now().toString(),
         number: "NF123456",
         supplier: "Fornecedor Exemplo Ltda",
-        dataEmissao: getCurrentISOString(),
+        issueDate: getCurrentISOString(),
         numeroDanfe: "123456789",
         valorTotal: 15750.00,
         items: [
