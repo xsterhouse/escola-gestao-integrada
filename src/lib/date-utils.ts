@@ -43,3 +43,7 @@ export const ensureDate = (dateInput: Date | string): Date => {
   if (typeof dateInput === 'string') return new Date(dateInput);
   return dateInput;
 };
+
+export const getCurrentISOString = (): string => {
+  return new Date().toISOString();
+};

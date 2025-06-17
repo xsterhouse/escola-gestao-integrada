@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Check, X, Upload } from "lucide-react";
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { PaymentAccount, ReceivableAccount } from "@/lib/types";
 import { v4 as uuidv4 } from "uuid";
+import { getCurrentISOString } from "@/lib/date-utils";
 
 interface NewPaymentModalProps {
   isOpen: boolean;
@@ -86,14 +88,14 @@ export function NewPaymentModal({
         description,
         supplier,
         value: parseFloat(value),
-        dueDate,
+        dueDate: dueDate.toISOString(),
         category: resourceType, // Using resourceType as category
         expenseType: resourceType,
         resourceCategory: resourceType,
         status: "a_pagar",
         documentUrl: file ? URL.createObjectURL(file) : undefined,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: getCurrentISOString(),
+        updatedAt: getCurrentISOString()
       };
       
       onSavePayment(payment);
@@ -109,12 +111,12 @@ export function NewPaymentModal({
         category: resourceType, // Adding required category field
         resourceType,
         value: parseFloat(value),
-        dueDate, // Adding required dueDate field
-        expectedDate: dueDate,
+        dueDate: dueDate.toISOString(), // Adding required dueDate field
+        expectedDate: dueDate.toISOString(),
         status: "pendente",
         documentUrl: file ? URL.createObjectURL(file) : undefined,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: getCurrentISOString(),
+        updatedAt: getCurrentISOString()
       };
       
       onSaveReceivable(receivable);

@@ -1,9 +1,11 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { InvoiceData } from "@/lib/types";
+import { getCurrentISOString } from "@/lib/date-utils";
 
 interface XmlImportSectionProps {
   onImport: (invoiceData: InvoiceData) => void;
@@ -39,18 +41,8 @@ export function XmlImportSection({ onImport }: XmlImportSectionProps) {
       const mockInvoiceData: InvoiceData = {
         id: Date.now().toString(),
         number: "NF123456",
-        supplier: {
-          id: "supplier-1",
-          cnpj: "12.345.678/0001-90",
-          razaoSocial: "Fornecedor Exemplo Ltda",
-          name: "Fornecedor Exemplo Ltda",
-          endereco: "Rua das Flores, 123 - Centro",
-          telefone: "(11) 1234-5678",
-          email: "contato@fornecedor.com.br",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        dataEmissao: new Date(),
+        supplier: "Fornecedor Exemplo Ltda",
+        dataEmissao: getCurrentISOString(),
         numeroDanfe: "123456789",
         valorTotal: 15750.00,
         items: [

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, FileText, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Contract } from "@/lib/types";
+import { getCurrentISOString } from "@/lib/date-utils";
 
 interface LicitationImportSectionProps {
   onImport: (contracts: Contract[]) => void;
@@ -36,27 +37,31 @@ export function LicitationImportSection({ onImport }: LicitationImportSectionPro
           id: "1",
           number: "001/2024",
           supplier: "Papelaria ABC Ltda",
-          startDate: new Date('2024-01-01'),
-          endDate: new Date('2024-12-31'),
+          startDate: getCurrentISOString(),
+          endDate: getCurrentISOString(),
           value: 25000.00,
           status: 'ativo',
           items: [],
           itensContratados: ["Caderno", "Caneta", "Lápis"],
           quantidade: 1500,
-          valorContratado: 25000.00
+          valorContratado: 25000.00,
+          dataInicio: getCurrentISOString(),
+          dataFim: getCurrentISOString()
         },
         {
           id: "2",
           number: "002/2024", 
           supplier: "Material Escolar XYZ",
-          startDate: new Date('2024-02-01'),
-          endDate: new Date('2024-11-30'),
+          startDate: getCurrentISOString(),
+          endDate: getCurrentISOString(),
           value: 15000.00,
           status: 'ativo',
           items: [],
           itensContratados: ["Borracha", "Régua", "Apontador"],
           quantidade: 800,
-          valorContratado: 15000.00
+          valorContratado: 15000.00,
+          dataInicio: getCurrentISOString(),
+          dataFim: getCurrentISOString()
         }
       ];
 

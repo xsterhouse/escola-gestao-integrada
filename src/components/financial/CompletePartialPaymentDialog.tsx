@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReceivableAccount, BankAccount } from "@/lib/types";
 import { toast } from "sonner";
+import { getCurrentISOString } from "@/lib/date-utils";
 
 interface CompletePartialPaymentDialogProps {
   isOpen: boolean;
@@ -50,9 +51,9 @@ export function CompletePartialPaymentDialog({
       receivedAmount: originalValue, // Now fully paid
       isPartialPayment: false, // No longer partial
       status: 'recebido' as const,
-      receivedDate: new Date(),
+      receivedDate: getCurrentISOString(),
       bankAccountId: selectedBankAccount,
-      updatedAt: new Date()
+      updatedAt: getCurrentISOString()
     };
 
     onConfirm({
