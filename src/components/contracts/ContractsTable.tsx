@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ContractData } from "@/lib/types";
+import { safeFormatDate } from "@/lib/date-utils";
 
 interface ContractsTableProps {
   contracts: ContractData[];
@@ -15,10 +16,6 @@ export function ContractsTable({ contracts }: ContractsTableProps) {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
-  };
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('pt-BR').format(date);
   };
 
   return (
@@ -64,8 +61,8 @@ export function ContractsTable({ contracts }: ContractsTableProps) {
                         <div className="text-sm text-gray-500">{contract.fornecedor.endereco}</div>
                       </div>
                     </TableCell>
-                    <TableCell>{formatDate(contract.dataInicio)}</TableCell>
-                    <TableCell>{formatDate(contract.dataFim)}</TableCell>
+                    <TableCell>{safeFormatDate(contract.dataInicio)}</TableCell>
+                    <TableCell>{safeFormatDate(contract.dataFim)}</TableCell>
                     <TableCell>
                       <Badge 
                         variant={contract.status === 'ativo' ? 'default' : 'secondary'}

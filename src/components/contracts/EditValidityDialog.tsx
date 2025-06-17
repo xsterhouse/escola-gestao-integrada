@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ContractData } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Save, X } from "lucide-react";
+import { safeFormatDate, ensureDate, safeDateToISOString } from "@/lib/date-utils";
 
 interface EditValidityDialogProps {
   contract: ContractData;
@@ -16,11 +17,15 @@ interface EditValidityDialogProps {
 
 export function EditValidityDialog({ contract, onUpdate, onClose }: EditValidityDialogProps) {
   const { toast } = useToast();
+  
+  const startDate = ensureDate(contract.dataInicio);
+  const endDate = ensureDate(contract.dataFim);
+  
   const [dataInicio, setDataInicio] = useState(
-    contract.dataInicio.toISOString().split('T')[0]
+    startDate.toISOString().split('T')[0]
   );
   const [dataFim, setDataFim] = useState(
-    contract.dataFim.toISOString().split('T')[0]
+    endDate.toISOString().split('T')[0]
   );
 
   const handleSave = () => {
@@ -38,9 +43,9 @@ export function EditValidityDialog({ contract, onUpdate, onClose }: EditValidity
 
     const updatedContract: ContractData = {
       ...contract,
-      dataInicio: novaDataInicio,
-      dataFim: novaDataFim,
-      updatedAt: new Date(),
+      dataInicio: safeDateToISOString(novaDataInicio),
+      dataFim: safeDateToISOString(novaDataFim),
+      updatedAt: safeDateToISOString(new Date()),
     };
 
     onUpdate(updatedContract);
@@ -49,10 +54,6 @@ export function EditValidityDialog({ contract, onUpdate, onClose }: EditValidity
       title: "Sucesso",
       description: "Vigência do contrato atualizada com sucesso!",
     });
-  };
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('pt-BR').format(date);
   };
 
   return (
@@ -78,7 +79,7 @@ export function EditValidityDialog({ contract, onUpdate, onClose }: EditValidity
           <div className="grid grid-cols-2 gap-4 text-sm text-gray-500">
             <div>
               <span className="font-medium">Vigência Atual:</span>
-              <div>{formatDate(contract.dataInicio)} até {formatDate(contract.dataFim)}</div>
+              <div>{safeFormatDate(contract.dataInicio)} até {safeFormatDate(contract.dataFim)}</div>
             </div>
           </div>
 

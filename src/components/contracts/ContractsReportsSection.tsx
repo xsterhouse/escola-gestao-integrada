@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress";
 import { Contract } from "@/lib/types";
 import { Search, Calendar, FileText } from "lucide-react";
+import { safeFormatDate, ensureDate } from "@/lib/date-utils";
 
 interface ContractsReportsSectionProps {
   contracts: Contract[];
@@ -24,14 +24,13 @@ export function ContractsReportsSection({ contracts }: ContractsReportsSectionPr
     }).format(value);
   };
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('pt-BR').format(date);
-  };
-
-  const calculateVigencyProgress = (startDate: Date, endDate: Date) => {
+  const calculateVigencyProgress = (startDate: Date | string, endDate: Date | string) => {
     const now = new Date();
-    const total = endDate.getTime() - startDate.getTime();
-    const elapsed = now.getTime() - startDate.getTime();
+    const start = ensureDate(startDate);
+    const end = ensureDate(endDate);
+    
+    const total = end.getTime() - start.getTime();
+    const elapsed = now.getTime() - start.getTime();
     const progress = Math.max(0, Math.min(100, (elapsed / total) * 100));
     
     return progress;
@@ -128,8 +127,8 @@ export function ContractsReportsSection({ contracts }: ContractsReportsSectionPr
                       </TableCell>
                       <TableCell>{contract.quantidade}</TableCell>
                       <TableCell>{formatCurrency(contract.valorContratado)}</TableCell>
-                      <TableCell>{formatDate(contract.dataInicio)}</TableCell>
-                      <TableCell>{formatDate(contract.dataFim)}</TableCell>
+                      <TableCell>{safeFormatDate(contract.dataInicio)}</TableCell>
+                      <TableCell>{safeFormatDate(contract.dataFim)}</TableCell>
                       <TableCell>
                         <div className="space-y-2 min-w-[120px]">
                           <div className="flex justify-between text-sm">
