@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,8 +42,8 @@ export function XmlImportSection({ onImport }: XmlImportSectionProps) {
         number: "NF123456",
         supplier: "Fornecedor Exemplo Ltda",
         issueDate: getCurrentISOString(),
-        numeroDanfe: "123456789",
-        valorTotal: 15750.00,
+        dueDate: getCurrentISOString(),
+        totalValue: 15750.00,
         items: [
           {
             id: "1",

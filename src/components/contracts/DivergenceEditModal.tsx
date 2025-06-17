@@ -252,26 +252,6 @@ export function DivergenceEditModal({
     }
   };
 
-  const handleItemChange = (itemIndex: number, field: string, value: string | number) => {
-    const updatedItems = [...editedItems];
-    updatedItems[itemIndex] = {
-      ...updatedItems[itemIndex],
-      [field]: field === 'precoUnitario' || field === 'quantidadeContratada' 
-        ? parseFloat(value.toString()) || 0 
-        : value
-    };
-
-    // Recalculate derived values
-    if (field === 'precoUnitario' || field === 'quantidadeContratada') {
-      const item = updatedItems[itemIndex];
-      item.valorTotalContrato = (item.quantidadeContratada || 0) * (item.precoUnitario || 0);
-      item.saldoQuantidade = (item.quantidadeContratada || 0) - (item.quantidadePaga || 0);
-      item.saldoValor = (item.valorTotalContrato || 0) - (item.valorPago || 0);
-    }
-
-    setEditedItems(updatedItems);
-  };
-
   const unresolvedDivergences = contract.divergencias?.filter(d => d.status === 'pending') || [];
 
   return (
